@@ -5,8 +5,11 @@
    normale verdeling, polygonen en steekproeven, lineaire en exponentiële formules
    (groeifactor omrekenen, verdubbelingstijd, machtsformules) en veranderingen
    (toenamediagram, differentiequotiënt, helling met een raaklijn).
-   Alles zonder grafische rekenmachine: de getallen zijn zo gekozen dat het met een
-   gewone rekenmachine kan. Kansbomen staan in wiskunde-statistiek.js (wi-kans).
+   Verschillen beschrijven (twee boxplots, phi, max Vcp en de effectgrootte E) met de
+   grenzen van het formuleblad.
+   Bijna alles kan met een gewone rekenmachine. Alleen de doelen "met de GR" (normalcdf,
+   invNorm, binompdf en binomcdf) vragen een grafische rekenmachine; de uitkomsten rekent
+   dit bestand zelf precies na. Kansbomen staan in wiskunde-statistiek.js (wi-kans).
    Zie leerroute.js voor het formaat. */
 (function(){
   'use strict';
@@ -242,6 +245,65 @@
     do { p = []; var rest = 100; for (var i = 0; i < n - 1; i++){ var x = stap * R.heel(Math.ceil(min / stap), Math.floor((rest - (n - 1 - i) * min) / stap)); p.push(x); rest -= x; } p.push(rest); }
     while (p.some(function(x){ return x < min || x % stap; }) || Math.max.apply(null, p) > 60);
     return R.hussel(p);
+  }
+
+  /* ---------- de grafische rekenmachine: normale en binomiale verdeling ---------- */
+  /* Φ(z), de oppervlakte links van z bij μ = 0 en σ = 1: een reeks met alleen positieve termen, dus heel precies */
+  function Phi(z){
+    if (z < -9) return 0; if (z > 9) return 1;
+    var s = z, t = z, z2 = z * z;
+    for (var i = 3; i < 800; i += 2){ t = t * z2 / i; s += t; if (Math.abs(t) < 1e-17 * Math.abs(s)) break; }
+    return 0.5 + s * Math.exp(-z2 / 2 - 0.9189385332046727);
+  }
+  /* normalcdf(a, b, μ, σ); a of b null is min of plus oneindig */
+  function ncdf(a, b, mu, sg){ return (b == null ? 1 : Phi((b - mu) / sg)) - (a == null ? 0 : Phi((a - mu) / sg)); }
+  /* invNorm(oppervlakte links, μ, σ) */
+  function inorm(p, mu, sg){ var lo = -12, hi = 12; for (var i = 0; i < 200; i++){ var m = (lo + hi) / 2; if (Phi(m) < p) lo = m; else hi = m; } return mu + sg * (lo + hi) / 2; }
+  /* binompdf en binomcdf */
+  function bpdf(n, p, k){ if (k < 0 || k > n) return 0; var c = 1; for (var i = 0; i < k; i++) c = c * (n - i) / (i + 1); return c * Math.pow(p, k) * Math.pow(1 - p, n - k); }
+  function bcdf(n, p, k){ var s = 0; for (var i = 0; i <= Math.min(k, n); i++) s += bpdf(n, p, i); return Math.min(1, s); }
+  /* een getal zoals je het op de GR intikt: met een punt */
+  function gT(x){ return String(rnd(x, 6)); }
+  function paren(n){ return n < 0 ? '(' + T(n) + ')' : T(n); }
+  var EEN = { mannen:'een man', zakken:'een zak', ritten:'een rit', 'baby\'s':'een baby', lampen:'een lamp' };
+  /* "dat een man langer is dan 187 cm", "dat een zak tussen 148 en 152 gram weegt" */
+  function datZin(it, soort, a, b){
+    var een = EEN[it.wie] || 'er een';
+    if (soort === 'tussen') return een + ' tussen ' + T(a) + ' en ' + T(b) + ' ' + it.eh + it.na + ' ' + it.ev;
+    var r = soort === 'meer' ? it.meer : it.minder;
+    return een + ' ' + r.replace(/ dan$/, '') + ' ' + it.ev + ' dan ' + T(a) + ' ' + it.eh;
+  }
+
+  /* ---------- verschillen beschrijven ---------- */
+  var VERSCHIL = ['gering', 'middelmatig', 'groot'];
+  /* twee boxplots boven één as; q = [min, Q1, mediaan, Q3, max] */
+  function boxFig(q1, q2, nm, lo, hi, lab, eh){
+    var W = 580, L = 128, Rr = 556, yAs = 196, s = '', v;
+    function Xb(x){ return L + (x - lo) / (hi - lo) * (Rr - L); }
+    lab.forEach(function(x){ s += ln(Xb(x), 22, Xb(x), yAs, { w:1, op:0.18 }) + ln(Xb(x), yAs, Xb(x), yAs + 5, { w:1.5 }) + tx(Xb(x), yAs + 21, T(x), { fs:13 }); });
+    s += ln(L, yAs, Rr, yAs, { w:2 });
+    [[q1, nm[0], 66, KL[0]], [q2, nm[1], 144, KL[2]]].forEach(function(b){
+      var q = b[0], y = b[2], h = 22;
+      s += ln(Xb(q[0]), y, Xb(q[1]), y, { w:2.5 }) + ln(Xb(q[3]), y, Xb(q[4]), y, { w:2.5 });
+      s += ln(Xb(q[0]), y - 11, Xb(q[0]), y + 11, { w:2.5 }) + ln(Xb(q[4]), y - 11, Xb(q[4]), y + 11, { w:2.5 });
+      s += rc(Xb(q[1]), y - h, Xb(q[3]) - Xb(q[1]), 2 * h, { f:b[3], fo:0.2, w:2.5 });
+      s += ln(Xb(q[2]), y - h, Xb(q[2]), y + h, { w:4 });
+      s += tx(L - 14, y + 5, b[1], { fs:14, vet:true, a:'end' });
+    });
+    s += tx(Rr, yAs + 42, eh, { fs:13, a:'end', vet:true });
+    return svg(W, yAs + 50, s, 'twee boxplots: ' + nm[0] + ' en ' + nm[1], 600);
+  }
+  function boxKlasse(a, b){
+    var overlap = a[3] > b[1] && b[3] > a[1];
+    if (!overlap) return 2;
+    var buiten = a[2] < b[1] || a[2] > b[3] || b[2] < a[1] || b[2] > a[3];
+    return buiten ? 1 : 0;
+  }
+  /* vijf getallen op de posities 0 tot 20: oplopend, een box van minstens 3 breed en de mediaan er echt binnen */
+  function vijf(R, lo, hi){
+    var q; do { q = [R.heel(lo, hi), R.heel(lo, hi), R.heel(lo, hi), R.heel(lo, hi), R.heel(lo, hi)].sort(function(x, y){ return x - y; }); }
+    while (q[1] - q[0] < 1 || q[2] - q[1] < 1 || q[3] - q[2] < 1 || q[4] - q[3] < 1 || q[3] - q[1] < 3);
+    return q;
   }
 
   /* ================= de inhoud ================= */
@@ -512,7 +574,7 @@
 
     /* ================= de binomiale kans en de verwachtingswaarde ================= */
     { groep:{ id:'wha-binom', niveau:'havo', domein:'statistiek', naam:'De binomiale kans en de verwachtingswaarde',
-        uit:'Wiskunde A: een experiment een paar keer herhalen en de kans op precies zoveel keer succes uitrekenen met de formule, hoogstens en minstens, en de verwachtingswaarde bij een kansverdeling.' },
+        uit:'Wiskunde A: een experiment een paar keer herhalen en de kans op precies zoveel keer succes uitrekenen met de formule, hoogstens en minstens, met de GR bij veel herhalingen, en de verwachtingswaarde bij een kansverdeling.' },
       doelen:[
         { id:'wha-bin-formule', naam:'De binomiale kans met de formule', kort:'P(X = k) = (n boven k) · p^k · (1 − p)^(n − k): het aantal rijtjes keer de kans op één rijtje',
           uit:'<p>Lisa gooit een vrije worp raak met kans 0,7. Ze gooit 4 keer. Hoe groot is de kans op <b>precies 3 keer raak</b>?</p><p>Eén rijtje is bijvoorbeeld RRRM. De kans daarop: 0,7 ' + X + ' 0,7 ' + X + ' 0,7 ' + X + ' 0,3 = 0,7<sup>3</sup> ' + X + ' 0,3<sup>1</sup> = 0,1029. Elk rijtje met 3 keer R heeft dezelfde kans, en er zijn er <b>(4 boven 3) = 4</b>.</p><p>De <b>binomiale kans</b>: P(X = 3) = 4 ' + X + ' 0,1029 = <b>0,4116</b>, afgerond 0,412. Dit mag als je elke keer dezelfde kans hebt en de keren los van elkaar zijn.</p>',
@@ -557,6 +619,37 @@
               S(t2, T(P2), 'Er zijn ' + n + ' rijtjes (' + n + ' nCr 1 = ' + n + '). Dus ' + n + ' keer de kans op één rijtje.', F(T(P2), T(rnd(P2 / n, 8)), 'Dat is één rijtje. Er zijn er ' + n + '.')),
               S('Samen: ' + T(P1) + ' + ' + T(P2) + ' ≈ (rond af op 3 decimalen)', ant, 'Tel op en rond af: ' + T(rnd(tot, 8)) + '.') ] };
           } },
+        { id:'wha-bin-gr', naam:'Binomiale kansen met de GR', kort:'Precies k: binompdf(n, p, k). Hoogstens k: binomcdf(n, p, k). Minstens k: 1 − binomcdf(n, p, k − 1)',
+          uit:'<p>Bij een grote n reken je binomiale kansen uit met de <b>grafische rekenmachine</b>. Op de TI heten de opdrachten binompdf en binomcdf, op de Casio BinomialPD en BinomialCD.</p>' +
+            '<p><b>binompdf(n, p, k)</b> geeft P(X = k): <b>precies</b> k keer succes. <b>binomcdf(n, p, k)</b> geeft P(X ≤ k): <b>hoogstens</b> k keer, dus 0 tot en met k bij elkaar.</p>' +
+            '<p>Andere kansen schrijf je eerst om. Minder dan 8 is hoogstens 7: P(X ≤ 7). Minstens 8 is alles behalve 0 tot en met 7: P(X ≥ 8) = <b>1 ' + MIN + ' P(X ≤ 7)</b>. Meer dan 8 is 1 ' + MIN + ' P(X ≤ 8).</p>' +
+            '<p>Voorbeeld: n = 20, p = 0.3. P(X ≥ 8) = 1 ' + MIN + ' binomcdf(20, 0.3, 7) ≈ 1 ' + MIN + ' 0,772 = <b>0,228</b>.</p>',
+          wanneer:'je bij een binomiaal experiment met veel herhalingen een kans zoekt.',
+          maak:function(R){
+            var it = R.kies([
+              { zin:function(p, n){ return 'Een basketballer gooit een vrije worp raak met kans ' + T(p) + '. Hij gooit ' + n + ' keer. X is het aantal keer raak.'; }, ps:[0.6, 0.7, 0.75, 0.8], n:[15, 20, 25, 30] },
+              { zin:function(p, n){ return 'Een machine maakt met kans ' + T(p) + ' een product met een fout. Je controleert ' + n + ' producten. X is het aantal producten met een fout.'; }, ps:[0.04, 0.05, 0.08, 0.1], n:[30, 40, 50, 60] },
+              { zin:function(p, n){ return 'Bij een quiz heeft elke vraag vier antwoorden, waarvan één goed. Je gokt bij alle ' + n + ' vragen. X is het aantal goede antwoorden.'; }, ps:[0.25], n:[12, 16, 20, 24, 30] },
+              { zin:function(p, n){ return 'Van alle leerlingen van een grote school fietst ' + T(p * 100) + '% naar school. Je kiest aselect ' + n + ' leerlingen. X is het aantal fietsers.'; }, ps:[0.4, 0.55, 0.65], n:[20, 25, 30, 40] },
+              { zin:function(p, n){ return 'Een zaadje komt op met kans ' + T(p) + '. Je zaait ' + n + ' zaadjes. X is het aantal zaadjes dat opkomt.'; }, ps:[0.8, 0.85, 0.9], n:[20, 30, 40, 50] } ]);
+            var SRT = ['precies', 'hoogstens', 'minstens', 'minder', 'meer'], soort, n, p, k, P, mu;
+            do { soort = R.kies(SRT); n = R.kies(it.n); p = R.kies(it.ps); mu = n * p; k = Math.round(mu + R.heel(-3, 3) * Math.sqrt(mu * (1 - p)) / 2);
+              P = soort === 'precies' ? bpdf(n, p, k) : soort === 'hoogstens' ? bcdf(n, p, k) : soort === 'minstens' ? 1 - bcdf(n, p, k - 1) : soort === 'minder' ? bcdf(n, p, k - 1) : 1 - bcdf(n, p, k);
+            } while (k < 2 || k > n - 2 || P < 0.01 || P > 0.99 || grens(P, 3, 0.05));
+            var wat = { precies:'gelijk is aan ' + k, hoogstens:'hoogstens ' + k + ' is', minstens:'minstens ' + k + ' is', minder:'kleiner is dan ' + k, meer:'groter is dan ' + k }[soort];
+            var notG = { precies:'P(X = ' + k + ')', hoogstens:'P(X ≤ ' + k + ')', minstens:'P(X ≥ ' + k + ')', minder:'P(X ≤ ' + (k - 1) + ')', meer:'P(X ≥ ' + (k + 1) + ')' }[soort];
+            var notF = { precies:['P(X ≤ ' + k + ')', 'P(X ≥ ' + k + ')'], hoogstens:['P(X ≤ ' + (k - 1) + ')', 'P(X ≥ ' + k + ')'], minstens:['P(X ≥ ' + (k + 1) + ')', 'P(X ≤ ' + k + ')'], minder:['P(X ≤ ' + k + ')', 'P(X ≥ ' + k + ')'], meer:['P(X ≥ ' + k + ')', 'P(X ≤ ' + k + ')'] }[soort];
+            var a = 'binompdf(' + n + ', ' + gT(p) + ', ', c = 'binomcdf(' + n + ', ' + gT(p) + ', ';
+            var cmd = { precies:a + k + ')', hoogstens:c + k + ')', minstens:'1 ' + MIN + ' ' + c + (k - 1) + ')', minder:c + (k - 1) + ')', meer:'1 ' + MIN + ' ' + c + k + ')' }[soort];
+            var cmdF = { precies:[c + k + ')', '1 ' + MIN + ' ' + a + k + ')'], hoogstens:[a + k + ')', c + (k - 1) + ')'], minstens:['1 ' + MIN + ' ' + c + k + ')', c + (k - 1) + ')'], minder:[c + k + ')', a + (k - 1) + ')'], meer:['1 ' + MIN + ' ' + c + (k - 1) + ')', c + k + ')'] }[soort];
+            var hintG = { precies:'Precies ' + k + ': dat is één waarde.', hoogstens:'Hoogstens ' + k + ' is ' + k + ' of minder.', minstens:'Minstens ' + k + ' is ' + k + ' of meer.', minder:'Kleiner dan ' + k + ' is hoogstens ' + (k - 1) + '.', meer:'Groter dan ' + k + ' is minstens ' + (k + 1) + '.' }[soort];
+            var hintC = { precies:'Precies k gaat met binompdf.', hoogstens:'binomcdf telt alles van 0 tot en met k op.', minstens:'Minstens ' + k + ' is alles behalve 0 tot en met ' + (k - 1) + ': 1 min binomcdf tot ' + (k - 1) + '.', minder:'Hoogstens ' + (k - 1) + ': binomcdf tot en met ' + (k - 1) + '.', meer:'Minstens ' + (k + 1) + ' is alles behalve 0 tot en met ' + k + ': 1 min binomcdf tot ' + k + '.' }[soort];
+            var ant = rAnt(P, 3), anderKant = soort === 'minstens' ? 1 - P : soort === 'meer' ? 1 - P : null;
+            return { vraag:'De kans dat X ' + wat + '?', context:it.zin(p, n) + ' Bereken met de GR de kans dat X ' + wat + '. Rond af op 3 decimalen.', antwoord:ant, stappen:[
+              K(R, 'Schrijf de kans met X:', notG, notF, hintG),
+              K(R, 'Wat tik je in op de GR?', cmd, cmdF, hintC),
+              S(cmd + ' ≈ (rond af op 3 decimalen)', ant, 'De GR geeft ' + T(rnd(P, 6)) + '. Rond af op 3 decimalen.', anderKant != null ? F(ant, rT(anderKant, 3), 'Dat is binomcdf zelf. Doe nog 1 min die uitkomst.') : null) ] };
+          } },
         { id:'wha-verw', naam:'De verwachtingswaarde', kort:'E(X) = elke waarde keer zijn kans, en dat alles opgeteld',
           uit:'<p>De <b>verwachtingswaarde</b> E(X) is wat je <b>gemiddeld per keer</b> verwacht als je iets heel vaak doet.</p><p>Bij een spel is W je winst. W = ' + MIN + '2 met kans 0,7, W = 3 met kans 0,2 en W = 8 met kans 0,1. Doe <b>elke waarde keer zijn kans</b> en tel op: ' + MIN + '2 ' + X + ' 0,7 + 3 ' + X + ' 0,2 + 8 ' + X + ' 0,1 = ' + MIN + '1,4 + 0,6 + 0,8 = <b>0</b>.</p><p>Is E(W) kleiner dan 0, dan verlies je op den duur. Groter dan 0: dan win je op den duur.</p>',
           wanneer:'je bij een kansverdeling wilt weten wat je gemiddeld per keer krijgt.',
@@ -580,7 +673,7 @@
 
     /* ================= spreiding en de normale verdeling ================= */
     { groep:{ id:'wha-normaal', niveau:'havo', domein:'statistiek', naam:'Standaardafwijking en normale verdeling',
-        uit:'Wiskunde A: de standaardafwijking van een kleine rij getallen uitrekenen, en met de vuistregels van de normale verdeling werken (68% en 95%), zonder grafische rekenmachine.' },
+        uit:'Wiskunde A: de standaardafwijking van een kleine rij getallen uitrekenen, met de vuistregels van de normale verdeling werken (68% en 95%), en daarna met de grafische rekenmachine: normalcdf, invNorm en μ of σ terugrekenen.' },
       doelen:[
         { id:'wha-st-sd', naam:'De standaardafwijking', kort:'Bereken het gemiddelde, tel de kwadraten van de afwijkingen op, deel door n en neem de wortel',
           uit:'<p>De <b>standaardafwijking</b> σ zegt hoe ver de getallen gemiddeld van het gemiddelde af liggen. Hoe groter σ, hoe meer spreiding.</p><p>Bij 4, 6, 8, 10: het gemiddelde is 7. De afwijkingen zijn ' + MIN + '3, ' + MIN + '1, 1 en 3. De <b>kwadraten</b> daarvan: 9, 1, 1, 9. Samen 20.</p><p>Deel door het aantal getallen: 20 : 4 = 5. Neem de <b>wortel</b>: σ = √5 ≈ <b>2,2</b>. Op de rekenmachine heet dit σx.</p>',
@@ -646,6 +739,78 @@
               o.antwoord = T(n); o.eenheid = it.wie;
             }
             return o;
+          } },
+        { id:'wha-norm-cdf', naam:'Een kans met normalcdf', kort:'normalcdf(linkergrens, rechtergrens, μ, σ); meer dan: rechtergrens 10^99, minder dan: linkergrens −10^99',
+          uit:'<p>Ligt een grens niet precies op μ, μ ± σ of μ ± 2σ, dan helpen de vuistregels niet. Dan gebruik je de <b>grafische rekenmachine</b>.</p>' +
+            '<p><b>normalcdf(L, R, μ, σ)</b> geeft de oppervlakte onder de klok tussen L en R: de kans dat een waarde daartussen ligt. Op de Casio heet dat NormCD.</p>' +
+            '<p>Bij <b>meer dan</b> 187 is er geen rechtergrens. Neem dan een heel groot getal: normalcdf(187, 10^99, 180, 7). Bij <b>minder dan</b> 187 neem je als linkergrens ' + MIN + '10^99.</p>' +
+            '<p>Zoek je een <b>aantal</b>, doe dan de kans keer het totaal en rond af op een heel getal.</p>',
+          wanneer:'je bij een normale verdeling een kans of een aantal zoekt en de grens niet bij de vuistregels past.',
+          maak:function(R){
+            var it = R.kies(NORMAAL), mu, sg, soort = R.kies(['meer', 'minder', 'tussen']), aantal = R.heel(0, 2) === 0, Nt, a, b, P;
+            function gq(){ return Math.round(mu + R.heel(-22, 22) / 10 * sg); }
+            do {
+              mu = R.kies(it.mu); sg = R.kies(it.sg); Nt = R.kies(it.N); a = gq(); b = soort === 'tussen' ? gq() : null;
+              if (b != null && a > b){ var t = a; a = b; b = t; }
+              P = soort === 'meer' ? ncdf(a, null, mu, sg) : soort === 'minder' ? ncdf(null, a, mu, sg) : ncdf(a, b, mu, sg);
+            } while ((soort === 'tussen' && b - a < 2) || a === mu || b === mu || P < 0.02 || P > 0.98 || grens(P, 3, 0.05) || (aantal && (grens(P * Nt, 0, 0.08) || Math.round(P * Nt) !== Math.round(rnd(P, 4) * Nt) || Math.round(P * Nt) !== Math.round(rnd(P, 3) * Nt))));
+            var m = ', ' + mu + ', ' + sg + ')', H = '10^99';
+            var cmd = soort === 'meer' ? 'normalcdf(' + a + ', ' + H + m : soort === 'minder' ? 'normalcdf(' + MIN + H + ', ' + a + m : 'normalcdf(' + a + ', ' + b + m;
+            var cmdF = soort === 'meer' ? ['normalcdf(' + MIN + H + ', ' + a + m, 'normalcdf(' + a + ', ' + H + ', ' + sg + ', ' + mu + ')'] :
+              soort === 'minder' ? ['normalcdf(' + a + ', ' + H + m, 'normalcdf(' + MIN + H + ', ' + a + ', ' + sg + ', ' + mu + ')'] :
+              ['normalcdf(' + MIN + H + ', ' + b + m, 'normalcdf(' + a + ', ' + b + ', ' + sg + ', ' + mu + ')'];
+            var hint = soort === 'meer' ? 'Meer dan ' + a + ': van ' + a + ' tot heel ver naar rechts, dus rechtergrens 10^99. Daarna eerst μ, dan σ.' :
+              soort === 'minder' ? 'Minder dan ' + a + ': van heel ver links tot ' + a + ', dus linkergrens ' + MIN + '10^99. Daarna eerst μ, dan σ.' : 'Tussen ' + a + ' en ' + b + ': eerst de linkergrens, dan de rechtergrens, dan μ en σ.';
+            var ant = rAnt(P, 3), rel = soort === 'meer' ? it.meer + ' ' + T(a) : soort === 'minder' ? it.minder + ' ' + T(a) : 'tussen ' + T(a) + ' en ' + T(b);
+            var st = [
+              K(R, 'Wat tik je in op de GR?', cmd, cmdF, hint),
+              S(cmd + ' ≈ (rond af op 3 decimalen)', ant, 'De GR geeft ' + T(rnd(P, 6)) + '. Rond af op 3 decimalen.', soort !== 'tussen' ? F(ant, rT(1 - P, 3), 'Dat is de andere kant van de grens. Kijk of je meer dan of minder dan zoekt.') : null) ];
+            var o = { vraag:'De kans?', context:normaalZin(it, mu, sg) + ' Bereken met de GR de kans dat ' + datZin(it, soort, a, b) + '. Rond af op 3 decimalen.', antwoord:ant, stappen:st };
+            if (aantal){
+              var n = Math.round(P * Nt);
+              o.vraag = 'Hoeveel ' + it.wie + '?';
+              o.context = normaalZin(it, mu, sg) + ' Het gaat om ' + T(Nt) + ' ' + it.wie + '. ' + normaalVr(it, rel, soort === 'tussen', true) + ' Gebruik de GR en rond af op een heel aantal.';
+              st.push(S(T(rnd(P, 3)) + ' ' + X + ' ' + T(Nt) + ' ≈ (een heel aantal)', n, 'De kans keer het totaal: ' + T(rnd(P * Nt, 2)) + '. Rond af op een heel aantal.', F(n, rT(P, 3), 'Dat is de kans. Doe nog keer ' + T(Nt) + '.')));
+              o.antwoord = T(n); o.eenheid = it.wie;
+            }
+            return o;
+          } },
+        { id:'wha-norm-inv', naam:'Een grens met invNorm', kort:'invNorm(oppervlakte links, μ, σ): bij "meer dan" is de oppervlakte links 1 min het percentage',
+          uit:'<p>Ken je het percentage en zoek je de <b>grens</b>, dan gebruik je <b>invNorm</b> (op de Casio InvNormCD).</p>' +
+            '<p>invNorm rekent altijd met de oppervlakte <b>links</b> van de grens: <b>invNorm(oppervlakte links, μ, σ)</b>.</p>' +
+            '<p>De zwaarste 10% weegt meer dan de grens g. Links van g ligt dan 90%, dus g = invNorm(0.90, μ, σ). De lichtste 10% weegt minder dan g: dan is het invNorm(0.10, μ, σ).</p>',
+          wanneer:'je bij een normale verdeling een percentage weet en de grens zoekt.',
+          maak:function(R){
+            var it = R.kies(NORMAAL), mu, sg, pr, boven, L, g;
+            do { mu = R.kies(it.mu); sg = R.kies(it.sg); pr = R.kies([1, 2, 5, 10, 15, 20, 25, 30, 40]); boven = R.heel(0, 1) === 1; L = boven ? (100 - pr) / 100 : pr / 100; g = inorm(L, mu, sg); } while (grens(g, 1, 0.05));
+            var ant = rAnt(g, 1), gf = inorm(1 - L, mu, sg), rest = ', ' + mu + ', ' + sg + ')';
+            return { vraag:'De grens g?', context:normaalZin(it, mu, sg) + ' ' + pr + '% van de ' + it.wie + ' ' + it.ev + ' ' + (boven ? it.meer : it.minder) + ' een grens g. Bereken g met de GR. Rond af op 1 decimaal.', antwoord:ant, eenheid:it.eh, stappen:[
+              K(R, 'Hoe groot is de oppervlakte links van g?', T(L), [T(rnd(1 - L, 2))], boven ? 'Rechts van g ligt ' + pr + '%. Links ligt de rest: 100% ' + MIN + ' ' + pr + '% = ' + (100 - pr) + '%.' : 'Links van g liggen precies de ' + pr + '% die ' + it.minder + ' g ' + it.mv + '.', { orde:boven ? [T(rnd(1 - L, 2)), T(L)] : [T(L), T(rnd(1 - L, 2))] }),
+              K(R, 'Wat tik je in op de GR?', 'invNorm(' + gT(L) + rest, ['invNorm(' + gT(1 - L) + rest, 'invNorm(' + gT(L) + ', ' + sg + ', ' + mu + ')'], 'invNorm met de oppervlakte links, dan μ, dan σ.'),
+              S('g ≈ (rond af op 1 decimaal)', ant, 'De GR geeft ' + T(rnd(g, 4)) + '.', F(ant, rT(gf, 1), 'Dat is de grens aan de andere kant. Gebruik de oppervlakte links van g.'), { e:it.eh }) ] };
+          } },
+        { id:'wha-norm-terug', naam:'μ of σ terugrekenen met de GR', kort:'Zoek z = invNorm(oppervlakte links, 0, 1); dan g = μ + z · σ, en daaruit μ of σ',
+          uit:'<p>Soms ken je de grens en het percentage, maar is μ of σ onbekend.</p>' +
+            '<p>Gebruik de <b>z-waarde</b>: hoeveel σ de grens van μ af ligt. Met μ = 0 en σ = 1 geeft de GR die direct: z = invNorm(oppervlakte links, 0, 1). Dan geldt <b>g = μ + z · σ</b>.</p>' +
+            '<p>Voorbeeld: σ = 4 gram en 5% van de zakken weegt minder dan 250 gram. z = invNorm(0.05, 0, 1) ≈ ' + MIN + '1,645. Dan 250 = μ ' + MIN + ' 1,645 · 4, dus μ = 250 + 6,58 ≈ <b>256,6 gram</b>.</p>' +
+            '<p>Het kan ook met de GR door te proberen: zet Y1 = normalcdf(' + MIN + '10^99, 250, X, 4) en Y2 = 0.05, en zoek het snijpunt.</p>',
+          wanneer:'je bij een normale verdeling μ of σ zoekt uit een percentage.',
+          maak:function(R){
+            var it = R.kies(NORMAAL), zoekMu = R.heel(0, 1) === 1, mu0, sg0, pr, boven, L, g, z, uit, uitR;
+            do {
+              mu0 = R.kies(it.mu); sg0 = R.kies(it.sg); pr = R.kies([2, 5, 10, 15, 20, 25, 30]); boven = R.heel(0, 1) === 1; L = boven ? (100 - pr) / 100 : pr / 100;
+              g = Math.round(inorm(L, mu0, sg0)); z = inorm(L, 0, 1);
+              uit = zoekMu ? g - z * sg0 : (g - mu0) / z; uitR = zoekMu ? g - rnd(z, 3) * sg0 : (g - mu0) / rnd(z, 3);
+            } while (g === mu0 || grens(uit, 1, 0.06) || rnd(uit, 1) !== rnd(uitR, 1) || uit <= 0);
+            var ant = rAnt(uit, 1), rel = (boven ? it.meer : it.minder) + ' ' + T(g) + ' ' + it.eh;
+            var ctx = it.wat + (zoekMu ? ', met een standaardafwijking van ' + T(sg0) + ' ' + it.eh + '. Het gemiddelde μ is onbekend.' : ', met een gemiddelde van ' + T(mu0) + ' ' + it.eh + '. De standaardafwijking σ is onbekend.') +
+              ' ' + pr + '% van de ' + it.wie + ' ' + it.ev + ' ' + rel + '. Bereken ' + (zoekMu ? 'μ' : 'σ') + '. Rond af op 1 decimaal.';
+            var stap3 = zoekMu ? S(T(g) + ' = μ + ' + paren(rnd(z, 3)) + ' ' + X + ' ' + T(sg0) + ', dus μ = ' + T(g) + ' ' + MIN + ' ' + paren(rnd(z, 3)) + ' ' + X + ' ' + T(sg0) + ' ≈ (1 decimaal)', ant, 'Breng z · σ naar de andere kant: μ = g ' + MIN + ' z · σ.', F(ant, rT(g + z * sg0, 1), 'Let op het teken van z: μ = g min z keer σ.'), { e:it.eh })
+              : S(T(g) + ' = ' + T(mu0) + ' + ' + paren(rnd(z, 3)) + ' ' + X + ' σ, dus σ = (' + T(g) + ' ' + MIN + ' ' + T(mu0) + ') : ' + paren(rnd(z, 3)) + ' ≈ (1 decimaal)', ant, 'De afstand van μ tot de grens is ' + T(g - mu0) + '. Deel die door z.', F(ant, rT(Math.abs((g - mu0) * z), 1), 'Delen door z, niet vermenigvuldigen.'), { e:it.eh });
+            return { vraag:(zoekMu ? 'μ' : 'σ') + ' = ?', context:ctx, antwoord:ant, eenheid:it.eh, stappen:[
+              K(R, 'Hoe groot is de oppervlakte links van ' + T(g) + '?', T(L), [T(rnd(1 - L, 2))], boven ? 'Rechts ligt ' + pr + '%, dus links ' + (100 - pr) + '%.' : 'Links van ' + T(g) + ' liggen de ' + pr + '% die ' + it.minder + ' ' + T(g) + ' ' + it.mv + '.', { orde:boven ? [T(rnd(1 - L, 2)), T(L)] : [T(L), T(rnd(1 - L, 2))] }),
+              S('z = invNorm(' + gT(L) + ', 0, 1) ≈ (3 decimalen)', rAnt(z, 3), 'Met μ = 0 en σ = 1 geeft invNorm de z-waarde. ' + (z < 0 ? 'De grens ligt links van μ, dus z is negatief.' : 'De grens ligt rechts van μ, dus z is positief.'), F(rAnt(z, 3), rT(-z, 3), 'Let op het teken: ligt ' + T(g) + ' links of rechts van het midden?')),
+              stap3 ] };
           } }
       ] },
 
@@ -766,6 +931,109 @@
               K(R, 'Wat is de populatie?', it.pop(P), [it.st(n), 'de ' + it.wat], 'De populatie is de hele groep waar je iets over wilt weten.'),
               S('Welk percentage in de steekproef? ' + k + ' : ' + n + ' ' + X + ' 100% =', pAnt(q), 'Deel ' + k + ' door ' + n + ' en doe keer 100.', F(pAnt(q), T(rnd(n / k, 2)), 'Andersom: het deel gedeeld door het totaal.'), { e:'%' }),
               S('Schatting voor de populatie: ' + q + '% van ' + T(P) + ' =', A, T(q / 100) + ' ' + X + ' ' + T(P) + ' = ' + T(A) + '.', F(A, k, 'Dat is het aantal in de steekproef. Reken het om naar de hele populatie.')) ] };
+          } }
+      ] },
+
+    /* ================= verschillen beschrijven ================= */
+    { groep:{ id:'wha-effect', niveau:'havo', domein:'statistiek', naam:'Verschillen beschrijven',
+        uit:'Wiskunde A: is het verschil tussen twee groepen gering, middelmatig of groot? Met twee boxplots, met phi bij een kruistabel, met het grootste verschil in cumulatieve percentages en met de effectgrootte. De grenzen staan op het formuleblad.' },
+      doelen:[
+        { id:'wha-eff-box', naam:'Twee boxplots vergelijken', kort:'Boxen los van elkaar: groot. Overlap en een mediaan buiten de andere box: middelmatig. Anders: gering',
+          uit:'<p>Met twee boxplots onder elkaar beschrijf je het verschil tussen twee groepen. De <b>box</b> loopt van het eerste tot het derde kwartiel; de dikke streep is de <b>mediaan</b>.</p>' +
+            '<p>Het formuleblad zegt:</p><ul><li>De boxen <b>overlappen elkaar niet</b>: het verschil is <b>groot</b>.</li><li>De boxen overlappen wel, en de <b>mediaan van de ene boxplot ligt buiten de box van de andere</b>: <b>middelmatig</b>.</li><li>In alle andere gevallen: <b>gering</b>.</li></ul>' +
+            '<p>Kijk dus eerst naar de boxen, en pas daarna naar de medianen.</p>',
+          wanneer:'je twee groepen vergelijkt met boxplots.',
+          maak:function(R){
+            var it = R.kies([
+              { zin:'De boxplots laten de reactietijd zien van leerlingen die \'s ochtends getest zijn en van leerlingen die \'s avonds getest zijn.', nm:['ochtend', 'avond'], lo:200, u:10, eh:'ms' },
+              { zin:'De boxplots laten de cijfers zien van twee klassen voor dezelfde toets.', nm:['klas 4A', 'klas 4B'], lo:0, u:0.5, eh:'cijfer' },
+              { zin:'De boxplots laten de lengte zien van jongens en meisjes uit klas 3.', nm:['jongens', 'meisjes'], lo:140, u:2.5, eh:'cm' },
+              { zin:'De boxplots laten zien hoeveel minuten per dag leerlingen van twee scholen op hun telefoon zitten.', nm:['school X', 'school Y'], lo:0, u:15, eh:'minuten' },
+              { zin:'De boxplots laten de opbrengst per tomatenplant zien, met gewone voeding en met nieuwe voeding.', nm:['gewoon', 'nieuw'], lo:2, u:0.25, eh:'kg' } ]);
+            var doel = R.heel(0, 2), a, b;
+            do { a = vijf(R, 0, 20); b = vijf(R, 0, 20); }
+            while (boxKlasse(a, b) !== doel || Math.abs(a[3] - b[1]) < 2 || Math.abs(b[3] - a[1]) < 2 || [a[2]].some(function(m){ return b.slice(1, 4).indexOf(m) >= 0; }) || b.slice(1, 4).indexOf(a[2]) >= 0 || a.slice(1, 4).indexOf(b[2]) >= 0);
+            var w = function(q){ return q.map(function(p){ return rnd(it.lo + p * it.u, 6); }); }, A = w(a), B = w(b), lab = [];
+            for (var i = 0; i <= 20; i += 2) lab.push(rnd(it.lo + i * it.u, 6));
+            var fig = boxFig(A, B, it.nm, it.lo, it.lo + 20 * it.u, lab, it.eh), overlap = doel < 2;
+            var st = [K(R, 'Overlappen de twee boxen elkaar?', overlap ? 'ja' : 'nee', [], 'Kijk alleen naar de gekleurde boxen, niet naar de snorharen. Loopt de ene box een stuk over de andere heen?', { orde:['ja', 'nee'] })];
+            if (overlap) st.push(K(R, 'Ligt de mediaan van een van de boxplots buiten de box van de andere?', doel === 1 ? 'ja' : 'nee', [], 'Volg de dikke streep van ' + it.nm[0] + ' recht naar beneden: valt hij in de box van ' + it.nm[1] + '? En de mediaan van ' + it.nm[1] + ' in de box van ' + it.nm[0] + '?', { orde:['ja', 'nee'] }));
+            st.push(K(R, 'Het verschil tussen ' + it.nm[0] + ' en ' + it.nm[1] + ' is', VERSCHIL[doel], [], ['De boxen overlappen en beide medianen liggen in de box van de andere: gering.', 'De boxen overlappen, maar een mediaan ligt buiten de andere box: middelmatig.', 'De boxen overlappen niet: groot.'][doel], { orde:VERSCHIL }));
+            var l = st[st.length - 1];
+            return { vraag:'boxplots ' + A.join(' ') + ' en ' + B.join(' '), vraagHtml:'Gering, middelmatig of groot?', context:it.zin + ' Is het verschil tussen de groepen gering, middelmatig of groot? Gebruik de regels van het formuleblad.', beeld:fig, zelfBeeld:fig, opties:l.opties, goed:l.goed, stappen:st };
+          } },
+        { id:'wha-eff-phi', naam:'Phi bij een kruistabel', kort:'φ = (ad − bc) / √((a + b)(c + d)(a + c)(b + d)); boven 0,4 of onder −0,4 groot, tussen 0,2 en 0,4 middelmatig',
+          uit:'<p>Bij twee groepen en twee uitkomsten maak je een <b>kruistabel</b> met de getallen a, b (eerste rij) en c, d (tweede rij).</p>' +
+            '<p>Het formuleblad geeft <b>φ = (a · d ' + MIN + ' b · c) / √((a + b)(c + d)(a + c)(b + d))</b>. Onder de wortel staan de twee rijtotalen en de twee kolomtotalen.</p>' +
+            '<ul><li>φ kleiner dan ' + MIN + '0,4 of groter dan 0,4: het verschil is <b>groot</b>.</li><li>φ tussen ' + MIN + '0,4 en ' + MIN + '0,2, of tussen 0,2 en 0,4: <b>middelmatig</b>.</li><li>φ van ' + MIN + '0,2 tot en met 0,2: <b>gering</b>.</li></ul>' +
+            '<p>Het teken zegt alleen welke groep vaker ja heeft. Voor de grootte van het verschil kijk je naar φ zonder min.</p>',
+          wanneer:'je twee groepen vergelijkt met een kruistabel van twee bij twee.',
+          maak:function(R){
+            var it = R.kies([
+              { r:['jongens', 'meisjes'], k:['wel lid', 'geen lid'], zin:'Aan leerlingen is gevraagd of ze lid zijn van een sportclub.' },
+              { r:['stad', 'dorp'], k:['wel', 'geen'], zin:'Aan leerlingen uit de stad en uit een dorp is gevraagd of ze een bijbaan hebben.' },
+              { r:['medicijn', 'nepmiddel'], k:['genezen', 'niet genezen'], zin:'Een groep patiënten kreeg een medicijn, een andere groep een nepmiddel. Daarna is gekeken wie genezen is.' },
+              { r:['ontbijt', 'geen ontbijt'], k:['voldoende', 'onvoldoende'], zin:'Bij een toets is gekeken of leerlingen die ochtend hadden ontbeten, en of ze een voldoende haalden.' },
+              { r:['klas 1', 'klas 6'], k:['fietst', 'fietst niet'], zin:'Aan leerlingen uit klas 1 en klas 6 is gevraagd of ze naar school fietsen.' } ]);
+            var doel = R.heel(0, 2), a, b, c, d, ph, noemer, ap;
+            do { a = R.heel(8, 70); b = R.heel(8, 70); c = R.heel(8, 70); d = R.heel(8, 70); noemer = (a + b) * (c + d) * (a + c) * (b + d); ph = (a * d - b * c) / Math.sqrt(noemer); ap = Math.abs(ph); }
+            while ((ap > 0.4 ? 2 : ap > 0.2 ? 1 : 0) !== doel || Math.abs(ap - 0.2) < 0.02 || Math.abs(ap - 0.4) < 0.02 || grens(ph, 2, 0.05));
+            var tab = R0.teken.tabel([['', it.k[0], it.k[1]], [it.r[0], String(a), String(b)], [it.r[1], String(c), String(d)]], { kop:true, zijkop:true });
+            var teller = a * d - b * c, ant = rAnt(ph, 2);
+            var st = [
+              S('a · d ' + MIN + ' b · c = ' + a + ' ' + X + ' ' + d + ' ' + MIN + ' ' + b + ' ' + X + ' ' + c + ' =', teller, a + ' ' + X + ' ' + d + ' = ' + (a * d) + ' en ' + b + ' ' + X + ' ' + c + ' = ' + (b * c) + '.', F(teller, a * c - b * d, 'Kruislings: a keer d (linksboven keer rechtsonder) min b keer c.', -teller, 'Andersom: a · d min b · c.')),
+              S('Onder de wortel: (' + a + ' + ' + b + ')(' + c + ' + ' + d + ')(' + a + ' + ' + c + ')(' + b + ' + ' + d + ') =', noemer, 'De rijtotalen ' + (a + b) + ' en ' + (c + d) + ' en de kolomtotalen ' + (a + c) + ' en ' + (b + d) + ' met elkaar vermenigvuldigen.'),
+              S('φ = ' + T(teller) + ' / √' + T(noemer) + ' ≈ (rond af op 2 decimalen)', ant, 'Neem eerst de wortel: √' + T(noemer) + ' ≈ ' + T(rnd(Math.sqrt(noemer), 1)) + '. Deel dan.', F(ant, rT(teller / noemer, 2), 'Vergeet de wortel niet.')),
+              K(R, 'φ ≈ ' + rT(ph, 2) + '. Het verschil tussen ' + it.r[0] + ' en ' + it.r[1] + ' is', VERSCHIL[doel], [], 'Kijk naar φ zonder min: ' + rT(ap, 2) + '. Tot en met 0,2 gering, tot en met 0,4 middelmatig, daarboven groot.', { orde:VERSCHIL }) ];
+            var l = st[st.length - 1];
+            return { vraag:'kruistabel ' + [a, b, c, d].join(' '), vraagHtml:'Gering, middelmatig of groot?', context:it.zin + ' Bereken φ en zeg of het verschil tussen ' + it.r[0] + ' en ' + it.r[1] + ' gering, middelmatig of groot is.', beeld:tab, zelfBeeld:tab, opties:l.opties, goed:l.goed, stappen:st };
+          } },
+        { id:'wha-eff-vcp', naam:'Het grootste verschil in cumulatieve percentages', kort:'Max Vcp is het grootste verschil tussen de cumulatieve percentages; boven 40 groot, boven 20 middelmatig',
+          uit:'<p>Hebben twee groepen een frequentieverdeling in dezelfde klassen, dan vergelijk je de <b>cumulatieve percentages</b>: bij elke grens het percentage dat eronder ligt.</p>' +
+            '<p>Bereken bij elke grens het verschil tussen de twee groepen (altijd positief). Het grootste verschil heet <b>max V<sub>cp</sub></b>.</p>' +
+            '<ul><li>max V<sub>cp</sub> groter dan 40: het verschil is <b>groot</b>.</li><li>Groter dan 20 en hoogstens 40: <b>middelmatig</b>.</li><li>Hoogstens 20: <b>gering</b>.</li></ul>',
+          wanneer:'je twee groepen vergelijkt met een cumulatief percentagepolygoon of een tabel met cumulatieve percentages.',
+          maak:function(R){
+            var it = R.kies([
+              { zin:'De tabel geeft de lengte van jongens en meisjes uit klas 3, als cumulatief percentage.', g:['jongens', 'meisjes'], b:[150, 160, 170, 180, 190], eh:'cm' },
+              { zin:'De tabel geeft de reistijd naar school van leerlingen uit de stad en uit een dorp, als cumulatief percentage.', g:['stad', 'dorp'], b:[10, 20, 30, 40, 50], eh:'min' },
+              { zin:'De tabel geeft de score op een toets van groep 1 en groep 2, als cumulatief percentage.', g:['groep 1', 'groep 2'], b:[20, 40, 60, 80, 100], eh:'punten' },
+              { zin:'De tabel geeft het gewicht van appels van twee bomen, als cumulatief percentage.', g:['boom A', 'boom B'], b:[120, 140, 160, 180, 200], eh:'gram' } ]);
+            var doel = R.heel(0, 2), c1, c2, vs, mx;
+            function cum(){ var l; do { l = [R.heel(3, 97), R.heel(3, 97), R.heel(3, 97), R.heel(3, 97)].sort(function(x, y){ return x - y; }); } while (l[1] - l[0] < 4 || l[2] - l[1] < 4 || l[3] - l[2] < 4); return l.concat([100]); }
+            do { c1 = cum(); c2 = cum(); vs = c1.map(function(x, i){ return Math.abs(x - c2[i]); }); mx = Math.max.apply(null, vs); }
+            while ((mx > 40 ? 2 : mx > 20 ? 1 : 0) !== doel || Math.abs(mx - 20) <= 1 || Math.abs(mx - 40) <= 1 || vs.filter(function(v){ return v === mx; }).length > 1 || vs[0] === mx);
+            var tab = R0.teken.tabel([[it.eh].concat(it.b.map(function(x){ return 'onder ' + x; })), [it.g[0]].concat(c1.map(String)), [it.g[1]].concat(c2.map(String))], { kop:true, zijkop:true });
+            var st = [
+              S('Het verschil bij de grens ' + it.b[0] + ': ' + Math.max(c1[0], c2[0]) + ' ' + MIN + ' ' + Math.min(c1[0], c2[0]) + ' =', vs[0], 'Het grootste min het kleinste percentage.'),
+              S('Bereken bij elke grens het verschil. Het grootste verschil, max V<sub>cp</sub> =', mx, 'De verschillen zijn ' + vs.slice(0, 4).join(', ') + ' (en bij ' + it.b[4] + ' is het 0). De grootste is ' + mx + '.', F(mx, vs[0], 'Dat is het verschil bij de eerste grens. Kijk bij alle grenzen.')),
+              K(R, 'max V<sub>cp</sub> = ' + mx + '. Het verschil tussen ' + it.g[0] + ' en ' + it.g[1] + ' is', VERSCHIL[doel], [], 'Hoogstens 20 is gering, boven 20 tot en met 40 is middelmatig, boven 40 is groot.', { orde:VERSCHIL }) ];
+            var l = st[st.length - 1];
+            return { vraag:'cumulatief ' + c1.join(' ') + ' en ' + c2.join(' '), vraagHtml:'Gering, middelmatig of groot?', context:it.zin + ' Bereken max V<sub>cp</sub> en zeg of het verschil gering, middelmatig of groot is.', beeld:tab, zelfBeeld:tab, opties:l.opties, goed:l.goed, stappen:st };
+          } },
+        { id:'wha-eff-e', naam:'De effectgrootte E', kort:'E = (x̄1 − x̄2) / (½(S1 + S2)); boven 0,8 of onder −0,8 groot, tussen 0,4 en 0,8 middelmatig',
+          uit:'<p>Ken je van twee groepen het gemiddelde en de standaardafwijking, dan bereken je de <b>effectgrootte</b>: <b>E = (x̄<sub>1</sub> ' + MIN + ' x̄<sub>2</sub>) / (½(S<sub>1</sub> + S<sub>2</sub>))</b>.</p>' +
+            '<p>Je deelt het verschil van de gemiddelden door de gemiddelde standaardafwijking. Zo zie je of het verschil groot is vergeleken met de spreiding.</p>' +
+            '<ul><li>E kleiner dan ' + MIN + '0,8 of groter dan 0,8: het verschil is <b>groot</b>.</li><li>E tussen ' + MIN + '0,8 en ' + MIN + '0,4, of tussen 0,4 en 0,8: <b>middelmatig</b>.</li><li>E van ' + MIN + '0,4 tot en met 0,4: <b>gering</b>.</li></ul>',
+          wanneer:'je twee groepen vergelijkt waarvan je het gemiddelde en de standaardafwijking kent.',
+          maak:function(R){
+            var it = R.kies([
+              { zin:'Twee klassen maakten dezelfde toets.', g:['klas A', 'klas B'], m:[50, 78], s:[6, 16], f:10, eh:'' },
+              { zin:'De lengte van leerlingen uit klas 4 van twee scholen is gemeten.', g:['school 1', 'school 2'], m:[164, 182], s:[5, 9], f:1, eh:'cm' },
+              { zin:'Bij een test is de reactietijd gemeten van een groep die net had gesport en een groep die niet had gesport.', g:['gesport', 'niet gesport'], m:[220, 300], s:[20, 45], f:1, eh:'ms' },
+              { zin:'Twee groepen hielden een week bij hoeveel uur ze per nacht sliepen.', g:['groep 1', 'groep 2'], m:[65, 90], s:[5, 12], f:10, eh:'uur' } ]);
+            var doel = R.heel(0, 2), m1, m2, s1, s2, E;
+            do { m1 = R.heel(it.m[0], it.m[1]) / it.f; m2 = R.heel(it.m[0], it.m[1]) / it.f; s1 = R.heel(it.s[0], it.s[1]) / it.f; s2 = R.heel(it.s[0], it.s[1]) / it.f; E = (m1 - m2) / (0.5 * (s1 + s2)); }
+            while (m1 === m2 || (Math.abs(E) > 0.8 ? 2 : Math.abs(E) > 0.4 ? 1 : 0) !== doel || Math.abs(Math.abs(E) - 0.4) < 0.02 || Math.abs(Math.abs(E) - 0.8) < 0.02 || grens(E, 2, 0.05));
+            var e = it.eh ? ' ' + it.eh : '', vs = rnd(m1 - m2, 6), sg = rnd(0.5 * (s1 + s2), 6), ant = rAnt(E, 2);
+            var tab = R0.teken.tabel([['', 'gemiddelde', 'standaardafwijking'], [it.g[0], T(m1) + e, T(s1) + e], [it.g[1], T(m2) + e, T(s2) + e]], { kop:true, zijkop:true });
+            var st = [
+              S('x̄<sub>1</sub> ' + MIN + ' x̄<sub>2</sub> = ' + T(m1) + ' ' + MIN + ' ' + T(m2) + ' =', vs, 'Het gemiddelde van ' + it.g[0] + ' min dat van ' + it.g[1] + '.', null, { e:it.eh }),
+              S('½(S<sub>1</sub> + S<sub>2</sub>) = ½ ' + X + ' (' + T(s1) + ' + ' + T(s2) + ') =', sg, 'De twee standaardafwijkingen samen, gedeeld door 2.', F(sg, rnd(s1 + s2, 6), 'Neem de helft: het gemiddelde van de twee standaardafwijkingen.'), { e:it.eh }),
+              S('E = ' + T(vs) + ' / ' + T(sg) + ' ≈ (rond af op 2 decimalen)', ant, 'Deel het verschil door de gemiddelde standaardafwijking.', F(ant, rT(vs / (s1 + s2), 2), 'Je deelde door de som. Deel door de helft daarvan.')),
+              K(R, 'E ≈ ' + rT(E, 2) + '. Het verschil tussen ' + it.g[0] + ' en ' + it.g[1] + ' is', VERSCHIL[doel], [], 'Kijk naar E zonder min: ' + rT(Math.abs(E), 2) + '. Tot en met 0,4 gering, tot en met 0,8 middelmatig, daarboven groot.', { orde:VERSCHIL }) ];
+            var l = st[st.length - 1];
+            return { vraag:'gemiddelden ' + [m1, s1, m2, s2].join(' '), vraagHtml:'Gering, middelmatig of groot?', context:it.zin + ' De tabel geeft de gemiddelden en de standaardafwijkingen. Bereken de effectgrootte E en zeg of het verschil gering, middelmatig of groot is.', beeld:tab, zelfBeeld:tab, opties:l.opties, goed:l.goed, stappen:st };
           } }
       ] },
 

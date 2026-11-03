@@ -1,11 +1,17 @@
 /* De leerroute wiskunde: meetkunde in de onderbouw (klas 1 tot 3).
    Soorten hoeken en hoeken met drie letters, nevenhoeken, overstaande hoeken, F- en
-   Z-hoeken, de hoekensom van een (gelijkbenige) driehoek; wat cm² is en welke eenheid
-   past, omtrek en oppervlakte van rechthoek, vierkant, driehoek, parallellogram, trapezium,
-   ruit en vlieger, vierkante maten omrekenen, de cirkel, samengestelde figuren
-   (erbij of eraf); inhoud en oppervlakte van balk, prisma en cilinder, inhoudsmaten;
-   Pythagoras; gelijkvormigheid (factor of verhoudingstabel); spiegelen, verschuiven
-   en draaien in een assenstelsel. Elke manier een eigen doel.
+   Z-hoeken, de hoekensom van een (gelijkbenige) driehoek, een hoek meten met de
+   gradenboog, hoeken rond een punt, hoeken in vierhoek, parallellogram en ruit, de
+   buitenhoek, soorten vierhoeken; wat cm² is en welke eenheid past, omtrek en
+   oppervlakte van rechthoek, vierkant, driehoek, parallellogram, trapezium, ruit en
+   vlieger, omtrek van samengestelde figuren, oppervlakte op roosterpapier, hoogte of
+   basis terugrekenen, vierkante maten omrekenen, de cirkel (ook de straal terug),
+   samengestelde figuren (erbij of eraf); inhoud en oppervlakte van balk, prisma en
+   cilinder, inhoud van piramide en kegel, inhoudsmaten; ruimtefiguren (herkennen en
+   tellen, ABCD.EFGH, kubusuitslagen, aanzichten van blokkenbouwsels); Pythagoras (ook
+   in een samengestelde figuur); gelijkvormigheid (factor, verhoudingstabel of hoeken);
+   symmetrieassen, draai- en puntsymmetrie, spiegelen in een lijn, verschuiven en
+   draaien in een assenstelsel. Elke manier een eigen doel.
    Hoeken met een letter en de hoekensom van een veelhoek staan in wiskunde-meetkunde.js.
    Zie leerroute.js voor het formaat. */
 (function(){
@@ -295,7 +301,7 @@
 
   /* ================= 1 hoeken ================= */
   G.push({ groep:{ id:'wob-m-hoek', niveau:'onderbouw', domein:'meetkunde', naam:'Hoeken',
-      uit:'Soorten hoeken, een hoek opschrijven met drie letters, en de eerste twee hoekregels: nevenhoeken en overstaande hoeken.' },
+      uit:'Soorten hoeken, een hoek opschrijven met drie letters, een hoek meten met de gradenboog, en de eerste hoekregels: nevenhoeken, overstaande hoeken en hoeken rond een punt.' },
     doelen:[
       { id:'wob-m-hoek-soort', naam:'Soorten hoeken', kort:'Vergelijk de hoek met 90° en daarna met 180°: scherp, recht, stomp of gestrekt',
         uit:'<p>Een hoek meet je in <b>graden</b>. Er zijn vier soorten.</p><p>Een <b>scherpe</b> hoek is kleiner dan 90°. Een <b>rechte</b> hoek is precies 90°; die teken je met een hokje. Een <b>stompe</b> hoek zit tussen 90° en 180°. Een <b>gestrekte</b> hoek is precies 180°: de benen vormen samen één rechte lijn.</p><p>Vergelijk de hoek dus eerst met 90°. Is hij groter, vergelijk hem dan met 180°.</p>',
@@ -360,6 +366,52 @@
             kstap(R, 'Welke hoek ligt recht tegenover ' + NM[i] + '?', NM[j], [NM[(i + 1) % 4], NM[(i + 3) % 4]], 'Ga vanuit ' + NM[i] + ' door het snijpunt ' + nm[4] + ' heen naar de overkant.'),
             kstap(R, 'Overstaande hoeken zijn', 'even groot', [], 'Bij een kruis zijn de hoeken tegenover elkaar steeds gelijk.', { orde:['even groot', 'samen 180°'] }),
             St(NM[j] + ' =', gr(w), NM[j] + ' is even groot als ' + NM[i] + ': ' + w + '°.', Fz(gr(w), F(String(180 - w), 'Dat is de nevenhoek. Overstaande hoeken zijn even groot.')), { e:'°' }) ] };
+        } },
+      { id:'wob-m-hoek-meten', naam:'Een hoek meten met de geodriehoek', kort:'Leg de nullijn langs het ene been en lees af op de schaal die aan die kant bij 0 begint',
+        uit:'<p>Een hoek meet je met de <b>gradenboog</b> van je geodriehoek. Zet het midden van de nullijn precies op het <b>hoekpunt</b> en leg de nullijn langs het <b>ene been</b>.</p>' +
+          '<p>Op de boog staan <b>twee schalen</b>: de ene begint rechts bij 0, de andere links. Kijk naar de kant waar het ene been ligt. Gebruik de schaal die <b>daar bij 0 begint</b>, en lees af waar het <b>andere been</b> de boog snijdt.</p>' +
+          '<p>Controleer altijd met een schatting: een <b>scherpe</b> hoek is kleiner dan 90°, een <b>stompe</b> groter. Lees je 130° af bij een scherpe hoek, dan nam je de verkeerde schaal: het is 50°.</p>',
+        wanneer:'je een hoek moet meten of tekenen met je geodriehoek.',
+        maak:function(R){
+          var a; do { a = R.heel(3, 33) * 5; } while (a === 90);
+          var rechts = R.heel(0, 1) === 1, buitenR = R.heel(0, 1) === 1, rich2 = rechts ? a : 180 - a;
+          var cx = 215, cy = 205, r = 150, s = '';
+          s += pad('M' + (cx - r) + ' ' + cy + ' A' + r + ' ' + r + ' 0 0 1 ' + (cx + r) + ' ' + cy + ' Z', { f:K[2], fo:0.12, w:2 });
+          s += pad('M' + (cx - r + 44) + ' ' + cy + ' A' + (r - 44) + ' ' + (r - 44) + ' 0 0 1 ' + (cx + r - 44) + ' ' + cy, { w:1, op:0.5 });
+          for (var g = 0; g <= 180; g += 5){
+            var lang = g % 10 === 0, p1 = pol(cx, cy, r, g), p2 = pol(cx, cy, r - (lang ? 13 : 7), g);
+            s += lnP(p1, p2, { w:lang ? 1.6 : 1, op:0.8 });
+            if (lang){
+              var vB = buitenR ? g : 180 - g, vI = 180 - vB, q1 = pol(cx, cy, r - 24, g), q2 = pol(cx, cy, r - 37, g);
+              s += tx(q1[0], q1[1], String(vB), { mid:true, fs:10, k:K[0] }) + tx(q2[0], q2[1], String(vI), { mid:true, fs:9, k:K[3] });
+            }
+          }
+          var e1 = pol(cx, cy, r + 40, rechts ? 0 : 180), e2 = pol(cx, cy, r + 40, rich2);
+          s += lnP([cx, cy], e1, { w:3.5, k:'var(--ink)' }) + lnP([cx, cy], e2, { w:3.5, k:'var(--ink)' }) + cir(cx, cy, 4, { f:'var(--ink)', s:'none', w:0 });
+          var bl = svg(430, 225, s, 'een hoek met een gradenboog met twee schalen', 440);
+          var kant = rechts ? 'rechts' : 'links', SCH = ['de buitenste schaal', 'de binnenste schaal'], goedS = (rechts === buitenR) ? SCH[0] : SCH[1], SRT = ['scherp: kleiner dan 90°', 'stomp: tussen 90° en 180°'];
+          return { vraag:'gradenboog ' + a + ' ' + kant + ' ' + (buitenR ? 'b' : 'i'), vraagHtml:'Hoe groot is de hoek?', context:'Lees de hoek af op de gradenboog. Het ene been ligt langs de nullijn en wijst naar ' + kant + '.', eenheid:'°', beeld:bl, zelfBeeld:bl, stappen:[
+            kstap(R, 'Schat eerst: is de hoek scherp of stomp?', SRT[a < 90 ? 0 : 1], [], a < 90 ? 'De opening is kleiner dan een rechte hoek.' : 'De opening is groter dan een rechte hoek.', { orde:SRT }),
+            kstap(R, 'Het ene been wijst naar ' + kant + '. Welke schaal begint ' + kant + ' bij 0?', goedS, [], 'Kijk ' + kant + ' op de nullijn: bij welke rij getallen staat daar een 0?', { orde:SCH }),
+            St('Lees op ' + goedS + ' af waar het andere been de boog snijdt. De hoek is', gr(a), 'Tel vanaf 0 op ' + goedS + '. Elk klein streepje is 5°. Controle: de hoek is ' + (a < 90 ? 'scherp' : 'stomp') + '.', Fz(gr(a), F(String(180 - a), 'Dat lees je af op de andere schaal. De hoek is ' + (a < 90 ? 'scherp, dus kleiner dan 90°.' : 'stomp, dus groter dan 90°.'))), { e:'°' }) ] };
+        } },
+      { id:'wob-m-hoek-rond', naam:'Hoeken rond een punt', kort:'Alle hoeken rond een punt zijn samen 360°: een hele draai',
+        uit:'<p>Draai je helemaal rond een punt, dan heb je een <b>hele draai</b> gemaakt: <b>360°</b>.</p><p>Liggen er een paar hoeken rond een punt, zonder gaten en zonder overlap, dan zijn ze dus <b>samen 360°</b>.</p><p>Hoeken van 100°, 120° en 85° rond punt M: samen 305°. De laatste hoek is 360 ' + MIN + ' 305 = <b>55°</b>.</p>',
+        wanneer:'er een paar hoeken samen rond één punt liggen.',
+        maak:function(R){
+          var n = R.kies([3, 3, 4]), h, q;
+          do { h = []; var som = 0; for (var i = 0; i < n - 1; i++){ var v = R.heel(7, 34) * 5; h.push(v); som += v; } h.push(360 - som); q = R.heel(0, n - 1); }
+          while (h.some(function(v){ return v < 35 || v === 180 || v > 200; }) || h[q] === 90);
+          var rot = R.heel(0, 11) * 30 + 10, cx = 200, cy = 140, L = 115, s = '', d = rot, nm = R.kies([['A', 'B', 'C', 'D'], ['P', 'Q', 'R', 'S'], ['K', 'L', 'N', 'O']]);
+          h.forEach(function(v, k){ s += hoekje(cx, cy, d, d + v, { t:k === q ? '?' : v + '°', k:k === q ? K[1] : [K[0], K[3], K[2], K[4]][k], r:v < 50 ? 52 : 36, lr:v < 50 ? 22 : 20 }); d += v; });
+          d = rot; h.forEach(function(v, k){ var p = pol(cx, cy, L, d); s += lnP([cx, cy], p, { w:3 }) + tx(pol(cx, cy, L + 15, d)[0], pol(cx, cy, L + 15, d)[1], nm[k], { mid:true, vet:true, fs:15 }); d += v; });
+          s += cir(cx, cy, 4, { f:'var(--ink)', s:'none', w:0 }) + tx(cx + 12, cy + 16, 'M', { mid:true, vet:true, fs:14 });
+          var bl = svg(400, 280, s, n + ' hoeken rond punt M', 400);
+          var bek = h.filter(function(v, k){ return k !== q; }), sb = bek.reduce(function(x, y){ return x + y; }, 0), uit = 360 - sb;
+          return { vraag:'? = ?', vraagHtml:'Hoe groot is de hoek met het vraagteken?', context:'Rond punt M liggen ' + n + ' hoeken. Bekend zijn: ' + bek.map(function(v){ return v + '°'; }).join(', ').replace(/, ([^,]*)$/, ' en $1') + '. Bereken de hoek met het vraagteken.', eenheid:'°', beeld:bl, zelfBeeld:bl, stappen:[
+            kstap(R, 'Hoeveel graden zijn alle hoeken rond een punt samen?', '360°', [], 'Rond een punt maak je een hele draai.', { orde:['90°', '180°', '360°'] }),
+            St('De bekende hoeken samen: ' + bek.join(' + ') + ' =', gr(sb), 'Tel de ' + bek.length + ' hoeken op.', null, { e:'°' }),
+            St('De hoek met het vraagteken = 360 ' + MIN + ' ' + sb + ' =', gr(uit), 'Wat er van de hele draai overblijft.', Fz(gr(uit), F(String(180 - sb), 'Rond een punt is het samen 360°, niet 180°.', String(sb), 'Dat zijn de bekende hoeken samen. Trek ze af van 360°.')), { e:'°' }) ] };
         } }
     ] });
 
@@ -681,13 +733,171 @@
             St('1 ' + gr + '² is ' + st + ' ' + kl + ' bij ' + st + ' ' + kl + '. 1 ' + gr + '² = ' + st + ' ' + X + ' ' + st + ' =', metE(T(kw), kl + '²'), st + ' rijen van ' + st + ' hokjes: ' + st + ' ' + X + ' ' + st + '.', F(String(st), 'Een ' + gr + '² is ' + st + ' ' + kl + ' lang én ' + st + ' ' + kl + ' breed. Dat zijn ' + st + ' rijen van ' + st + ': ' + st + ' ' + X + ' ' + st + '.'), { e:kl + '²', waarom:'Het vierkant is lang én breed, dus de stap van ' + st + ' telt twee keer.' }),
             kstap(R, 'Van ' + v.van + ' naar ' + v.naar + ': wat doe je?', keer ? OPT[0] : OPT[1], [], keer ? 'Naar een kleinere eenheid: er passen meer hokjes in, dus keer ' + T(kw) + '.' : 'Naar een grotere eenheid: er passen minder in, dus gedeeld door ' + T(kw) + '.', { orde:OPT }),
             St(T(x) + ' ' + v.van + ' = (in ' + v.naar + ')', metE(T(y), v.naar), keer ? T(x) + ' ' + X + ' ' + T(kw) + ' = ' + T(y) + '.' : T(x) + ' : ' + T(kw) + ' = ' + T(y) + '.', Fz(metE(T(y), v.naar), fo), { e:v.naar }) ] };
+        } },
+      { id:'wob-m-opp-omtrek', naam:'Omtrek van driehoek, parallellogram en trapezium', kort:'De omtrek is de rand: tel alle zijden op. De hoogte hoort er niet bij',
+        uit:'<p>De <b>omtrek</b> is de lengte van de <b>rand</b> van een figuur. Loop in gedachten één keer rond en tel alle zijden op.</p>' +
+          '<p>Een <b>driehoek</b> heeft drie zijden, een <b>trapezium</b> vier. Bij een <b>parallellogram</b> zijn de overstaande zijden even lang: omtrek = 2 ' + X + ' (basis + schuine zijde).</p>' +
+          '<p>De <b>hoogte</b> (de stippellijn) loopt dwars door de figuur. Die is geen rand, dus die tel je <b>niet</b> mee. De hoogte heb je alleen nodig voor de oppervlakte.</p>' +
+          '<p>Driehoek met zijden 13, 14 en 15 cm: omtrek = 13 + 14 + 15 = <b>42 cm</b>.</p>',
+        wanneer:'je de lengte van de rand van een figuur met rechte zijden zoekt.',
+        maak:function(R){
+          var v = R.kies(['drie', 'drie', 'para', 'trap']), e = R.kies(['cm', 'cm', 'm']), bl, ctx, O, zijdenL, st;
+          var HT = { 12:[[5, 13], [9, 15], [16, 20]], 8:[[6, 10], [15, 17]], 4:[[3, 5]], 3:[[4, 5]], 6:[[8, 10]], 24:[[7, 25], [10, 26]] };
+          var JA = ['nee: de hoogte is geen rand', 'ja: alle maten tellen mee'];
+          if (v === 'drie' || v === 'trap'){
+            var h = +R.kies(['12', '12', '8', '4', '3', '6', '24']), p1 = R.kies(HT[h]), p2 = R.kies(HT[h]), c = v === 'trap' ? R.heel(2, 9) : 0;
+            var a = p1[0] + p2[0] + c;
+            if (v === 'drie'){
+              var Pd = [[0, 0], [a, 0], [p1[0], h]];
+              zijdenL = [a, p2[1], p1[1]]; O = a + p2[1] + p1[1];
+              bl = tekenFig(Pd, { zijde:[a + ' ' + e, p2[1] + ' ' + e, p1[1] + ' ' + e], markeer:false, W:380, H:250, extra:[[0, -0.6]], aria:'driehoek met drie zijden en een hoogte',
+                na:function(P, f){ return hoogteLijn(P[2], f([p1[0], 0]), 1, h + ' ' + e, (a - p1[0]) >= p1[0] ? 1 : -1); } });
+              ctx = 'De zijden van de driehoek zijn ' + a + ', ' + p2[1] + ' en ' + p1[1] + ' ' + e + '. De hoogte (de stippellijn) is ' + h + ' ' + e + '. Bereken de omtrek.';
+            } else {
+              var Pt = [[0, 0], [a, 0], [p1[0] + c, h], [p1[0], h]];
+              zijdenL = [a, p2[1], c, p1[1]]; O = a + p2[1] + c + p1[1];
+              bl = tekenFig(Pt, { zijde:[a + ' ' + e, p2[1] + ' ' + e, c + ' ' + e, p1[1] + ' ' + e], markeer:false, W:400, H:250, extra:[[0, -0.6]], aria:'trapezium met vier zijden en een hoogte',
+                na:function(P, f){ var xh = p1[0] + c / 2; return hoogteLijn(f([xh, h]), f([xh, 0]), 1, h + ' ' + e, 1); } });
+              ctx = 'De zijden van het trapezium zijn ' + a + ', ' + p2[1] + ', ' + c + ' en ' + p1[1] + ' ' + e + '. De hoogte (de stippellijn) is ' + h + ' ' + e + '. Bereken de omtrek.';
+            }
+            st = [kstap(R, 'Hoort de hoogte van ' + h + ' ' + e + ' bij de omtrek?', JA[0], [], 'De omtrek is de rand. De hoogte loopt door de figuur heen.', { orde:JA }),
+              St('Omtrek = ' + zijdenL.join(' + ') + ' =', metE(String(O), e), 'Tel alle ' + zijdenL.length + ' zijden op.', Fz(metE(String(O), e), F(String(O + h), 'De hoogte hoort niet bij de rand. Laat hem weg.', String(O - zijdenL[zijdenL.length - 1]), 'Je vergat een zijde. Tel ze allemaal.')), { e:e }) ];
+          } else {
+            var t = R.kies(TRIPEL.filter(function(x){ return x[0] <= 9; })), pp = t[0], hh = t[1], s = t[2], b = R.heel(Math.max(5, pp), 14);
+            O = 2 * (b + s);
+            bl = tekenFig([[0, 0], [b, 0], [b + pp, hh], [pp, hh]], { zijde:[b + ' ' + e, '', '', s + ' ' + e], markeer:false, W:400, H:240, extra:[[0, -0.6]], aria:'parallellogram met basis, schuine zijde en hoogte',
+              na:function(P, f){ return hoogteLijn(P[3], f([pp, 0]), 1, hh + ' ' + e, 1); } });
+            ctx = 'De basis van het parallellogram is ' + b + ' ' + e + ', de schuine zijde is ' + s + ' ' + e + ' en de hoogte (de stippellijn) is ' + hh + ' ' + e + '. Bereken de omtrek.';
+            st = [kstap(R, 'Welke twee maten heb je nodig voor de omtrek?', 'de basis en de schuine zijde', ['de basis en de hoogte', 'de schuine zijde en de hoogte'], 'De omtrek is de rand. De hoogte loopt door de figuur heen, die hoort er niet bij.'),
+              St('Eén basis en één schuine zijde samen: ' + b + ' + ' + s + ' =', metE(String(b + s), e), 'Tel ze op.', Fz(metE(String(b + s), e), F(String(b + hh), 'Je nam de hoogte. Neem de schuine zijde.')), { e:e }),
+              St('Omtrek = 2 ' + X + ' ' + (b + s) + ' =', metE(String(O), e), 'Overstaande zijden zijn even lang: er zijn twee basissen en twee schuine zijden.', Fz(metE(String(O), e), F(String(b + s), 'Er zijn er van elk twee: doe nog keer 2.', String(2 * (b + hh)), 'Je nam de hoogte. De omtrek gaat over de schuine zijden.')), { e:e }) ];
+          }
+          return { vraag:'Omtrek?', context:ctx, eenheid:e, beeld:bl, zelfBeeld:bl, stappen:st };
+        } },
+      { id:'wob-m-opp-omtrek-sam', naam:'Omtrek van een samengestelde figuur', kort:'Reken eerst de zijden uit die er niet bij staan, en tel dan de hele rand op',
+        uit:'<p>Bij een figuur met hoekjes eruit staan niet alle maten erbij. Die reken je eerst uit.</p>' +
+          '<p>Kijk naar de <b>overkant</b>. Is de onderkant 10 cm en de bovenkant bestaat uit een stuk van 6 cm en een stuk dat je zoekt, dan is dat stuk 10 ' + MIN + ' 6 = 4 cm.</p>' +
+          '<p>Tel daarna <b>alle</b> zijden op. Loop in gedachten één keer rond, zodat je er geen vergeet.</p>',
+        wanneer:'je de omtrek zoekt van een figuur die bestaat uit rechthoeken.',
+        maak:function(R){
+          var u = R.heel(0, 2) === 0, e = R.kies(['cm', 'm']), Wd = R.heel(7, 14), Hd = R.heel(5, 10), O, Pn, LB, st;
+          if (!u){
+            var cw = R.heel(2, Wd - 3), ch = R.heel(2, Hd - 2);
+            Pn = [[0, 0], [Wd, 0], [Wd, Hd - ch], [Wd - cw, Hd - ch], [Wd - cw, Hd], [0, Hd]];
+            LB = [Wd + ' ' + e, (Hd - ch) + ' ' + e, '?', '?', (Wd - cw) + ' ' + e, Hd + ' ' + e];
+            O = 2 * (Wd + Hd);
+            st = [St('De korte zijde die naar links loopt: ' + Wd + ' ' + MIN + ' ' + (Wd - cw) + ' =', metE(String(cw), e), 'Onder is het ' + Wd + ' ' + e + '. Boven is het ' + (Wd - cw) + ' ' + e + ' plus het stuk dat je zoekt.', null, { e:e }),
+              St('De korte zijde die omhoog loopt: ' + Hd + ' ' + MIN + ' ' + (Hd - ch) + ' =', metE(String(ch), e), 'Links is het ' + Hd + ' ' + e + '. Rechts is het ' + (Hd - ch) + ' ' + e + ' plus het stuk dat je zoekt.', null, { e:e }),
+              St('Omtrek = ' + [Wd, Hd - ch, cw, ch, Wd - cw, Hd].join(' + ') + ' =', metE(String(O), e), 'Tel alle zes zijden op.', Fz(metE(String(O), e), F(String(O - cw - ch), 'Je vergat de twee zijden die je net uitrekende.', String(Wd * Hd - cw * ch), 'Dat is de oppervlakte. De omtrek is de rand.')), { e:e }) ];
+          } else {
+            var t1 = R.heel(2, 4), t2 = R.heel(2, 4), dp = R.heel(2, Hd - 2);
+            if (Wd - t1 - t2 < 2) Wd = t1 + t2 + R.heel(2, 5);
+            var gap = Wd - t1 - t2;
+            Pn = [[0, 0], [Wd, 0], [Wd, Hd], [Wd - t2, Hd], [Wd - t2, Hd - dp], [t1, Hd - dp], [t1, Hd], [0, Hd]];
+            LB = [Wd + ' ' + e, Hd + ' ' + e, t2 + ' ' + e, '?', '?', dp + ' ' + e, t1 + ' ' + e, Hd + ' ' + e];
+            O = 2 * Wd + 2 * Hd + 2 * dp;
+            st = [St('De onderkant van de uitsparing: ' + Wd + ' ' + MIN + ' ' + t1 + ' ' + MIN + ' ' + t2 + ' =', metE(String(gap), e), 'Onder is het ' + Wd + ' ' + e + '. Boven gaan de twee pootjes van ' + t1 + ' en ' + t2 + ' ' + e + ' eraf.', Fz(metE(String(gap), e), F(String(Wd - t1), 'Haal beide pootjes eraf.', String(Wd - t2), 'Haal beide pootjes eraf.')), { e:e }),
+              St('De rechterkant van de uitsparing is even diep als de linker:', metE(String(dp), e), 'Beide pootjes zijn ' + Hd + ' ' + e + ' hoog en de bodem van de uitsparing ligt recht: links en rechts is de uitsparing ' + dp + ' ' + e + ' diep.', null, { e:e }),
+              St('Omtrek = ' + [Wd, Hd, t2, dp, gap, dp, t1, Hd].join(' + ') + ' =', metE(String(O), e), 'Tel alle acht zijden op.', Fz(metE(String(O), e), F(String(2 * Wd + 2 * Hd), 'Je vergat de twee zijkanten van de uitsparing.', String(O - dp), 'Er zijn twee zijkanten van ' + dp + ' ' + e + ' in de uitsparing.')), { e:e }) ];
+          }
+          var bl = function(n){
+            var f = pas(Pn, 380, 250, 44).f, P = Pn.map(f), cx = 0, cy = 0, s = pad(pth(P), { f:K[0], fo:0.1, w:2.5 });
+            Pn.forEach(function(p){ cx += p[0] / Pn.length; cy += p[1] / Pn.length; });
+            LB.forEach(function(t, i){
+              var A = Pn[i], B = Pn[(i + 1) % Pn.length], mx = (A[0] + B[0]) / 2, my = (A[1] + B[1]) / 2, hor = A[1] === B[1];
+              var nx = hor ? 0 : (B[1] > A[1] ? 1 : -1), ny = hor ? (B[0] > A[0] ? -1 : 1) : 0, q = f([mx, my]), tt = t, binnen = hor ? (A[1] !== 0 && A[1] !== Hd) : (A[0] !== 0 && A[0] !== Wd);
+              if (binnen){ nx = -nx; ny = -ny; }
+              if (t === '?' && (hor ? n >= 1 : n >= 2)) tt = (hor ? (u ? String(Wd - t1 - t2) : String(cw)) : (u ? String(dp) : String(ch))) + ' ' + e;
+              s += tx(q[0] + nx * (14 + String(tt).length * 3.2), q[1] - ny * 15, tt, { mid:true, vet:true, fs:15, k:t === '?' ? K[1] : null });
+            });
+            return svg(380, 250, s, u ? 'een U-vormige figuur' : 'een L-vormige figuur', 400);
+          };
+          return { vraag:'Omtrek?', context:'De figuur is ' + Wd + ' ' + e + ' breed en ' + Hd + ' ' + e + ' hoog, en alle hoeken zijn recht. Bij twee zijden staat een vraagteken. Bereken de omtrek.', eenheid:e, beeld:bl, zelfBeeld:bl(0), stappen:st };
+        } },
+      { id:'wob-m-opp-rooster', naam:'Oppervlakte op roosterpapier', kort:'Teken een rechthoek eromheen en haal de rechthoekige driehoeken eromheen eraf',
+        uit:'<p>Een schuine figuur op roosterpapier kun je niet in hokjes tellen. Gebruik de <b>rechthoek eromheen</b>.</p>' +
+          '<p>1. Teken de kleinste rechthoek langs de roosterlijnen die precies om de figuur past, en bereken de oppervlakte.</p>' +
+          '<p>2. Tussen de figuur en de rechthoek liggen <b>rechthoekige driehoeken</b>. Elk is een halve rechthoek: rechthoekszijde ' + X + ' rechthoekszijde : 2. Tel de hokjes langs de zijden.</p>' +
+          '<p>3. Trek de driehoeken af van de rechthoek. Wat overblijft is de figuur.</p>',
+        wanneer:'een figuur schuine zijden heeft en de hoekpunten op roosterpunten liggen.',
+        maak:function(R){
+          var Wd = R.heel(4, 8), Hd = R.heel(3, 6), vier = R.heel(0, 1) === 1, P, stukken;
+          if (vier){
+            var a = R.heel(1, Wd - 1), b = R.heel(1, Hd - 1), c = R.heel(1, Wd - 1), d = R.heel(1, Hd - 1);
+            P = [[a, 0], [Wd, b], [c, Hd], [0, d]];
+            stukken = [[[0, 0], [a, 0], [0, d], a, d], [[Wd, 0], [Wd, b], [a, 0], Wd - a, b], [[Wd, Hd], [c, Hd], [Wd, b], Wd - c, Hd - b], [[0, Hd], [0, d], [c, Hd], c, Hd - d]];
+          } else {
+            var y1 = R.heel(1, Hd - 1), x2 = R.heel(1, Wd - 1);
+            P = [[0, y1], [x2, 0], [Wd, Hd]];
+            stukken = [[[0, 0], [x2, 0], [0, y1], x2, y1], [[Wd, 0], [Wd, Hd], [x2, 0], Wd - x2, Hd], [[0, Hd], [0, y1], [Wd, Hd], Wd, Hd - y1]];
+          }
+          var fx = R.heel(0, 1), fy = R.heel(0, 1);
+          function sp(p){ return [fx ? Wd - p[0] : p[0], fy ? Hd - p[1] : p[1]]; }
+          P = P.map(sp); stukken = stukken.map(function(q){ return [sp(q[0]), sp(q[1]), sp(q[2]), q[3], q[4]]; });
+          var rh = Wd * Hd, weg = stukken.reduce(function(x, q){ return x + q[3] * q[4] / 2; }, 0), A = rh - weg;
+          var sv = 0; P.forEach(function(p, i){ var q = P[(i + 1) % P.length]; sv += p[0] * q[1] - q[0] * p[1]; });
+          if (Math.abs(Math.abs(sv) / 2 - A) > 1e-9) throw new Error('rooster: oppervlakte klopt niet');
+          var bl = function(n){
+            var uu = Math.min(300 / (Wd + 2), 210 / (Hd + 2)), W2 = (Wd + 2) * uu, H2 = (Hd + 2) * uu + 34, s = '', i;
+            function f(p){ return [(p[0] + 1) * uu, 34 + (Hd + 1 - p[1]) * uu]; }
+            for (i = 0; i <= Wd + 2; i++) s += ln(i * uu, 34, i * uu, H2, { w:1, op:0.25 });
+            for (i = 0; i <= Hd + 2; i++) s += ln(0, 34 + i * uu, W2, 34 + i * uu, { w:1, op:0.25 });
+            s += rect(4, 6, uu, uu, { f:K[0], fo:0.25, w:2 }) + tx(12 + uu, 6 + uu / 2, '= 1 cm²', { a:'start', mid:true, fs:14 });
+            if (n >= 2) stukken.forEach(function(q){ s += pg([f(q[0]), f(q[1]), f(q[2])], { f:K[3], fo:0.3, w:1.5, s:K[3] }); });
+            if (n >= 1) s += pg([f([0, 0]), f([Wd, 0]), f([Wd, Hd]), f([0, Hd])], { stip:'7 5', w:2.5, s:K[1] });
+            s += pg(P.map(f), { f:K[0], fo:0.2, w:2.5 });
+            P.forEach(function(p){ var q = f(p); s += cir(q[0], q[1], 3.5, { f:'var(--ink)', s:'none', w:0 }); });
+            return svg(W2, H2, s, 'een schuine ' + (vier ? 'vierhoek' : 'driehoek') + ' op roosterpapier', Math.min(420, W2 * 1.3));
+          };
+          var dl = stukken.map(function(q){ return q[3] + ' ' + X + ' ' + q[4] + ' : 2'; });
+          return { vraag:'rooster ' + P.map(function(p){ return p.join(','); }).join(' '), vraagHtml:'Oppervlakte?', context:'Elk hokje is 1 cm bij 1 cm. Bereken de oppervlakte van de schuine ' + (vier ? 'vierhoek' : 'driehoek') + ' met de rechthoek eromheen.', eenheid:'cm²', beeld:bl, zelfBeeld:bl(0), stappen:[
+            St('De rechthoek eromheen is ' + Wd + ' hokjes breed en ' + Hd + ' hokjes hoog: ' + Wd + ' ' + X + ' ' + Hd + ' =', metE(String(rh), 'cm²'), 'Tel de hokjes van de breedte en de hoogte van de kleinste rechthoek om de figuur.', null, { e:'cm²' }),
+            St('De ' + stukken.length + ' driehoeken eromheen samen: ' + dl.join(' + ') + ' =', metE(T(weg), 'cm²'), 'Elke driehoek is een halve rechthoek: ' + stukken.map(function(q){ return T(q[3] * q[4] / 2); }).join(' + ') + ' = ' + T(weg) + '.', Fz(metE(T(weg), 'cm²'), F(T(2 * weg), 'Elke driehoek is de helft van een rechthoek: deel door 2.')), { e:'cm²' }),
+            St('Oppervlakte = ' + rh + ' ' + MIN + ' ' + T(weg) + ' =', metE(T(A), 'cm²'), 'Haal de driehoeken af van de rechthoek.', Fz(metE(T(A), 'cm²'), F(T(rh + weg), 'De driehoeken moeten eraf, niet erbij.')), { e:'cm²' }) ] };
+        } },
+      { id:'wob-m-opp-terug', naam:'De hoogte of de basis terugrekenen', kort:'Vul in wat je weet in de formule van de oppervlakte en reken de ontbrekende maat terug',
+        uit:'<p>Weet je de oppervlakte al, dan kun je een ontbrekende maat <b>terugrekenen</b>.</p>' +
+          '<p><b>Parallellogram:</b> oppervlakte = basis ' + X + ' hoogte. Dus hoogte = oppervlakte : basis. 48 cm² met basis 8 cm: hoogte = 48 : 8 = <b>6 cm</b>.</p>' +
+          '<p><b>Driehoek:</b> oppervlakte = basis ' + X + ' hoogte : 2. Doe eerst ' + X + ' 2 terug: 30 cm² wordt 60. Met basis 12 cm is de hoogte 60 : 12 = <b>5 cm</b>.</p>' +
+          '<p><b>Trapezium:</b> neem eerst het gemiddelde van de evenwijdige zijden en deel de oppervlakte daardoor.</p>',
+        wanneer:'je de oppervlakte weet en een maat zoekt.',
+        maak:function(R){
+          var v = R.kies(['drie', 'drie', 'para', 'trap']), zoekH = v === 'trap' || R.heel(0, 1) === 1, e = 'cm', e2 = 'cm²', bl, ctx, st, uit;
+          if (v === 'drie'){
+            var b = R.heel(4, 14), h = R.heel(3, 12), p = R.heel(1, b - 1), A = b * h / 2;
+            if (!heel(A)){ h++; A = b * h / 2; }
+            bl = tekenFig([[0, 0], [b, 0], [p, h]], { zijde:[zoekH ? b + ' ' + e : '?', '', ''], markeer:false, W:380, H:250, extra:[[0, -0.6]], aria:'driehoek met een hoogte',
+              na:function(P, f){ return hoogteLijn(P[2], f([p, 0]), 1, zoekH ? '?' : h + ' ' + e, (b - p) >= p ? 1 : -1); } });
+            uit = zoekH ? h : b;
+            ctx = 'De driehoek heeft een oppervlakte van ' + T(A) + ' ' + e2 + '. ' + (zoekH ? 'De basis is ' + b + ' ' + e + '. Hoe groot is de hoogte?' : 'De hoogte is ' + h + ' ' + e + '. Hoe lang is de basis?');
+            st = [kstap(R, 'Welke formule hoort bij de oppervlakte van een driehoek?', 'basis ' + X + ' hoogte : 2', ['basis ' + X + ' hoogte', '(basis + hoogte) : 2'], 'Een driehoek is de helft van een rechthoek.'),
+              St('Basis ' + X + ' hoogte = ' + T(A) + ' ' + X + ' 2 =', metE(T(2 * A), e2), 'Het delen door 2 maak je ongedaan met keer 2.', Fz(metE(T(2 * A), e2), F(T(A / 2), 'Terugrekenen: keer 2, niet gedeeld door 2.')), { e:e2 }),
+              St((zoekH ? 'Hoogte = ' + T(2 * A) + ' : ' + b : 'Basis = ' + T(2 * A) + ' : ' + h) + ' =', metE(String(uit), e), 'Deel door de maat die je weet.', Fz(metE(String(uit), e), F(T(A / (zoekH ? b : h)), 'Vergeet niet eerst keer 2 te doen.')), { e:e }) ];
+          } else if (v === 'para'){
+            var t = R.kies(TRIPEL.filter(function(x){ return x[0] <= 9; })), pp = t[0], hh = t[1], s = t[2], bb = R.heel(Math.max(5, pp), 14), AA = bb * hh;
+            bl = tekenFig([[0, 0], [bb, 0], [bb + pp, hh], [pp, hh]], { zijde:[zoekH ? bb + ' ' + e : '?', '', '', s + ' ' + e], markeer:false, W:400, H:240, extra:[[0, -0.6]], aria:'parallellogram met een hoogte',
+              na:function(P, f){ return hoogteLijn(P[3], f([pp, 0]), 1, zoekH ? '?' : hh + ' ' + e, 1); } });
+            uit = zoekH ? hh : bb;
+            ctx = 'Het parallellogram heeft een oppervlakte van ' + AA + ' ' + e2 + '. De schuine zijde is ' + s + ' ' + e + '. ' + (zoekH ? 'De basis is ' + bb + ' ' + e + '. Hoe groot is de hoogte?' : 'De hoogte is ' + hh + ' ' + e + '. Hoe lang is de basis?');
+            st = [kstap(R, 'Welke formule hoort bij de oppervlakte van een parallellogram?', 'basis ' + X + ' hoogte', ['basis ' + X + ' hoogte : 2', 'basis ' + X + ' schuine zijde'], 'Schuif het driehoekje opzij: je krijgt een rechthoek van basis bij hoogte.'),
+              St((zoekH ? 'Hoogte = ' + AA + ' : ' + bb : 'Basis = ' + AA + ' : ' + hh) + ' =', metE(String(uit), e), 'Welk getal keer ' + (zoekH ? bb : hh) + ' is ' + AA + '? Dat vind je met delen.', Fz(metE(String(uit), e), F(T(AA / s), 'De schuine zijde heb je hier niet nodig.', T(2 * uit), 'Bij een parallellogram deel je niet door 2, dus ook niet terug.')), { e:e }) ];
+          } else {
+            var a = R.heel(6, 14), c = R.heel(2, a - 2), ht = R.heel(2, 9), q = R.heel(0, a - c), m = (a + c) / 2, At = m * ht;
+            bl = tekenFig([[0, 0], [a, 0], [q + c, ht], [q, ht]], { zijde:[a + ' ' + e, '', c + ' ' + e, ''], markeer:false, W:400, H:240, extra:[[0, -0.6]], aria:'trapezium met een hoogte',
+              na:function(P, f){ var x = q > 0 ? q : q + c / 2; return hoogteLijn(f([x, ht]), f([x, 0]), 1, '?', 1); } });
+            uit = ht;
+            ctx = 'Het trapezium heeft een oppervlakte van ' + T(At) + ' ' + e2 + '. De evenwijdige zijden zijn ' + a + ' ' + e + ' en ' + c + ' ' + e + '. Hoe groot is de hoogte?';
+            st = [St('Het gemiddelde van de evenwijdige zijden: (' + a + ' + ' + c + ') : 2 =', metE(T(m), e), 'Tel ze op en deel door 2.', Fz(metE(T(m), e), F(String(a + c), 'Deel nog door 2.')), { e:e }),
+              St('Hoogte = ' + T(At) + ' : ' + T(m) + ' =', metE(String(ht), e), 'Oppervlakte = gemiddelde ' + X + ' hoogte. Dus deel de oppervlakte door het gemiddelde.', Fz(metE(String(ht), e), F(T(At / (a + c)), 'Deel door het gemiddelde, niet door de som.')), { e:e }) ];
+          }
+          return { vraag:zoekH ? 'Hoogte?' : 'Basis?', context:ctx, eenheid:e, beeld:bl, zelfBeeld:bl, stappen:st };
         } }
     ] });
 
   /* ================= 3 inhoud ================= */
   var TRAP = [['m³', 'dm³', 'cm³'], ['kubieke meter', 'kubieke decimeter', 'kubieke centimeter']];
   G.push({ groep:{ id:'wob-m-inh', niveau:'onderbouw', domein:'meetkunde', naam:'Inhoud',
-      uit:'De inhoud van balk, prisma en cilinder: grondvlak keer hoogte. En omrekenen tussen m³, dm³, cm³ en liter.' },
+      uit:'De inhoud van balk, prisma en cilinder: grondvlak keer hoogte. Bij piramide en kegel deel je daarna door 3. En omrekenen tussen m³, dm³, cm³ en liter.' },
     doelen:[
       { id:'wob-m-inh-balk', naam:'Inhoud van een balk', kort:'Inhoud = lengte × breedte × hoogte, of grondvlak × hoogte',
         uit:'<p>De <b>inhoud</b> is hoeveel kubusjes van 1 cm³ erin passen.</p><p>De onderste laag is het <b>grondvlak</b>: lengte × breedte. Er liggen zoveel lagen op elkaar als de <b>hoogte</b>. Dus: <b>inhoud = l × b × h</b>.</p><p>Balk van 5 bij 3 bij 4 cm: grondvlak 5 × 3 = 15 cm², inhoud 15 × 4 = <b>60 cm³</b>.</p>',
@@ -767,12 +977,280 @@
             St('Inhoud = ' + l + ' ' + X + ' ' + b + ' ' + X + ' ' + h + ' =', metE(T(V), 'cm³'), 'Lengte keer breedte keer hoogte.', null, { e:'cm³' }),
             kstap(R, '1 liter = 1000 cm³. Hoe reken je cm³ om naar liter?', 'delen door 1000', [], 'Een liter is groter dan een cm³: er gaan er 1000 in. Dus delen.', { orde:['delen door 1000', 'keer 1000', 'delen door 100'] }),
             St(T(V) + ' : 1000 =', metE(T(Lt), 'liter', ['l', 'L']), 'Haal drie nullen weg of zet de komma drie plaatsen naar links.', Fz(metE(T(Lt), 'liter'), F(T(V / 100), 'Deel door 1000, niet door 100.')), { e:'liter' }) ] };
+        } },
+      { id:'wob-m-inh-piramide', naam:'Inhoud van een piramide en een kegel', kort:'Inhoud = grondvlak × hoogte : 3, een derde van het prisma of de cilinder eromheen',
+        uit:'<p>Een <b>piramide</b> loopt vanaf het grondvlak naar één punt, de <b>top</b>. Zet je hem in een balk met hetzelfde grondvlak en dezelfde hoogte, dan past hij er precies <b>drie keer</b> in.</p>' +
+          '<p>Dus: <b>inhoud = grondvlak ' + X + ' hoogte : 3</b>. De hoogte is de afstand van de top recht naar beneden, niet de schuine ribbe.</p>' +
+          '<p>Een <b>kegel</b> is een piramide met een cirkel als grondvlak: <b>inhoud = π ' + X + ' r² ' + X + ' h : 3</b>.</p>' +
+          '<p>Piramide met een grondvlak van 6 bij 6 cm en hoogte 10 cm: 36 ' + X + ' 10 = 360, en 360 : 3 = <b>120 cm³</b>.</p>',
+        wanneer:'een ruimtefiguur spits toeloopt naar een punt, zoals een piramide, een puntzak of een ijshoorntje.',
+        maak:function(R){
+          var kegel = R.heel(0, 2) === 0, st, bl, ctx, e = 'cm';
+          if (!kegel){
+            var vk = R.heel(0, 1) === 1, l = R.heel(3, 12), b = vk ? l : R.heel(2, 10), h, Gv, V;
+            do { h = R.heel(4, 15); Gv = l * b; } while ((Gv * h) % 3 || h > 1.4 * Math.max(l, b) + 2);
+            V = Gv * h / 3;
+            var pts = [[0, 0, 0], [l, 0, 0], [l, 0, b], [0, 0, b], [l / 2, h, b / 2], [l / 2, 0, b / 2]];
+            bl = ruimte(pts, [[0, 1], [1, 2], [2, 3, 1], [3, 0, 1], [4, 0], [4, 1], [4, 2], [4, 3, 1]], { maten:[[0, 1, l + ' ' + e], [1, 2, b + ' ' + e], [5, 4, h + ' ' + e, 36, 0]], lijnen:[[5, 4, 1, true]], vlak:[[[0, 1, 2, 3], K[0]]], d:0.45, aria:'piramide met een ' + (vk ? 'vierkant' : 'rechthoekig') + ' grondvlak' });
+            ctx = 'Een piramide heeft een ' + (vk ? 'vierkant grondvlak met zijden van ' + l + ' cm' : 'rechthoekig grondvlak van ' + l + ' cm bij ' + b + ' cm') + '. De hoogte is ' + h + ' cm. Bereken de inhoud.';
+            st = [St('Grondvlak = ' + l + ' ' + X + ' ' + b + ' =', metE(String(Gv), 'cm²'), 'Het grondvlak is een ' + (vk ? 'vierkant' : 'rechthoek') + ': lengte keer breedte.', null, { e:'cm²' }),
+              St('Grondvlak ' + X + ' hoogte = ' + Gv + ' ' + X + ' ' + h + ' =', metE(String(Gv * h), 'cm³'), 'Dat is de inhoud van de balk eromheen.', null, { e:'cm³' }),
+              St('Inhoud = ' + (Gv * h) + ' : 3 =', metE(T(V), 'cm³'), 'De piramide is een derde van de balk eromheen.', Fz(metE(T(V), 'cm³'), F(String(Gv * h), 'Dat is de balk eromheen. Deel nog door 3.', T(Gv * h / 2), 'Deel door 3, niet door 2.')), { e:'cm³' }) ];
+          } else {
+            var r, hk2, Vk, d = R.kies([0, 1]);
+            do { r = R.heel(2, 9); hk2 = R.heel(4, 20); Vk = PI * r * r * hk2 / 3; } while (grens(Vk, d));
+            bl = kegelFig({ r:'r = ' + r + ' cm', h:'h = ' + hk2 + ' cm' });
+            ctx = 'Een kegel heeft een straal van ' + r + ' cm en een hoogte van ' + hk2 + ' cm. Bereken de inhoud. ' + Rond(d);
+            st = [St('r² = ' + r + ' ' + X + ' ' + r + ' =', String(r * r), r + ' keer zichzelf.', Fz([String(r * r)], F(String(2 * r), 'Kwadraat is keer zichzelf, niet keer 2.'))),
+              St('r² ' + X + ' h = ' + (r * r) + ' ' + X + ' ' + hk2 + ' =', String(r * r * hk2), (r * r) + ' keer de hoogte ' + hk2 + '.'),
+              St('Inhoud = π ' + X + ' ' + (r * r * hk2) + ' : 3 ≈ (' + rondTekst(d) + ')', af(Vk, d, 'cm³'), 'De kegel is een derde van de cilinder. Tik alles in één keer in: ' + T(Vk, { dec:3 }) + '…', Fz(af(Vk, d, 'cm³'), F(afT(PI * r * r * hk2, d), 'Dat is de cilinder. Deel nog door 3.')), { e:'cm³' }) ];
+          }
+          return { vraag:'Inhoud?', context:ctx, eenheid:'cm³', beeld:bl, zelfBeeld:bl, stappen:st };
         } }
     ] });
 
+  /* ================= 3b ruimtefiguren ================= */
+  /* een kegel: o.r en o.h als tekst (leeg mag) */
+  function kegelFig(o){
+    var cx = 150, rx = 92, ry = 26, top = 28, bod = 222, s = '';
+    s += pad('M' + (cx - rx) + ' ' + bod + ' A' + rx + ' ' + ry + ' 0 0 1 ' + (cx + rx) + ' ' + bod, { stip:'6 5', op:0.6, w:2 });
+    s += pad('M' + (cx - rx) + ' ' + bod + ' A' + rx + ' ' + ry + ' 0 0 0 ' + (cx + rx) + ' ' + bod + ' L' + cx + ' ' + top + ' Z', { w:2.5, f:K[0], fo:0.1 });
+    if (o.h) s += ln(cx, top, cx, bod, { k:K[1], w:2.5, stip:'7 5' }) + tx(cx - 8, (top + bod) / 2 + 20, o.h, { vet:true, a:'end', k:K[1] });
+    if (o.r) s += ln(cx, bod, cx + rx, bod, { k:K[1], w:3 }) + tx(cx + rx / 2, bod - 8, o.r, { vet:true, k:K[1] });
+    s += cir(cx, bod, 3.5, { f:'var(--ink)', s:'none', w:0 });
+    return svg(310, 260, s, o.aria || 'kegel', 300);
+  }
+  function bolFig(){
+    var cx = 150, cy = 125, r = 100, s = cir(cx, cy, r, { f:K[0], fo:0.1, w:2.5 });
+    s += pad('M' + (cx - r) + ' ' + cy + ' A' + r + ' 28 0 0 1 ' + (cx + r) + ' ' + cy, { stip:'6 5', op:0.6, w:2 }) + pad('M' + (cx - r) + ' ' + cy + ' A' + r + ' 28 0 0 0 ' + (cx + r) + ' ' + cy, { w:2 });
+    return svg(300, 250, s + cir(cx, cy, 3.5, { f:'var(--ink)', s:'none', w:0 }), 'bol', 280);
+  }
+  /* de veelvlakken: punten, ribben (derde getal 1 = verstopt, gestippeld) en het aantal vlakken */
+  var VEEL = [
+    { naam:'kubus', p:balkPts(4, 4, 4), r:BALK_RIBBEN, v:6 },
+    { naam:'balk', p:balkPts(6, 3, 4), r:BALK_RIBBEN, v:6 },
+    { naam:'prisma', lang:'driezijdig prisma', p:[[0, 0, 0], [4, 0, 0], [2, 3, 0], [0, 0, 6], [4, 0, 6], [2, 3, 6]], r:[[0, 1], [1, 2], [2, 0], [0, 3, 1], [1, 4], [2, 5], [3, 4, 1], [4, 5], [5, 3, 1]], v:5, d:0.35 },
+    { naam:'piramide', lang:'vierzijdige piramide', p:[[0, 0, 0], [4, 0, 0], [4, 0, 4], [0, 0, 4], [2, 4, 2]], r:[[0, 1], [1, 2], [2, 3, 1], [3, 0, 1], [4, 0], [4, 1], [4, 2], [4, 3, 1]], v:5 },
+    { naam:'piramide', lang:'driezijdige piramide', p:[[0, 0, 0], [5, 0, 0], [2, 0, 4], [2.4, 4, 1.4]], r:[[0, 1], [1, 2], [2, 0, 1], [3, 0], [3, 1], [3, 2]], v:4 } ];
+  var RUIMTE_NAMEN = ['kubus', 'balk', 'prisma', 'piramide', 'cilinder', 'kegel', 'bol'];
+  var RUIMTE_HINT = { kubus:'Zes vierkanten, alle ribben even lang.', balk:'Zes rechthoeken, de ribben zijn niet allemaal even lang.', prisma:'Een grondvlak en een bovenvlak die precies gelijk zijn, met rechthoeken ertussen.', piramide:'Een grondvlak met driehoeken die samenkomen in één punt: de top.', cilinder:'Twee gelijke cirkels met een gebogen wand ertussen.', kegel:'Een cirkel als grondvlak en een gebogen wand naar één punt.', bol:'Helemaal rond, zonder ribben of punten.' };
+  /* balk ABCD.EFGH met letters; o.lijnen [[i, j, kleur]], o.vlak [[[i...], kleur]] */
+  function balkNm(l, b, h, o){
+    o = o || {};
+    var NM = 'ABCDEFGH', P = balkPts(l, b, h).map(function(p){ return schuin(p, 0.5); }), t = pas(P, 380, 260, 44), Q = P.map(t.f), s = '';
+    (o.vlak || []).forEach(function(v){ s += pg(v[0].map(function(i){ return Q[i]; }), { f:v[1], fo:0.25, s:'none', w:0 }); });
+    BALK_RIBBEN.forEach(function(rb){ s += lnP(Q[rb[0]], Q[rb[1]], { w:2.5, stip:rb[2] ? '6 5' : null, op:rb[2] ? 0.6 : null }); });
+    (o.lijnen || []).forEach(function(lj){ s += lnP(Q[lj[0]], Q[lj[1]], { k:lj[2], w:5 }); });
+    var cx = 0, cy = 0; Q.forEach(function(q){ cx += q[0] / 8; cy += q[1] / 8; });
+    Q.forEach(function(q, i){ var dx = q[0] - cx, dy = q[1] - cy, L = Math.hypot(dx, dy) || 1; s += tx(q[0] + dx / L * 16, q[1] + dy / L * 16, NM.charAt(i), { mid:true, vet:true, fs:16 }); });
+    return svg(380, 260, s, o.aria || 'balk ABCD.EFGH', 400);
+  }
+  /* een kubusuitslag vouwen: elk vakje krijgt de buitennormaal van zijn zijvlak */
+  var NETTEN = [
+    [[0, 0], [0, 1], [1, 1], [2, 1], [3, 1], [0, 2]], [[0, 0], [0, 1], [1, 1], [2, 1], [3, 1], [1, 2]], [[0, 0], [0, 1], [1, 1], [2, 1], [3, 1], [2, 2]],
+    [[0, 0], [0, 1], [1, 1], [2, 1], [3, 1], [3, 2]], [[1, 0], [0, 1], [1, 1], [2, 1], [3, 1], [1, 2]], [[1, 0], [0, 1], [1, 1], [2, 1], [3, 1], [2, 2]],
+    [[0, 0], [1, 0], [1, 1], [2, 1], [3, 1], [3, 2]], [[0, 0], [1, 0], [1, 1], [2, 1], [3, 1], [2, 2]], [[0, 0], [1, 0], [1, 1], [2, 1], [3, 1], [1, 2]],
+    [[0, 0], [1, 0], [1, 1], [2, 1], [2, 2], [3, 2]], [[0, 0], [1, 0], [2, 0], [2, 1], [3, 1], [4, 1]] ];
+  function vouw(cel){
+    var n = cel.length, nor = new Array(n), U = new Array(n), V = new Array(n), rij = [0];
+    function neg(a){ return [-a[0], -a[1], -a[2]]; }
+    nor[0] = [0, 0, -1]; U[0] = [1, 0, 0]; V[0] = [0, 1, 0];
+    while (rij.length){
+      var i = rij.shift();
+      for (var j = 0; j < n; j++){
+        if (nor[j]) continue;
+        var dx = cel[j][0] - cel[i][0], dy = cel[j][1] - cel[i][1];
+        if (Math.abs(dx) + Math.abs(dy) !== 1) continue;
+        if (dx === 1){ nor[j] = U[i]; U[j] = neg(nor[i]); V[j] = V[i]; }
+        else if (dx === -1){ nor[j] = neg(U[i]); U[j] = nor[i]; V[j] = V[i]; }
+        else if (dy === -1){ nor[j] = V[i]; V[j] = neg(nor[i]); U[j] = U[i]; }
+        else { nor[j] = neg(V[i]); V[j] = nor[i]; U[j] = U[i]; }
+        rij.push(j);
+      }
+    }
+    var sl = nor.map(function(a){ return a ? a.join(',') : '?'; });
+    if (sl.some(function(x, k){ return x === '?' || sl.indexOf(x) !== k; })) throw new Error('geen kubusuitslag');
+    return nor;
+  }
+  /* blokkenbouwsel: hoogtes[rij][kolom], rij 0 is achter, de laatste rij is voor */
+  function aanzichtFig(hg, o){
+    o = o || {};
+    var rij = hg.length, kol = hg[0].length, u = 44, x0 = 30, y0 = 20, s = '', i, j;
+    for (i = 0; i < rij; i++) for (j = 0; j < kol; j++){
+      var x = x0 + j * u, y = y0 + i * u;
+      s += rect(x, y, u, u, { f:hg[i][j] ? K[0] : 'none', fo:hg[i][j] ? 0.15 + 0.08 * hg[i][j] : 0, w:2 });
+      if (hg[i][j]) s += tx(x + u / 2, y + u / 2, String(hg[i][j]), { mid:true, vet:true, fs:18 });
+    }
+    for (j = 0; j < kol; j++) s += tx(x0 + (j + 0.5) * u, y0 + rij * u + 16, 'k' + (j + 1), { mid:true, fs:12, k:'var(--muted)' });
+    var yv = y0 + rij * u + 40; s += tx(x0 + kol * u / 2, yv, 'voor', { mid:true, vet:true, fs:15, k:K[1] }) + pad('M' + (x0 + kol * u / 2 - 34) + ' ' + (yv - 4) + ' l-10 0 M' + (x0 + kol * u / 2 + 34) + ' ' + (yv - 4) + ' l10 0', { s:K[1], w:2 });
+    var W = x0 + kol * u + 30;
+    if (o.voor){
+      var hm = []; for (j = 0; j < kol; j++){ var m = 0; for (i = 0; i < rij; i++) m = Math.max(m, hg[i][j]); hm.push(m); }
+      var top = Math.max.apply(null, hm), v = 30, bx = W + 20, by = 20 + top * v;
+      s += tx(bx + kol * v / 2, 12, 'vooraanzicht', { mid:true, vet:true, fs:13, k:K[2] });
+      for (j = 0; j < kol; j++) for (i = 0; i < hm[j]; i++) s += rect(bx + j * v, by - (i + 1) * v + 8, v, v, { f:K[2], fo:0.25, w:1.8 });
+      s += ln(bx - 6, by + 8, bx + kol * v + 6, by + 8, { w:2.5 });
+      W = bx + kol * v + 20;
+    }
+    return svg(W, Math.max(yv + 14, o.voor ? 30 + 6 * 30 : 0), s, 'bovenaanzicht van een blokkenbouwsel met het aantal blokjes op elk vakje', Math.min(520, W * 1.2));
+  }
+
+  G.push({ groep:{ id:'wob-m-ruimte', niveau:'onderbouw', domein:'meetkunde', naam:'Ruimtefiguren',
+      uit:'Ruimtefiguren herkennen en hun vlakken, ribben en hoekpunten tellen, de namen in een balk ABCD.EFGH, uitslagen van een kubus en aanzichten van een blokkenbouwsel.' },
+    doelen:[
+      { id:'wob-m-ruimte-naam', naam:'Ruimtefiguren herkennen en tellen', kort:'Herken de figuur aan zijn vlakken. Een vlak is een zijkant, een ribbe een rand, een hoekpunt een punt',
+        uit:'<p>Een <b>ruimtefiguur</b> heeft lengte, breedte en hoogte. De bekendste: <b>kubus</b>, <b>balk</b>, <b>prisma</b>, <b>piramide</b>, <b>cilinder</b>, <b>kegel</b> en <b>bol</b>.</p>' +
+          '<p>Bij een figuur met platte zijkanten tel je drie dingen. Een <b>vlak</b> is een zijkant. Een <b>ribbe</b> is een rand waar twee vlakken samenkomen. Een <b>hoekpunt</b> is een punt waar ribben samenkomen.</p>' +
+          '<p>Een kubus heeft 6 vlakken, 12 ribben en 8 hoekpunten. Een vierzijdige piramide heeft 5 vlakken, 8 ribben en 5 hoekpunten. Gestippelde ribben zitten aan de achterkant: die tel je ook mee.</p>',
+        wanneer:'je een ruimtefiguur moet benoemen of zijn vlakken, ribben of hoekpunten moet tellen.',
+        maak:function(R){
+          if (R.heel(0, 3) === 0){
+            var rond = R.kies(['cilinder', 'kegel', 'bol']);
+            var blr = rond === 'cilinder' ? cilinder({ r:'', h:'', aria:'een ruimtefiguur' }) : rond === 'kegel' ? kegelFig({ aria:'een ruimtefiguur' }) : bolFig();
+            var st0 = [kstap(R, 'Heeft deze figuur platte vlakken, gebogen vlakken of allebei?', rond === 'bol' ? 'alleen een gebogen vlak' : 'platte en gebogen vlakken', ['alleen platte vlakken', rond === 'bol' ? 'platte en gebogen vlakken' : 'alleen een gebogen vlak'], rond === 'bol' ? 'Een bol is overal rond.' : 'Er is een ronde, platte ' + (rond === 'kegel' ? 'bodem' : 'bodem en deksel') + ' en een gebogen wand.'),
+              kstap(R, 'Welke ruimtefiguur is dit?', rond, RUIMTE_NAMEN.filter(function(x){ return x !== rond; }).slice(4).concat(['kubus']), RUIMTE_HINT[rond])];
+            return eindKeuze({ vraag:'ruimte ' + rond, vraagHtml:'Welke ruimtefiguur is dit?', context:'Bekijk de tekening. Welke ruimtefiguur is het?', beeld:blr, zelfBeeld:blr, stappen:st0 });
+          }
+          var f = R.kies(VEEL), H = f.p.length, Rb = f.r.length, Vl = 2 - H + Rb;
+          if (Vl !== f.v) throw new Error('Euler klopt niet bij ' + f.naam);
+          var bl = ruimte(f.p, f.r, { d:f.d || 0.5, vlak:[[f.naam === 'prisma' ? [0, 1, 2] : f.naam === 'piramide' ? (H === 5 ? [0, 1, 4] : [0, 1, 3]) : [0, 1, 5, 4], K[0]]], aria:'een ruimtefiguur met platte vlakken' });
+          var wat = R.kies(['vlakken', 'ribben', 'hoekpunten']), uit = wat === 'vlakken' ? Vl : wat === 'ribben' ? Rb : H;
+          var naamOpt = ['kubus', 'balk', 'prisma', 'piramide'];
+          var HN = { vlakken:'Tel de zijkanten, ook de onderkant en de vlakken achter (met gestippelde randen).', ribben:'Tel alle randen, ook de gestippelde: die zitten aan de achterkant.', hoekpunten:'Tel alle punten waar ribben samenkomen, ook achteraan.' };
+          var st = [kstap(R, 'Welke ruimtefiguur is dit?', f.naam, naamOpt.filter(function(x){ return x !== f.naam; }), RUIMTE_HINT[f.naam] + (f.lang ? ' Deze heet een ' + f.lang + '.' : ''), { orde:naamOpt }),
+            St('Hoeveel ' + wat + ' heeft deze ruimtefiguur?', String(uit), HN[wat], Fz([String(uit)], F(String(wat === 'vlakken' ? Rb : Vl), wat === 'vlakken' ? 'Dat is het aantal ribben. Een vlak is een zijkant.' : 'Dat is het aantal vlakken. Een ribbe is een rand.', String(wat === 'hoekpunten' ? Rb : H), wat === 'hoekpunten' ? 'Dat is het aantal ribben. Een hoekpunt is een punt.' : 'Dat is het aantal hoekpunten.'))) ];
+          return { vraag:'ruimte ' + (f.lang || f.naam) + ' ' + wat, vraagHtml:'Aantal ' + wat + '?', context:'Hier zie je een ruimtefiguur. Gestippelde ribben zitten aan de achterkant. Hoeveel ' + wat + ' heeft hij?', beeld:bl, zelfBeeld:bl, stappen:st };
+        } },
+      { id:'wob-m-ruimte-ribben', naam:'Ribben en vlakken in een balk ABCD.EFGH', kort:'Evenwijdig: zelfde richting. Snijdend: een punt gemeen. Kruisend: geen van beide',
+        uit:'<p>Een balk heet <b>ABCD.EFGH</b>. ABCD is het grondvlak, EFGH het bovenvlak. E ligt recht boven A, F boven B, G boven C en H boven D.</p>' +
+          '<p>Een <b>vlak</b> noem je met de vier hoekpunten in de volgorde waarin je er omheen loopt: het voorvlak is <b>ABFE</b>, niet ABEF.</p>' +
+          '<p>Twee ribben zijn <b>evenwijdig</b> als ze dezelfde kant op lopen, zoals AB en DC. Ze <b>snijden</b> elkaar als ze een hoekpunt gemeen hebben, zoals AB en BF. Ze <b>kruisen</b> elkaar als ze niet evenwijdig zijn en elkaar ook niet raken, zoals AB en CG.</p>',
+        wanneer:'je in een balk of kubus ribben en vlakken moet benoemen.',
+        maak:function(R){
+          var NM = 'ABCDEFGH', l = R.heel(5, 7), b = R.heel(4, 6), h = R.heel(3, 5);
+          function as(rb){ var a = balkPts(1, 2, 3)[rb[0]], c = balkPts(1, 2, 3)[rb[1]]; return a[0] !== c[0] ? 'x' : a[1] !== c[1] ? 'y' : 'z'; }
+          function nm(rb){ return NM.charAt(rb[0]) + NM.charAt(rb[1]); }
+          function soort(p, q){ if (p[0] === q[0] && p[1] === q[1]) return 'zelf'; if (p[0] === q[0] || p[0] === q[1] || p[1] === q[0] || p[1] === q[1]) return 'snijdend'; return as(p) === as(q) ? 'evenwijdig' : 'kruisend'; }
+          var RB = BALK_RIBBEN.map(function(r){ return [r[0], r[1]]; });
+          if (R.heel(0, 3) === 0){
+            var VL = [{ p:[0, 1, 5, 4], w:'het voorvlak' }, { p:[4, 5, 6, 7], w:'het bovenvlak' }, { p:[1, 2, 6, 5], w:'het rechterzijvlak' }, { p:[0, 1, 2, 3], w:'het grondvlak' }, { p:[3, 2, 6, 7], w:'het achtervlak' }, { p:[0, 3, 7, 4], w:'het linkerzijvlak' }];
+            var vk = R.kies(VL), rot = R.heel(0, 3), goed = vk.p.slice(rot).concat(vk.p.slice(0, rot)).map(function(i){ return NM.charAt(i); }).join('');
+            var mis = [goed.charAt(0) + goed.charAt(1) + goed.charAt(3) + goed.charAt(2), R.kies(VL.filter(function(x){ return x !== vk; })).p.map(function(i){ return NM.charAt(i); }).join('')];
+            var blv = function(n){ return balkNm(l, b, h, { vlak:[[vk.p, K[0]]], aria:'balk ABCD.EFGH met een gekleurd vlak' }); };
+            return eindKeuze({ vraag:'Hoe heet het gekleurde vlak?', context:'Hier zie je balk ABCD.EFGH. Eén vlak is gekleurd. Welke naam is goed?', beeld:blv, zelfBeeld:blv(0), stappen:[
+              kstap(R, 'Welke vier hoekpunten heeft het gekleurde vlak?', vk.p.slice().sort().map(function(i){ return NM.charAt(i); }).join(', '), [mis[1].split('').sort().join(', ')], 'Kijk naar de vier hoeken van het gekleurde vlak.'),
+              kstap(R, 'Welke naam is goed? Loop in volgorde om het vlak heen.', goed, mis, 'Bij ' + goed + ' loop je van ' + goed.split('').join(' naar ') + ' en weer terug naar ' + goed.charAt(0) + '. Elke stap is een ribbe van het vlak.') ] });
+          }
+          var gi = R.heel(0, 11), g = RB[gi], vraagS = R.kies(['evenwijdig', 'snijdend', 'kruisend']);
+          var per = { evenwijdig:[], snijdend:[], kruisend:[] };
+          RB.forEach(function(r){ var s = soort(g, r); if (s !== 'zelf') per[s].push(r); });
+          var goedR = R.kies(per[vraagS]), opt = [goedR].concat(['evenwijdig', 'snijdend', 'kruisend'].filter(function(x){ return x !== vraagS; }).map(function(x){ return R.kies(per[x]); }));
+          var DEF = { evenwijdig:'ze lopen dezelfde kant op', snijdend:'ze hebben een hoekpunt gemeen', kruisend:'ze lopen niet dezelfde kant op en raken elkaar niet' }, WRD = { evenwijdig:'evenwijdig met', snijdend:'snijdt', kruisend:'kruist' };
+          var DO = ['ze lopen dezelfde kant op', 'ze hebben een hoekpunt gemeen', 'ze lopen niet dezelfde kant op en raken elkaar niet'];
+          var bl = function(n){ return balkNm(l, b, h, { lijnen:[[g[0], g[1], K[1]]].concat(n >= 2 ? [[goedR[0], goedR[1], K[2]]] : []), aria:'balk ABCD.EFGH met ribbe ' + nm(g) + ' gekleurd' }); };
+          var vr = vraagS === 'snijdend' ? 'Welke ribbe snijdt ' + nm(g) + '?' : vraagS === 'kruisend' ? 'Welke ribbe kruist ' + nm(g) + '?' : 'Welke ribbe is evenwijdig met ' + nm(g) + '?';
+          return eindKeuze({ vraag:vr, context:'Hier zie je balk ABCD.EFGH met ribbe ' + nm(g) + ' gekleurd. Er is precies één goed antwoord.', beeld:bl, zelfBeeld:bl(0), stappen:[
+            kstap(R, 'Wanneer ' + (vraagS === 'evenwijdig' ? 'zijn twee ribben evenwijdig' : vraagS === 'snijdend' ? 'snijden twee ribben elkaar' : 'kruisen twee ribben elkaar') + '?', DEF[vraagS], [], vraagS === 'kruisend' ? 'Kruisend is wat overblijft: niet evenwijdig en ook geen punt gemeen.' : 'Kijk naar de richting en naar de hoekpunten.', { orde:DO }),
+            kstap(R, vr, nm(goedR), opt.slice(1).map(nm), opt.slice(1).map(function(r){ return nm(r) + ' ' + (soort(g, r) === 'evenwijdig' ? 'is evenwijdig met' : soort(g, r) === 'snijdend' ? 'snijdt' : 'kruist') + ' ' + nm(g); }).join('. ') + '. Dus ' + nm(goedR) + ' ' + WRD[vraagS] + ' ' + nm(g) + '.') ] });
+        } },
+      { id:'wob-m-ruimte-uitslag', naam:'Een kubus vouwen: wat ligt tegenover elkaar?', kort:'In een rechte rij van drie vlakken liggen de buitenste twee tegenover elkaar',
+        uit:'<p>Een <b>uitslag</b> is een ruimtefiguur die je openvouwt tot een plat stuk. Een kubus heeft 6 vierkante vlakken, dus zijn uitslag ook.</p>' +
+          '<p>Na het vouwen ligt elk vlak <b>tegenover</b> precies één ander vlak. Vlakken die in de uitslag tegen elkaar aan liggen, komen <b>naast</b> elkaar: die liggen nooit tegenover elkaar.</p>' +
+          '<p>Het trucje: liggen er drie vlakken in een <b>rechte rij</b>, dan liggen de buitenste twee tegenover elkaar. Zie je dat niet meteen, vouw dan in gedachten één vlak tegelijk omhoog.</p>',
+        wanneer:'je bij een uitslag van een kubus wilt weten welke vlakken tegenover elkaar komen.',
+        maak:function(R){
+          var cel = R.kies(NETTEN).map(function(c){ return c.slice(); }), sp = R.heel(0, 1), dr = R.heel(0, 3), i;
+          for (i = 0; i < dr; i++) cel = cel.map(function(c){ return [-c[1], c[0]]; });
+          if (sp) cel = cel.map(function(c){ return [-c[0], c[1]]; });
+          var mx = Math.min.apply(null, cel.map(function(c){ return c[0]; })), my = Math.min.apply(null, cel.map(function(c){ return c[1]; }));
+          cel = cel.map(function(c){ return [c[0] - mx, c[1] - my]; });
+          var nor = vouw(cel), LT = R.hussel(['A', 'B', 'C', 'D', 'E', 'F']), xi = R.heel(0, 5);
+          var oi = nor.map(function(a){ return a.join(','); }).indexOf(nor[xi].map(function(v){ return -v; }).join(','));
+          var buur = [], verder = [];
+          cel.forEach(function(c, j){ if (j === xi || j === oi) return; (Math.abs(c[0] - cel[xi][0]) + Math.abs(c[1] - cel[xi][1]) === 1 ? buur : verder).push(j); });
+          var mid = [(cel[xi][0] + cel[oi][0]) / 2, (cel[xi][1] + cel[oi][1]) / 2], rechtTussen = ((cel[xi][0] === cel[oi][0] && Math.abs(cel[xi][1] - cel[oi][1]) === 2) || (cel[xi][1] === cel[oi][1] && Math.abs(cel[xi][0] - cel[oi][0]) === 2)) && cel.some(function(c){ return c[0] === mid[0] && c[1] === mid[1]; });
+          var bl = function(n){
+            var u = 50, W = (Math.max.apply(null, cel.map(function(c){ return c[0]; })) + 1) * u + 20, H = (Math.max.apply(null, cel.map(function(c){ return c[1]; })) + 1) * u + 20, s = '';
+            cel.forEach(function(c, j){ var kl = n >= 2 && (j === xi || j === oi) ? K[2] : j === xi ? K[1] : K[0]; s += rect(10 + c[0] * u, 10 + c[1] * u, u, u, { f:kl, fo:j === xi || (n >= 2 && j === oi) ? 0.3 : 0.1, w:2.5 }) + tx(10 + (c[0] + 0.5) * u, 10 + (c[1] + 0.5) * u, LT[j], { mid:true, vet:true, fs:20 }); });
+            return svg(W, H, s, 'uitslag van een kubus met de letters A tot en met F', Math.min(360, W * 1.4));
+          };
+          var X0 = LT[xi], Y0 = LT[oi];
+          var st = [kstap(R, 'Welk vlak komt na het vouwen zeker naast ' + X0 + ' te liggen?', LT[buur[0]], [Y0].concat(verder.length ? [LT[verder[0]]] : []), 'Een vlak dat in de uitslag tegen ' + X0 + ' aan ligt, wordt er na het vouwen naast geplakt.'),
+            kstap(R, 'Welk vlak ligt na het vouwen tegenover ' + X0 + '?', Y0, LT.filter(function(x){ return x !== X0 && x !== Y0; }), rechtTussen ? X0 + ' en ' + Y0 + ' liggen in een rechte rij met één vlak ertussen: de buitenste twee liggen tegenover elkaar.' : 'Vouw in gedachten: ' + Y0 + ' raakt ' + X0 + ' nergens, en alle andere vlakken komen naast ' + X0 + '. Dus ' + Y0 + ' ligt tegenover ' + X0 + '.') ];
+          return eindKeuze({ vraag:'Wat ligt tegenover ' + X0 + '?', context:'Dit is een uitslag van een kubus. Je vouwt hem dicht. Welk vlak ligt dan tegenover vlak ' + X0 + '?', beeld:bl, zelfBeeld:bl(0), stappen:st });
+        } },
+      { id:'wob-m-ruimte-aanzicht', naam:'Een blokkenbouwsel: bovenaanzicht en vooraanzicht', kort:'Het getal in een vakje is de hoogte van dat torentje. Van voren zie je per kolom het hoogste torentje',
+        uit:'<p>Een bouwsel van blokjes kun je tekenen als <b>bovenaanzicht</b>: je kijkt er recht van boven op. In elk vakje staat <b>hoeveel blokjes</b> daar op elkaar staan.</p>' +
+          '<p>Alle getallen samen is het <b>aantal blokjes</b>.</p>' +
+          '<p>Het <b>vooraanzicht</b> is wat je ziet als je recht van voren kijkt. Per kolom zie je alleen het <b>hoogste</b> torentje: de lagere torentjes erachter of ervoor vallen erbinnen. Een kolom met torentjes van 1, 3 en 2 is in het vooraanzicht 3 hokjes hoog.</p>' +
+          '<p>Het <b>zijaanzicht</b> werkt net zo, maar dan per rij.</p>',
+        wanneer:'je een bouwsel van blokjes moet tellen of tekenen van voren of van opzij.',
+        maak:function(R){
+          var rij = R.heel(2, 3), kol = R.heel(2, 4), hg, som;
+          do { hg = []; som = 0; for (var i = 0; i < rij; i++){ hg.push([]); for (var j = 0; j < kol; j++){ var v = R.kies([0, 1, 1, 2, 2, 3, 4]); hg[i].push(v); som += v; } } }
+          while (hg.some(function(r){ return r.every(function(v){ return !v; }); }) || [0, 1, 2, 3].slice(0, kol).some(function(j){ return hg.every(function(r){ return !r[j]; }); }));
+          var kolMax = [], rijMax = hg.map(function(r){ return Math.max.apply(null, r); }), kolSom = [];
+          for (j = 0; j < kol; j++){ var m = 0, sk = 0; for (i = 0; i < rij; i++){ m = Math.max(m, hg[i][j]); sk += hg[i][j]; } kolMax.push(m); kolSom.push(sk); }
+          var soort = R.kies(['tel', 'kol', 'voor', 'zij']), bl = function(n){ return aanzichtFig(hg, { voor:n >= 9 }); }, st, vraag, ctx, eh;
+          var VZ = ['het hoogste torentje in die kolom', 'alle blokjes in die kolom samen'];
+          if (soort === 'tel'){
+            st = hg.map(function(r, k){ var sr = r.reduce(function(x, y){ return x + y; }, 0); return St('Rij ' + (k + 1) + ' van achteren: ' + r.join(' + ') + ' =', String(sr), 'Tel de getallen in deze rij op.'); });
+            st.push(St('Alle blokjes samen: ' + hg.map(function(r){ return r.reduce(function(x, y){ return x + y; }, 0); }).join(' + ') + ' =', metE(String(som), 'blokjes'), 'Tel de rijen bij elkaar op.', Fz([String(som)], F(String(rij * kol), 'Dat is het aantal vakjes. Tel de getallen in de vakjes op.'))));
+            vraag = 'Aantal blokjes?'; ctx = 'Dit is het bovenaanzicht van een bouwsel van blokjes. In elk vakje staat hoeveel blokjes daar op elkaar staan. Hoeveel blokjes zijn het samen?'; eh = 'blokjes';
+          } else if (soort === 'kol'){
+            var kk = R.heel(0, kol - 1);
+            st = [kstap(R, 'Wat zie je van een kolom in het vooraanzicht?', VZ[0], [], 'Van voren vallen lagere torentjes achter het hoogste weg.', { orde:VZ }),
+              St('Kolom k' + (kk + 1) + ' heeft torentjes van ' + hg.map(function(r){ return r[kk]; }).join(', ') + '. Hoe hoog is die kolom in het vooraanzicht?', metE(String(kolMax[kk]), 'hokjes', ['blokjes']), 'Neem het hoogste torentje.', Fz([String(kolMax[kk])], F(String(kolSom[kk]), 'Dat zijn alle blokjes samen. Van voren zie je alleen het hoogste torentje.'))) ];
+            vraag = 'Hoe hoog is kolom k' + (kk + 1) + ' in het vooraanzicht?'; ctx = 'Dit is het bovenaanzicht van een bouwsel van blokjes, met het aantal blokjes op elk vakje. Je kijkt van de kant waar "voor" staat.'; eh = 'hokjes';
+          } else if (soort === 'voor'){
+            st = [kstap(R, 'Wat zie je van een kolom in het vooraanzicht?', VZ[0], [], 'Van voren vallen lagere torentjes achter het hoogste weg.', { orde:VZ }),
+              St('Hoe hoog is elke kolom van voren? Typ ze van links naar rechts, met puntkomma\'s ertussen.', kolMax.join('; '), 'Neem per kolom het hoogste getal: ' + kolMax.join(', ') + '.'),
+              St('Het vooraanzicht heeft samen ' + kolMax.join(' + ') + ' =', metE(String(kolMax.reduce(function(x, y){ return x + y; }, 0)), 'hokjes'), 'Tel de hoogtes van de kolommen op.', Fz([String(kolMax.reduce(function(x, y){ return x + y; }, 0))], F(String(som), 'Dat zijn alle blokjes. In het vooraanzicht telt per kolom alleen het hoogste torentje.'))) ];
+            st[1].controle = function(v){ var l = String(v).split(/[;,\s]+/).filter(Boolean); return l.length === kol && l.every(function(x, k){ return +x === kolMax[k]; }); }; st[1].invoer = 'tekst';
+            vraag = 'Hokjes in het vooraanzicht?'; ctx = 'Dit is het bovenaanzicht van een bouwsel van blokjes, met het aantal blokjes op elk vakje. Uit hoeveel hokjes bestaat het vooraanzicht?'; eh = 'hokjes';
+          } else {
+            var zs = rijMax.reduce(function(x, y){ return x + y; }, 0);
+            st = [kstap(R, 'Van opzij kijk je langs de rijen. Wat zie je van een rij?', 'het hoogste torentje in die rij', ['alle blokjes in die rij samen'], 'Van opzij vallen de lagere torentjes in een rij achter het hoogste weg.', { orde:['het hoogste torentje in die rij', 'alle blokjes in die rij samen'] }),
+              St('Het hoogste torentje per rij, van achteren naar voren: ' + hg.map(function(r, k){ return 'rij ' + (k + 1) + ': ' + r.join(', '); }).join('; ') + '. Samen ' + rijMax.join(' + ') + ' =', metE(String(zs), 'hokjes'), 'Neem per rij het hoogste getal (' + rijMax.join(', ') + ') en tel ze op.', Fz([String(zs)], F(String(som), 'Dat zijn alle blokjes. Van opzij telt per rij alleen het hoogste torentje.'))) ];
+            vraag = 'Hokjes in het zijaanzicht?'; ctx = 'Dit is het bovenaanzicht van een bouwsel van blokjes, met het aantal blokjes op elk vakje. Uit hoeveel hokjes bestaat het zijaanzicht?'; eh = 'hokjes';
+          }
+          if (soort === 'kol' || soort === 'voor'){ var nn = st.length; bl = function(n){ return aanzichtFig(hg, { voor:n >= nn }); }; }
+          return { vraag:vraag + ' ' + hg.map(function(r){ return r.join(''); }).join('|'), vraagHtml:vraag, context:ctx, eenheid:eh, beeld:bl, zelfBeeld:bl(0), stappen:st };
+        } }
+    ] });
+
+  /* ================= 4a symmetrie ================= */
+  function haakN(v){ return v < 0 ? '(' + T(v) + ')' : T(v); }
+  function regelmatig(n, r, a0){ var l = []; for (var k = 0; k < n; k++){ var a = (a0 + 360 * k / n) * RAD; l.push([r * Math.cos(a), r * Math.sin(a)]); } return l; }
+  /* figuren met hun symmetrieassen (hoeken van de assen door het midden) en hun draaisymmetrie (orde, 1 = geen) */
+  var SYMF = [
+    { naam:'vierkant', p:[[-2, -2], [2, -2], [2, 2], [-2, 2]], as:[0, 45, 90, 135], orde:4, fout:{ '2':'Ook de twee diagonalen zijn symmetrieassen: vouw over een diagonaal en de helften vallen op elkaar.' } },
+    { naam:'rechthoek', p:[[-3, -1.7], [3, -1.7], [3, 1.7], [-3, 1.7]], as:[0, 90], orde:2, fout:{ '4':'De diagonalen van een rechthoek zijn geen symmetrieas: vouw je over een diagonaal, dan vallen de hoeken niet op elkaar.' } },
+    { naam:'ruit', p:[[0, -2.6], [1.6, 0], [0, 2.6], [-1.6, 0]], as:[0, 90], orde:2, fout:{ '4':'Over een lijn door het midden van twee zijden vouwen lukt bij een ruit niet. Alleen de diagonalen zijn assen.' } },
+    { naam:'parallellogram', p:[[-3, -1.5], [1.4, -1.5], [3, 1.5], [-1.4, 1.5]], as:[], orde:2, fout:{ '2':'Vouw een parallellogram over een diagonaal of over een lijn door het midden: de helften vallen nooit precies op elkaar.' } },
+    { naam:'gelijkzijdige driehoek', p:regelmatig(3, 2.6, 90), as:[90, 30, 150], orde:3, fout:{ '1':'Elke hoek heeft een eigen as, naar het midden van de zijde ertegenover: drie assen.' } },
+    { naam:'gelijkbenige driehoek', p:[[-2, -1.8], [2, -1.8], [0, 3.2]], as:[90], orde:1, fout:{ '3':'Alleen bij een gelijkzijdige driehoek zijn het er drie. Hier zijn maar twee zijden even lang.' } },
+    { naam:'driehoek met drie verschillende zijden', kort:'willekeurige driehoek', p:[[-2.5, -1.5], [2.5, -1.5], [1.4, 2]], as:[], orde:1, fout:{ '1':'Vouw je hem dubbel, dan vallen de helften niet op elkaar: alle zijden zijn verschillend.' } },
+    { naam:'regelmatige vijfhoek', p:regelmatig(5, 2.6, 90), as:[90, 18, 126, 54, 162], orde:5, fout:{ '10':'Door elke hoek gaat één as, die aan de overkant door het midden van een zijde komt. Dat zijn er vijf.' } },
+    { naam:'regelmatige zeshoek', p:regelmatig(6, 2.6, 0), as:[0, 60, 120, 30, 90, 150], orde:6, fout:{ '3':'Er zijn ook drie assen door het midden van twee overstaande zijden.' } },
+    { naam:'vlieger', p:[[0, -3], [1.7, 0.9], [0, 2.1], [-1.7, 0.9]], as:[90], orde:1, fout:{ '2':'De andere diagonaal is geen as: de bovenkant en de onderkant zijn niet even groot.' } },
+    { naam:'gelijkbenig trapezium', p:[[-3, -1.5], [3, -1.5], [1.6, 1.5], [-1.6, 1.5]], as:[90], orde:1, fout:{ '2':'Een horizontale lijn is geen as: de boven- en onderkant zijn niet even lang.' } } ];
+  /* draaisymmetrische figuren zonder spiegelas: een molentje met n wieken */
+  function molen(n){ var l = []; for (var k = 0; k < n; k++){ var a = 360 * k / n; [[0.5, 0], [2.8, 0.6], [1.2, 1.5]].forEach(function(p){ l.push(draai(p, a)); }); } return l; }
+  function symFig(p, o){
+    o = o || {};
+    var rot = o.rot || 0, P = p.map(function(q){ return draai(q, rot); }), sz = 54, cx = 170, cy = 140, s = '';
+    var Q = P.map(function(q){ return [cx + q[0] * sz / 1.25, cy - q[1] * sz / 1.25]; });
+    if (o.molen){ for (var k = 0; k < Q.length; k += 3) s += pg([[cx, cy], Q[k], Q[k + 1], Q[k + 2]], { f:K[0], fo:0.22, w:2.5 }); }
+    else s += pg(Q, { f:K[0], fo:0.15, w:2.5 });
+    (o.assen || []).forEach(function(a){ var u = pol(0, 0, 150, a + rot); s += ln(cx - u[0], cy - u[1], cx + u[0], cy + u[1], { k:K[1], w:2.5, stip:'8 6' }); });
+    if (o.punt) s += cir(cx, cy, 4, { f:'var(--ink)', s:'none', w:0 });
+    return svg(340, 280, s, o.aria || 'een figuur', 340);
+  }
+
   /* ================= 4 transformaties ================= */
   G.push({ groep:{ id:'wob-m-transf', niveau:'onderbouw', domein:'meetkunde', naam:'Spiegelen, verschuiven en draaien',
-      uit:'Een driehoek in een assenstelsel spiegelen, verschuiven of draaien, en de coördinaten van het beeldpunt uitrekenen. Het beeldpunt van A heet A′, hier geschreven als A\'.' },
+      uit:'Symmetrieassen en draaisymmetrie herkennen. Een driehoek in een assenstelsel spiegelen, verschuiven of draaien, en de coördinaten van het beeldpunt uitrekenen. Het beeldpunt van A heet A′, hier geschreven als A\'.' },
     doelen:[
       { id:'wob-m-tr-spiegel', naam:'Spiegelen in de x-as of de y-as', kort:'In de x-as wordt (x, y) → (x, −y); in de y-as wordt (x, y) → (−x, y)',
         uit:'<p>Bij <b>spiegelen</b> komt het beeldpunt even ver aan de <b>andere kant</b> van de spiegelas.</p><p>Spiegel je in de <b>x-as</b>, dan blijft x gelijk en verandert y van teken: (3, 2) wordt <b>(3, −2)</b>.</p><p>Spiegel je in de <b>y-as</b>, dan blijft y gelijk en verandert x van teken: (3, 2) wordt <b>(−3, 2)</b>.</p>',
@@ -837,6 +1315,73 @@
             kstap(R, 'Welke regel hoort bij een kwartslag ' + (links ? 'linksom' : 'rechtsom') + '?', RG[links ? 0 : 1], [], links ? 'Linksom gaat (1, 0) naar (0, 1). Dat past bij (' + MIN + 'y, x).' : 'Rechtsom gaat (1, 0) naar (0, ' + MIN + '1). Dat past bij (y, ' + MIN + 'x).', { orde:RG }),
             St(links ? 'De x-coördinaat van ' + nm + "' is " + MIN + 'y. Hier is y = ' + T(A[1]) + ', dus ' + MIN + 'y =' : 'De x-coördinaat van ' + nm + "' is y. Hier is y =", T(B[0]), links ? 'Neem y = ' + T(A[1]) + ' en geef het het andere teken.' : 'Neem gewoon y = ' + T(A[1]) + '.', Fz([T(B[0])], F(T(A[0]), 'Bij een kwartslag ruilen x en y van plaats.', T(-B[0]), links ? 'Bij linksom krijgt de nieuwe x het andere teken.' : 'Bij rechtsom blijft de nieuwe x gelijk aan y.'))),
             StC(nm + "' =", B[0], B[1], 'x wordt ' + T(B[0]) + ' en y wordt ' + (links ? 'x = ' : MIN + 'x = ') + T(B[1]) + ': ' + co(B[0], B[1]) + '.') ] };
+        } },
+      { id:'wob-m-tr-symas', naam:'Symmetrieassen', kort:'Een symmetrieas is een vouwlijn: vouw je de figuur erover, dan vallen de twee helften precies op elkaar',
+        uit:'<p>Een figuur is <b>lijnsymmetrisch</b> als je hem zo dubbel kunt vouwen dat de twee helften precies op elkaar vallen. De vouwlijn heet een <b>symmetrieas</b>.</p>' +
+          '<p>Een figuur kan meer assen hebben. Een <b>rechthoek</b> heeft er 2: verticaal en horizontaal door het midden. De diagonalen niet: vouw je daarover, dan vallen de hoeken niet op elkaar. Een <b>vierkant</b> heeft er 4, ook de diagonalen.</p>' +
+          '<p>Sommige figuren hebben er geen, zoals een parallellogram. Een regelmatige veelhoek met n hoeken heeft er n.</p>',
+        wanneer:'je moet zeggen of en hoe vaak een figuur symmetrisch is.',
+        maak:function(R){
+          var f = R.kies(SYMF), rot = f.as.length === 1 ? R.kies([0, 0, 20, 90, -30]) : R.kies([0, 0, 15, 30, -20]), n = f.as.length;
+          var bl = function(k){ return symFig(f.p, { rot:rot, assen:k >= 2 ? f.as : [], aria:'een ' + f.naam }); };
+          var andere = SYMF.filter(function(x){ return x.naam !== f.naam && x.as.length !== n; }), opt = R.hussel(andere).slice(0, 2).map(function(x){ return x.naam; });
+          var fout = {}; for (var k in f.fout) if (+k !== n) fout[k] = f.fout[k];
+          if (n !== 0) fout['0'] = 'Er is wel een vouwlijn: de ' + (n === 1 ? 'lijn' : 'lijnen') + ' door het midden waarover de helften op elkaar vallen.';
+          return { vraag:'symmetrieassen ' + f.naam + ' ' + rot, vraagHtml:'Hoeveel symmetrieassen?', context:'Hoeveel symmetrieassen heeft deze figuur? Stel je voor dat je hem dubbelvouwt.', beeld:bl, zelfBeeld:bl(0), stappen:[
+            kstap(R, 'Wat voor figuur is dit?', f.naam, opt, 'Kijk naar de zijden en de hoeken: welke zijden zijn even lang, welke evenwijdig?'),
+            St('Hoeveel symmetrieassen heeft een ' + f.naam + '?', String(n), n ? 'Zoek elke lijn waarover je kunt vouwen zodat de helften op elkaar vallen. Het zijn er ' + n + '.' : 'Er is geen enkele vouwlijn waarbij de helften precies op elkaar vallen.', fout) ] };
+        } },
+      { id:'wob-m-tr-lijn', naam:'Spiegelen in een lijn x = a, y = b of y = x', kort:'Het beeldpunt ligt even ver aan de andere kant van de lijn. Bij y = x ruilen x en y van plaats',
+        uit:'<p>Bij spiegelen ligt het beeldpunt even ver van de spiegellijn, maar aan de <b>andere kant</b>.</p>' +
+          '<p>Bij de lijn <b>x = 2</b> (een staande lijn) verandert alleen x. A(5, 1) ligt 3 rechts van de lijn, dus A\' ligt 3 links ervan: x = 2 ' + MIN + ' 3 = ' + MIN + '1. A\' = <b>(' + MIN + '1, 1)</b>.</p>' +
+          '<p>Bij de lijn <b>y = b</b> (een liggende lijn) verandert alleen y, op dezelfde manier.</p>' +
+          '<p>Bij de schuine lijn <b>y = x</b> ruilen x en y van plaats: (4, 1) wordt <b>(1, 4)</b>.</p>',
+        wanneer:'een punt gespiegeld wordt in een lijn die niet een van de assen is.',
+        maak:function(R){
+          var soort = R.kies(['x', 'x', 'y', 'y', 'yx']), a, x, y, bx, by;
+          do { a = soort === 'yx' ? 0 : R.heel(-3, 3); x = R.heel(-5, 5); y = R.heel(-5, 5);
+            if (soort === 'x'){ bx = 2 * a - x; by = y; } else if (soort === 'y'){ bx = x; by = 2 * a - y; } else { bx = y; by = x; }
+          } while ((soort === 'x' && (x === a || !a)) || (soort === 'y' && (y === a || !a)) || (soort === 'yx' && x === y) || Math.abs(bx) > 6 || Math.abs(by) > 6);
+          var lijn = soort === 'x' ? 'x = ' + T(a) : soort === 'y' ? 'y = ' + T(a) : 'y = x';
+          var bl = function(n){
+            var u = 22, m = 26, Wd = 12 * u + 2 * m, s = '', i;
+            function f(p){ return [m + (p[0] + 6) * u, m + (6 - p[1]) * u]; }
+            for (i = -6; i <= 6; i++) s += lnP(f([i, -6]), f([i, 6]), { w:1, op:0.2 }) + lnP(f([-6, i]), f([6, i]), { w:1, op:0.2 });
+            s += lnP(f([-6, 0]), f([6, 0]), { w:2 }) + lnP(f([0, -6]), f([0, 6]), { w:2 });
+            for (i = -6; i <= 6; i += 2) if (i){ var p1 = f([i, 0]), p2 = f([0, i]); s += tx(p1[0], p1[1] + 15, T(i), { fs:11, k:'var(--muted)' }) + tx(p2[0] - 6, p2[1] + 4, T(i), { fs:11, a:'end', k:'var(--muted)' }); }
+            var L1 = soort === 'x' ? [a, -6] : soort === 'y' ? [-6, a] : [-6, -6], L2 = soort === 'x' ? [a, 6] : soort === 'y' ? [6, a] : [6, 6];
+            s += lnP(f(L1), f(L2), { k:K[3], w:3 }) + tx(f(L2)[0] + (soort === 'y' ? -2 : 6), f(L2)[1] + (soort === 'y' ? -8 : 14), lijn, { fs:13, vet:true, a:soort === 'y' ? 'end' : 'start', k:K[3] });
+            var A = f([x, y]); s += cir(A[0], A[1], 5.5, { f:K[0], s:'var(--kaart)', w:1.5 }) + tx(A[0] + 9, A[1] - 9, 'A', { vet:true, fs:14, a:'start', k:K[0] });
+            if (n >= 3){ var B = f([bx, by]); s += lnP(A, B, { k:K[2], w:2, stip:'5 4' }) + cir(B[0], B[1], 5.5, { f:K[2], s:'var(--kaart)', w:1.5 }) + tx(B[0] + 9, B[1] - 9, "A'", { vet:true, fs:14, a:'start', k:K[2] }); }
+            return svg(Wd, Wd, s, 'punt A en de spiegellijn ' + lijn, 360);
+          };
+          var st;
+          if (soort === 'yx'){
+            var RG = ['(x, y) → (y, x)', '(x, y) → (' + MIN + 'x, ' + MIN + 'y)', '(x, y) → (' + MIN + 'y, x)'];
+            st = [kstap(R, 'Welke regel hoort bij spiegelen in de lijn y = x?', RG[0], [], 'De lijn y = x loopt schuin door de oorsprong. Een punt erop heeft x en y gelijk. Bij spiegelen ruilen x en y van plaats.', { orde:RG }),
+              St('De x-coördinaat van A\' is de y-coördinaat van A:', T(bx), 'A = ' + co(x, y) + '. De nieuwe x is de oude y.', Fz([T(bx)], F(T(x), 'Bij y = x ruilen ze van plaats: de nieuwe x is de oude y.'))),
+              StC("A' =", bx, by, 'x en y ruilen: ' + co(bx, by) + '.') ];
+          } else {
+            var oud = soort === 'x' ? x : y, d = oud - a, nieuw = a - d, wat = soort === 'x' ? 'x' : 'y', kant = soort === 'x' ? (d > 0 ? 'rechts van' : 'links van') : (d > 0 ? 'boven' : 'onder');
+            st = [St('A ligt ' + kant + ' de lijn ' + lijn + '. Hoe ver? ' + (d > 0 ? T(oud) + ' ' + MIN + ' ' + haakN(a) : T(a) + ' ' + MIN + ' ' + haakN(oud)) + ' =', String(Math.abs(d)), 'Tel de hokjes van A tot de lijn, of reken het verschil uit.', Fz([String(Math.abs(d))], F(String(Math.abs(oud)), 'Dat is de afstand tot de as. Je zoekt de afstand tot de lijn ' + lijn + '.'))),
+              St('A\' ligt even ver aan de andere kant. De ' + wat + '-coördinaat van A\' = ' + T(a) + (d > 0 ? ' ' + MIN + ' ' : ' + ') + Math.abs(d) + ' =', T(nieuw), 'Vanaf de lijn ' + Math.abs(d) + ' de andere kant op.', Fz([T(nieuw)], F(T(-oud), 'Dat is spiegelen in de ' + (soort === 'x' ? 'y' : 'x') + '-as. Hier spiegel je in de lijn ' + lijn + '.', T(oud), 'Die blijft niet gelijk: A\' ligt aan de andere kant van de lijn.'))),
+              StC("A' =", bx, by, (soort === 'x' ? 'y blijft ' + T(y) + ', x wordt ' + T(bx) : 'x blijft ' + T(x) + ', y wordt ' + T(by)) + ': ' + co(bx, by) + '.') ];
+          }
+          return { vraag:"A' = ?", context:'Spiegel A' + co(x, y) + ' in de lijn ' + lijn + '. Wat zijn de coördinaten van A\'? Schrijf als (x, y).', beeld:bl, zelfBeeld:bl(0), antwoord:[co(bx, by)], controle:coC(bx, by), stappen:st };
+        } },
+      { id:'wob-m-tr-draai', naam:'Draaisymmetrie en puntsymmetrie', kort:'Tel hoe vaak de figuur in één hele draai op zichzelf valt. De kleinste draaihoek is 360° gedeeld door dat aantal',
+        uit:'<p>Een figuur is <b>draaisymmetrisch</b> als hij na een draai om zijn middelpunt, kleiner dan een hele draai, weer precies op zichzelf valt.</p>' +
+          '<p>Tel hoe vaak hij in één hele draai op zichzelf valt. Bij een gelijkzijdige driehoek is dat 3 keer. De <b>kleinste draaihoek</b> is dan 360 : 3 = <b>120°</b>.</p>' +
+          '<p>Valt de figuur al na een <b>halve slag</b> (180°) op zichzelf, dan heet hij <b>puntsymmetrisch</b>. Dat geldt als het aantal even is: een rechthoek (2), een vierkant (4), een zeshoek (6). Een gelijkzijdige driehoek is niet puntsymmetrisch.</p>',
+        wanneer:'je moet zeggen of een figuur draaisymmetrisch of puntsymmetrisch is.',
+        maak:function(R){
+          var keus = R.heel(0, 3) === 0 ? { naam:'molentje met ' + R.kies([3, 4, 5]) + ' wieken', molen:true } : R.kies(SYMF.filter(function(x){ return x.orde > 1; }));
+          var n = keus.molen ? +/\d/.exec(keus.naam)[0] : keus.orde, p = keus.molen ? molen(n) : keus.p, rot = R.kies([0, 0, 10, 25, -15]), hk = 360 / n, PS = ['ja: na een halve slag valt hij op zichzelf', 'nee: na een halve slag valt hij niet op zichzelf'];
+          var bl = symFig(p, { rot:rot, molen:keus.molen, punt:true, aria:'een ' + keus.naam });
+          return { vraag:'draai ' + keus.naam + ' ' + rot, vraagHtml:'Kleinste draaihoek?', context:'De figuur draait om zijn middelpunt. Hoe groot is de kleinste draaihoek waarbij hij weer precies op zichzelf valt?', eenheid:'°', beeld:bl, zelfBeeld:bl, stappen:[
+            St('Hoe vaak valt de figuur op zichzelf tijdens één hele draai (de hele draai zelf meegeteld)?', String(n), keus.molen ? 'Tel de wieken: elke wiek komt een keer op de plek van de eerste.' : 'Tel hoe vaak een hoek op de plek van de eerste hoek komt.'),
+            kstap(R, 'Is de figuur puntsymmetrisch?', PS[n % 2 ? 1 : 0], [], n % 2 ? n + ' is oneven: na een halve slag valt hij nog niet op zichzelf.' : n + ' is even: na een halve slag valt hij op zichzelf.', { orde:PS }),
+            St('De kleinste draaihoek = 360 : ' + n + ' =', gr(hk), 'Een hele draai gedeeld door het aantal keer.', Fz(gr(hk), F('180', n === 2 ? '' : 'Na 180° valt hij ook op zichzelf, maar er is een kleinere draaihoek.', '360', 'Na een hele draai valt elke figuur op zichzelf. Zoek de kleinste.')), { e:'°' }) ] };
         } }
     ] });
 
@@ -918,6 +1463,102 @@
           else st.push(St('De basishoeken samen: 2 ' + X + ' ' + bs + ' =', gr(2 * bs), '∠' + N[1] + ' is ook ' + bs + '°.', null, { e:'°' }),
             St('∠' + top + ' = 180 ' + MIN + ' ' + (2 * bs) + ' =', gr(tp), 'Wat er van de 180° overblijft, is de tophoek.', Fz(gr(tp), F(String(180 - bs), 'Er zijn twee basishoeken van ' + bs + '°.', String(bs), 'De tophoek is niet even groot als een basishoek.')), { e:'°' }));
           return { vraag:'∠' + (v === 0 ? N[0] : top) + ' = ?', context:'Driehoek ' + nm.join('') + ' is gelijkbenig: ' + benen + '. ' + (v === 0 ? '∠' + top + ' = ' + tp + '°. Bereken ∠' + N[0] + '.' : '∠' + N[0] + ' = ' + bs + '°. Bereken ∠' + top + '.'), eenheid:'°', beeld:bl, zelfBeeld:bl, stappen:st };
+        } },
+      { id:'wob-m-ev-vierhoek', naam:'Hoeken in een vierhoek, parallellogram en ruit', kort:'De hoeken van een vierhoek zijn samen 360°. In een parallellogram zijn overstaande hoeken gelijk en buurhoeken samen 180°',
+        uit:'<p>Een vierhoek kun je met een diagonaal in <b>twee driehoeken</b> knippen. Elke driehoek is samen 180°, dus de vier hoeken van een vierhoek zijn samen <b>360°</b>.</p>' +
+          '<p>In een <b>parallellogram</b> (en dus ook in een <b>ruit</b>) zijn de <b>overstaande hoeken even groot</b>. Twee hoeken <b>naast elkaar</b> zijn samen <b>180°</b>: het zijn hoeken bij evenwijdige lijnen.</p>' +
+          '<p>Is ∠A = 70° in parallellogram ABCD, dan is ∠C = 70° en zijn ∠B en ∠D allebei 180 ' + MIN + ' 70 = <b>110°</b>.</p>',
+        wanneer:'je een hoek zoekt in een vierhoek, een parallellogram of een ruit.',
+        maak:function(R){
+          var v = R.kies(['vier', 'vier', 'para', 'ruit']), nm = R.kies([['A', 'B', 'C', 'D'], ['P', 'Q', 'R', 'S'], ['K', 'L', 'M', 'N']]), bl, st, ctx, vr, uit;
+          if (v === 'vier'){
+            var A, P, ok;
+            do {
+              A = [R.heel(11, 28) * 5, R.heel(11, 28) * 5, R.heel(11, 28) * 5]; A.push(360 - A[0] - A[1] - A[2]); ok = A[3] >= 55 && A[3] <= 140;
+              if (ok){
+                var th = [0], i; for (i = 1; i < 4; i++) th.push(th[i - 1] + 180 - A[i]);
+                var u = th.map(function(t){ return [Math.cos(t * RAD), Math.sin(t * RAD)]; }), L0 = R.heel(5, 8), L1 = R.heel(4, 7);
+                var rx = -(L0 * u[0][0] + L1 * u[1][0]), ry = -(L0 * u[0][1] + L1 * u[1][1]), det = u[2][0] * u[3][1] - u[3][0] * u[2][1];
+                var L2 = (rx * u[3][1] - u[3][0] * ry) / det, L3 = (u[2][0] * ry - rx * u[2][1]) / det;
+                ok = L2 > 2.5 && L3 > 2.5 && L2 < 11 && L3 < 11;
+                if (ok){ P = [[0, 0]]; P.push([L0, 0]); P.push([P[1][0] + L1 * u[1][0], P[1][1] + L1 * u[1][1]]); P.push([P[2][0] + L2 * u[2][0], P[2][1] + L2 * u[2][1]]); }
+              }
+            } while (!ok);
+            var q = R.heel(0, 3), bek = A.filter(function(x, k){ return k !== q; }), sb = bek[0] + bek[1] + bek[2]; uit = A[q];
+            bl = tekenFig(P, { hoek:A.map(function(x, k){ return k === q ? '?' : x + '°'; }), kl:[K[0], K[3], K[2], K[4]].map(function(c, k){ return k === q ? K[1] : c; }), namen:nm, markeer:false, aria:'vierhoek ' + nm.join('') });
+            vr = '∠' + nm[q] + ' = ?'; ctx = 'In vierhoek ' + nm.join('') + ' zijn drie hoeken gegeven: ' + nm.filter(function(x, k){ return k !== q; }).map(function(x){ return '∠' + x + ' = ' + A[nm.indexOf(x)] + '°'; }).join(', ').replace(/, ([^,]*)$/, ' en $1') + '. Bereken ∠' + nm[q] + '.';
+            st = [kstap(R, 'Hoeveel graden zijn de vier hoeken van een vierhoek samen?', '360°', [], 'Met een diagonaal knip je de vierhoek in twee driehoeken: 2 ' + X + ' 180° = 360°.', { orde:['180°', '360°', '540°'] }),
+              St('De drie bekende hoeken samen: ' + bek.join(' + ') + ' =', gr(sb), 'Tel ze op.', null, { e:'°' }),
+              St('∠' + nm[q] + ' = 360 ' + MIN + ' ' + sb + ' =', gr(uit), 'Wat er van de 360° overblijft.', Fz(gr(uit), F(String(180 - sb), 'Een vierhoek is samen 360°, niet 180°.', String(sb), 'Dat zijn de drie bekende hoeken samen.')), { e:'°' }) ];
+          } else {
+            var a; do { a = R.heel(9, 32) * 5; } while (a === 90);
+            var ruit = v === 'ruit', s1 = ruit ? 5 : R.heel(6, 9), s2 = ruit ? 5 : R.heel(3, 5);
+            var Pp = [[0, 0], [s1, 0], [s1 + s2 * Math.cos(a * RAD), s2 * Math.sin(a * RAD)], [s2 * Math.cos(a * RAD), s2 * Math.sin(a * RAD)]];
+            var w = R.heel(1, 3), gw = w === 2 ? a : 180 - a, hk = [a + '°', '', '', '']; hk[w] = '?'; uit = gw;
+            bl = tekenFig(Pp, { hoek:hk, kl:[K[0], K[1], K[1], K[1]], namen:nm, markeer:false, aria:(ruit ? 'ruit ' : 'parallellogram ') + nm.join(''),
+              na:function(P){ return ruit ? streepje(P[0], P[1]) + streepje(P[1], P[2]) + streepje(P[2], P[3]) + streepje(P[3], P[0]) : ''; } });
+            var LG = ['overstaande hoeken: even groot', 'buurhoeken: samen 180°'];
+            vr = '∠' + nm[w] + ' = ?'; ctx = (ruit ? 'Ruit ' : 'Parallellogram ') + nm.join('') + ' heeft ∠' + nm[0] + ' = ' + a + '°. Bereken ∠' + nm[w] + '.';
+            st = [kstap(R, 'Hoe liggen ∠' + nm[0] + ' en ∠' + nm[w] + ' ten opzichte van elkaar?', LG[w === 2 ? 0 : 1], [], w === 2 ? '∠' + nm[0] + ' en ∠' + nm[2] + ' liggen schuin tegenover elkaar.' : '∠' + nm[0] + ' en ∠' + nm[w] + ' liggen aan dezelfde zijde, naast elkaar.', { orde:LG }),
+              St('∠' + nm[w] + ' =' + (w === 2 ? '' : ' 180 ' + MIN + ' ' + a + ' ='), gr(gw), w === 2 ? 'Overstaande hoeken in een ' + (ruit ? 'ruit' : 'parallellogram') + ' zijn even groot.' : 'Buurhoeken zijn samen 180°: trek ' + a + ' af van 180.', Fz(gr(gw), F(String(w === 2 ? 180 - a : a), w === 2 ? 'Overstaande hoeken zijn even groot, niet samen 180°.' : 'Buurhoeken zijn niet gelijk: samen zijn ze 180°.', String(360 - a), 'Twee buurhoeken zijn samen 180°, niet 360°.')), { e:'°' }) ];
+          }
+          return { vraag:vr, context:ctx, eenheid:'°', beeld:bl, zelfBeeld:bl, stappen:st };
+        } },
+      { id:'wob-m-ev-buiten', naam:'De buitenhoek van een driehoek', kort:'Een buitenhoek is samen met de binnenhoek ernaast 180°, en is even groot als de twee andere binnenhoeken samen',
+        uit:'<p>Verleng je een zijde van een driehoek, dan ontstaat er een <b>buitenhoek</b>. De buitenhoek en de binnenhoek ernaast zijn nevenhoeken: samen <b>180°</b>.</p>' +
+          '<p>Daaruit volgt een handige regel: de buitenhoek is <b>even groot als de twee andere binnenhoeken samen</b>. Zijn ∠A = 50° en ∠B = 60°, dan is de buitenhoek bij C 50 + 60 = <b>110°</b>. Controle: ∠C = 70°, en 180 ' + MIN + ' 70 = 110.</p>' +
+          '<p>In een <b>gelijkzijdige driehoek</b> zijn alle hoeken <b>60°</b>, dus elke buitenhoek is 120°.</p>',
+        wanneer:'een zijde van een driehoek verlengd is en je de hoek erbuiten zoekt.',
+        maak:function(R){
+          var gz = R.heel(0, 4) === 0, al, be, nm = R.kies(NAMEN3);
+          if (gz){ al = 60; be = 60; } else { do { al = R.heel(6, 20) * 5; be = R.heel(6, 20) * 5; } while (al + be > 145 || al + be < 70 || al === be && al === 60); }
+          var ga = 180 - al - be, uit = al + be;
+          var C = driePts(al, be)[2], L0 = Math.hypot(C[0] - 1, C[1]), ext = [C[0] + (C[0] - 1) / L0 * 0.45, C[1] + C[1] / L0 * 0.45];
+          var bl = function(n){ return tekenFig(driePts(al, be), { hoek:gz ? ['', '', ''] : [al + '°', be + '°', n >= 1 ? ga + '°' : ''], markeer:false, namen:nm, extra:[ext], aria:'driehoek ' + nm.join('') + ' met een verlengde zijde bij ' + nm[2],
+            na:function(P, f){ var E = f(ext); return lnP(P[2], E, { w:2.5, stip:'7 5' }) + tussen(P[2], E, P[0], { t:'?', k:K[1], r:30, recht:false }) + (gz ? streepje(P[0], P[1]) + streepje(P[1], P[2]) + streepje(P[2], P[0]) : ''); } }); };
+          var st, ctx;
+          if (gz){
+            ctx = 'Driehoek ' + nm.join('') + ' is gelijkzijdig. De zijde ' + nm[1] + nm[2] + ' is verlengd voorbij ' + nm[2] + '. Bereken de buitenhoek bij ' + nm[2] + '.';
+            st = [St('Alle hoeken van een gelijkzijdige driehoek zijn even groot: 180 : 3 =', gr(60), 'Drie gelijke hoeken, samen 180°.', null, { e:'°' }),
+              St('De buitenhoek = 180 ' + MIN + ' 60 =', gr(120), 'De buitenhoek en de binnenhoek ernaast zijn samen 180°.', Fz(gr(120), F('60', 'Dat is de binnenhoek. De buitenhoek ligt erbuiten.')), { e:'°' }) ];
+          } else {
+            ctx = 'In driehoek ' + nm.join('') + ' is ∠' + nm[0] + ' = ' + al + '° en ∠' + nm[1] + ' = ' + be + '°. De zijde ' + nm[1] + nm[2] + ' is verlengd voorbij ' + nm[2] + '. Bereken de buitenhoek bij ' + nm[2] + '.';
+            st = [St('Eerst de binnenhoek: ∠' + nm[2] + ' = 180 ' + MIN + ' ' + al + ' ' + MIN + ' ' + be + ' =', gr(ga), 'De drie hoeken van de driehoek zijn samen 180°.', null, { e:'°' }),
+              St('De buitenhoek = 180 ' + MIN + ' ' + ga + ' =', gr(uit), 'Buitenhoek en binnenhoek liggen op een rechte lijn: samen 180°. Controle: ' + al + ' + ' + be + ' = ' + uit + '.', Fz(gr(uit), F(String(ga), 'Dat is de binnenhoek. De buitenhoek ligt erbuiten.', String(360 - ga), 'Op een rechte lijn is het samen 180°, niet 360°.')), { e:'°' }) ];
+          }
+          return { vraag:'Buitenhoek = ?', context:ctx, eenheid:'°', beeld:bl, zelfBeeld:bl(0), stappen:st };
+        } },
+      { id:'wob-m-ev-soort', naam:'Welke vierhoek is het?', kort:'Kijk naar evenwijdige zijden, gelijke zijden, rechte hoeken en de diagonalen. Kies de naam die precies past',
+        uit:'<p>De bijzondere vierhoeken herken je aan hun eigenschappen.</p>' +
+          '<p><b>Twee paar evenwijdige zijden:</b> parallellogram. Met vier rechte hoeken is het een <b>rechthoek</b>, met vier gelijke zijden een <b>ruit</b>, met allebei een <b>vierkant</b>.</p>' +
+          '<p><b>Precies één paar evenwijdige zijden:</b> trapezium. Zijn de twee andere zijden even lang, dan is het een <b>gelijkbenig trapezium</b>.</p>' +
+          '<p><b>Geen evenwijdige zijden, wel twee paar gelijke zijden naast elkaar:</b> vlieger.</p>' +
+          '<p>De diagonalen helpen ook. Ze delen elkaar middendoor bij elk parallellogram. Even lang: rechthoek of vierkant. Loodrecht op elkaar: ruit, vierkant of vlieger.</p>',
+        wanneer:'je bij een beschrijving moet zeggen welke vierhoek het is.',
+        maak:function(R){
+          var L = [
+            ['vier rechte hoeken en vier even lange zijden', 'vierkant'],
+            ['vier rechte hoeken, maar niet alle zijden even lang', 'rechthoek'],
+            ['vier even lange zijden, maar geen rechte hoeken', 'ruit'],
+            ['twee paar evenwijdige zijden, geen rechte hoeken, en niet alle zijden even lang', 'parallellogram'],
+            ['precies één paar evenwijdige zijden, en de twee andere zijden zijn niet even lang', 'trapezium'],
+            ['precies één paar evenwijdige zijden, en de twee andere zijden zijn even lang', 'gelijkbenig trapezium'],
+            ['geen evenwijdige zijden, en twee paar even lange zijden die naast elkaar liggen', 'vlieger'],
+            ['diagonalen die even lang zijn, elkaar middendoor delen en loodrecht op elkaar staan', 'vierkant'],
+            ['diagonalen die even lang zijn en elkaar middendoor delen, maar niet loodrecht op elkaar staan', 'rechthoek'],
+            ['diagonalen die elkaar middendoor delen en loodrecht op elkaar staan, maar niet even lang zijn', 'ruit'],
+            ['diagonalen die elkaar middendoor delen, maar niet even lang zijn en niet loodrecht op elkaar staan', 'parallellogram'],
+            ['diagonalen die loodrecht op elkaar staan, waarbij maar één diagonaal de andere middendoor deelt', 'vlieger'] ];
+          var x = R.kies(L), naam = x[1], NM = ['vierkant', 'rechthoek', 'ruit', 'parallellogram', 'trapezium', 'gelijkbenig trapezium', 'vlieger'];
+          var EV = ['twee paar', 'precies één paar', 'geen'], ev = naam === 'vlieger' ? 2 : /trapezium/.test(naam) ? 1 : 0;
+          var VB = { vierkant:[[0, 0], [4, 0], [4, 4], [0, 4]], rechthoek:[[0, 0], [6, 0], [6, 3.5], [0, 3.5]], ruit:[[0, 0], [4, 0], [6.3, 3.3], [2.3, 3.3]], parallellogram:[[0, 0], [5.5, 0], [7, 3], [1.5, 3]],
+            trapezium:[[0, 0], [7, 0], [5.5, 3], [0.8, 3]], 'gelijkbenig trapezium':[[0, 0], [7, 0], [5.3, 3], [1.7, 3]], vlieger:[[0, 0], [2.2, 3], [0, 4.2], [-2.2, 3]] };
+          var bl = function(n){ return n >= 2 ? tekenFig(VB[naam], { W:300, H:200, aria:'een ' + naam }) : ''; };
+          return eindKeuze({ vraag:'Welke vierhoek heeft ' + x[0] + '?', context:'Kies de naam die precies past bij deze eigenschappen.', beeld:bl, stappen:[
+            kstap(R, 'Hoeveel paar evenwijdige zijden heeft deze vierhoek?', EV[ev], [], ev === 0 ? 'Vier rechte hoeken, vier gelijke zijden of diagonalen die elkaar middendoor delen: dan is het een parallellogram, met twee paar evenwijdige zijden.' : ev === 1 ? 'Dat staat in de beschrijving: precies één paar.' : 'Bij een vlieger liggen de gelijke zijden naast elkaar. Er zijn geen evenwijdige zijden.', { orde:EV }),
+            kstap(R, 'Welke vierhoek is het?', naam, (ev === 0 ? ['vierkant', 'rechthoek', 'ruit', 'parallellogram'] : ev === 1 ? ['trapezium', 'gelijkbenig trapezium', 'parallellogram', 'vlieger'] : ['vlieger', 'ruit', 'gelijkbenig trapezium', 'parallellogram']).filter(function(y){ return y !== naam; }), {
+              vierkant:'Gelijke zijden én rechte hoeken, of gelijke en loodrechte diagonalen: een vierkant.', rechthoek:'Rechte hoeken of even lange diagonalen, maar geen vierkant: een rechthoek.', ruit:'Gelijke zijden of loodrechte diagonalen, maar geen vierkant: een ruit.', parallellogram:'Twee paar evenwijdige zijden, maar niets extra: een parallellogram.',
+              trapezium:'Precies één paar evenwijdige zijden: een trapezium. De benen zijn niet gelijk, dus niet gelijkbenig.', 'gelijkbenig trapezium':'Eén paar evenwijdige zijden en twee gelijke benen: een gelijkbenig trapezium.', vlieger:'Twee paar gelijke zijden naast elkaar, of één diagonaal die de andere loodrecht middendoor deelt: een vlieger.' }[naam]) ] });
         } }
     ] });
 
@@ -1084,6 +1725,30 @@
           var oud = v.beeld; op.beeld = function(n){ return oud(Math.max(0, n - 1)); }; op.zelfBeeld = oud(0);
           op.stappen = [kstap(R, 'Welke manier is hier het handigst?', M[erbij ? 0 : 1], [], erbij ? 'Twee bekende figuren liggen tegen elkaar aan. Bereken ze los en tel op.' : 'Er is iets uit de figuur gehaald. Neem de hele figuur en haal het stuk eraf.', { orde:M })].concat(v.stappen);
           return op;
+        } },
+      { id:'wob-m-cir-terug', naam:'De straal terugrekenen', kort:'Uit de omtrek: d = omtrek : π. Uit de oppervlakte: r² = oppervlakte : π, en dan de wortel',
+        uit:'<p>Weet je de <b>omtrek</b> van een cirkel, dan reken je terug met delen: omtrek = π ' + X + ' d, dus <b>d = omtrek : π</b>. De straal is de helft daarvan.</p>' +
+          '<p>Weet je de <b>oppervlakte</b>, dan is r² = oppervlakte : π. Neem daarna de <b>wortel</b>: <b>r = √(oppervlakte : π)</b>.</p>' +
+          '<p>Omtrek 50 cm: d = 50 : π ≈ 15,9 cm. Oppervlakte 50 cm²: r² = 50 : π ≈ 15,92 en r = √15,92 ≈ 4,0 cm. Tik alles in zonder tussendoor af te ronden.</p>',
+        wanneer:'je de omtrek of de oppervlakte van een cirkel weet en de straal of diameter zoekt.',
+        maak:function(R){
+          var uitOpp = R.heel(0, 1) === 1, e = R.kies(['cm', 'cm', 'm']), it = e === 'm' ? R.kies(['Een rond grasveld', 'Een ronde vijver', 'Een rotonde']) : R.kies(['Een rond tafelblad', 'Een ronde klok', 'Een cirkel']), g, d, r, st, ctx;
+          if (!uitOpp){
+            var zoekR = R.heel(0, 1) === 1;
+            do { g = R.heel(150, 900) / 10; d = g / PI; r = d / 2; } while (grens(d, 1) || grens(r, 1) || grens(d, 2));
+            ctx = it + ' heeft een omtrek van ' + T(g) + ' ' + e + '. Hoe groot is ' + (zoekR ? 'de straal' : 'de diameter') + '? Rond af op 1 decimaal.';
+            st = [kstap(R, 'Omtrek = π ' + X + ' d. Hoe vind je d?', 'd = omtrek : π', ['d = omtrek ' + X + ' π', 'd = omtrek : 2'], 'Terugrekenen: het omgekeerde van keer π is gedeeld door π.'),
+              St('d = ' + T(g) + ' : π ≈ (' + (zoekR ? 'rond nog niet af, 2 decimalen mag' : 'rond af op 1 decimaal') + ')', zoekR ? af(d, 2, e).concat(af(d, 1, e)) : af(d, 1, e), 'Tik in: ' + T(g) + ' : π = ' + T(d, { dec:4 }) + '…', Fz(af(d, 1, e), F(afT(g * PI, 1), 'Delen door π, niet keer π.', afT(g / 2, 1), 'Je deelde door 2. Deel door π.')), { e:e }) ];
+            if (zoekR) st.push(St('r = d : 2 ≈ (rond af op 1 decimaal)', af(r, 1, e), 'Tik in: ' + T(g) + ' : π : 2 = ' + T(r, { dec:4 }) + '…', Fz(af(r, 1, e), F(afT(d, 1), 'Dat is de diameter. De straal is de helft.')), { e:e }));
+          } else {
+            do { g = R.heel(30, 900); if (R.heel(0, 1)) g = g + R.heel(1, 9) / 10; var r2 = g / PI; r = Math.sqrt(r2); } while (grens(r, 1) || grens(r2, 2));
+            var e2 = e + '²';
+            ctx = it + ' heeft een oppervlakte van ' + T(g) + ' ' + e2 + '. Hoe groot is de straal? Rond af op 1 decimaal.';
+            st = [St('r² = ' + T(g) + ' : π ≈ (2 decimalen)', [afT(g / PI, 2), afT(g / PI, 1)], 'Oppervlakte = π ' + X + ' r², dus r² = oppervlakte : π. Tik in: ' + T(g) + ' : π = ' + T(g / PI, { dec:4 }) + '…', F(afT(g * PI, 2), 'Delen door π, niet keer π.')),
+              St('r = √(' + T(g) + ' : π) ≈ (rond af op 1 decimaal)', af(r, 1, e), 'Neem de wortel. Tik in: √(' + T(g) + ' : π) = ' + T(r, { dec:4 }) + '…', Fz(af(r, 1, e), F(afT(g / PI, 1), 'Dat is r². Neem nog de wortel.', afT(Math.sqrt(g), 1), 'Deel eerst door π, en neem dan de wortel.')), { e:e }) ];
+          }
+          var bl = cirkelBeeld('?', !uitOpp && !zoekR, e);
+          return { vraag:uitOpp || zoekR ? 'Straal?' : 'Diameter?', context:ctx, eenheid:e, beeld:bl, zelfBeeld:bl, stappen:st };
         } }
     ] });
 
@@ -1242,6 +1907,28 @@
             kstap(R, 'De rechte hoek zit ' + (v === 'tv' ? 'in de hoek van het scherm' : 'onderaan, bij de grond') + '. Wat is de schuine zijde?', schuinW, opt.filter(function(o){ return o !== schuinW; }), 'De schuine zijde ligt tegenover de rechte hoek.'),
             St((zoek === 'sch' ? 'Je zoekt de schuine zijde: optellen. ' : 'Je zoekt een rechthoekszijde: aftrekken. ') + kwT, T(kw), zoek === 'sch' ? 'Tel de twee kwadraten op.' : 'Trek het kleine kwadraat van het grote af.', Fz([T(kw)], F(T(zoek === 'sch' ? Math.abs(A1 * A1 - A2 * A2) : A1 * A1 + A2 * A2), zoek === 'sch' ? 'Je zoekt de schuine zijde: optellen.' : 'Je zoekt geen schuine zijde: aftrekken.'))),
             St('√' + T(kw) + ' ≈ (' + rondTekst(d) + ')', af(uit, d, e), 'Gebruik de wortelknop: √' + T(kw) + ' = ' + T(uit, { dec:4 }) + '…', F(T(kw), 'Je vergat de wortel te nemen.'), { e:e }) ] };
+        } },
+      { id:'wob-m-pyt-omtrek', naam:'Pythagoras in een samengestelde figuur', kort:'Zoek de rechthoekige driehoek bij de schuine zijde, bereken die zijde met Pythagoras en tel dan de omtrek op',
+        uit:'<p>Bij een figuur met een <b>schuine zijde</b> staat die lengte er vaak niet bij. Die bereken je eerst.</p>' +
+          '<p>Trek een stippellijn recht naar beneden: dan zie je een <b>rechthoekige driehoek</b> met de schuine zijde als langste zijde. De rechthoekszijden vind je met aftrekken: bij een onderkant van 12 en een bovenkant van 8 is het stukje onder de schuine zijde 12 ' + MIN + ' 8 = 4.</p>' +
+          '<p>Hoogte 3 en stukje 4: schuine zijde² = 3² + 4² = 25, dus de schuine zijde is 5. Tel daarna alle zijden op voor de omtrek.</p>',
+        wanneer:'je de omtrek zoekt van een figuur waarvan één zijde schuin loopt en niet gegeven is.',
+        maak:function(R){
+          var a, c, h, dd, s, O, mooi = R.heel(0, 2) === 0, e = R.kies(['cm', 'm']);
+          do {
+            if (mooi){ var t = R.kies(TRIPEL); dd = t[0]; h = t[1]; } else { dd = R.heel(2, 8); h = R.heel(2, 9); }
+            c = R.heel(3, 10); a = c + dd; s = Math.sqrt(h * h + dd * dd); O = a + c + h + s;
+          } while (!heel(s) && (grens(s, 1) || grens(O, 1)));
+          var ex = heel(s), spieg = R.heel(0, 1) === 1;
+          var pts = spieg ? [[0, 0], [a, 0], [a, h], [a - c, h]] : [[0, 0], [a, 0], [c, h], [0, h]];
+          var bl = function(n){ return tekenFig(pts, { zijde:spieg ? [a + ' ' + e, h + ' ' + e, c + ' ' + e, n >= 3 ? afT(s, ex ? 0 : 1) + ' ' + e : '?'] : [a + ' ' + e, n >= 3 ? afT(s, ex ? 0 : 1) + ' ' + e : '?', c + ' ' + e, h + ' ' + e], W:400, H:240, aria:'een vierhoek met twee rechte hoeken en een schuine zijde',
+            na:function(P, f){ var x = spieg ? a - c : c; return lnP(f([x, h]), f([x, 0]), { k:K[1], w:2.5, stip:'6 5' }) + (n >= 1 ? (function(){ var x1 = f([x, 0])[0], x2 = f([spieg ? 0 : a, 0])[0], ruim = Math.abs(x2 - x1) > 50; return tx((x1 + x2) / 2, f([0, 0])[1] + (ruim ? -14 : 18), dd + ' ' + e, { mid:true, vet:true, fs:14, k:K[1] }); })() : ''); } }); };
+          var rond = ex ? '' : ' Rond af op 1 decimaal.';
+          return { vraag:'Omtrek?', context:'De figuur heeft twee rechte hoeken. De onderkant is ' + a + ' ' + e + ', de bovenkant ' + c + ' ' + e + ' en de hoogte ' + h + ' ' + e + '. Bereken de omtrek.' + rond, eenheid:e, beeld:bl, zelfBeeld:bl(0), stappen:[
+            St('Het stuk onder de schuine zijde: ' + a + ' ' + MIN + ' ' + c + ' =', metE(String(dd), e), 'De onderkant min de bovenkant.', null, { e:e }),
+            St('Schuine zijde² = ' + h + '² + ' + dd + '² = ' + (h * h) + ' + ' + (dd * dd) + ' =', String(h * h + dd * dd), 'Je zoekt de schuine zijde van de driehoek: de kwadraten optellen.', Fz([String(h * h + dd * dd)], F(String(h + dd), 'Eerst kwadrateren, dan optellen.', String(Math.abs(h * h - dd * dd)), 'Bij de schuine zijde tel je op.'))),
+            St('Schuine zijde = √' + (h * h + dd * dd) + (ex ? ' =' : ' ≈ (rond af op 1 decimaal)'), af(s, 1, e), 'Gebruik de wortelknop: √' + (h * h + dd * dd) + ' = ' + T(s, { dec:4 }) + (ex ? '.' : '…'), F(String(h * h + dd * dd), 'Je vergat de wortel te nemen.'), { e:e }),
+            St('Omtrek = ' + a + ' + ' + h + ' + ' + c + ' + ' + afT(s, ex ? 0 : 1) + (ex ? ' =' : ' ≈'), af(O, 1, e), 'Tel alle vier de zijden op.' + (ex ? '' : ' Reken met de niet afgeronde schuine zijde, dan krijg je ' + T(O, { dec:3 }) + '…'), Fz(af(O, 1, e), F(T(a + c + h), 'Je vergat de schuine zijde.', T(rnd(a + c + h + s, 1) + dd), 'Het stukje onder de schuine zijde is geen rand van de figuur.')), { e:e }) ] };
         } }
     ] });
 
@@ -1340,6 +2027,27 @@
           else st.push(St('Kruislings: ' + kb + ' ' + X + ' ' + o.zijde[qi] + ' =', String(kb * o.zijde[qi]), 'Vermenigvuldig de twee getallen die schuin tegenover elkaar staan in de tabel.'),
             St(zoek + ' = ' + (kb * o.zijde[qi]) + ' : ' + ko + (d ? ' ≈ (rond af op 1 decimaal)' : ' ='), af(uit, d, 'cm'), 'Deel door het getal schuin tegenover het vraagteken: ' + ko + '. Dat is ' + T(uit, { dec:4 }) + (d ? '…' : '.'), null, { e:'cm' }));
           return { vraag:zoek + ' = ?', context:o.notatie + ': △' + o.n2.join('') + ' is een vergroting of verkleining van △' + o.n1.join('') + '. Bereken ' + zoek + '. De maten zijn in cm.' + (d ? ' Rond af op 1 decimaal.' : ''), eenheid:'cm', beeld:bl, zelfBeeld:bl, stappen:st };
+        } },
+      { id:'wob-m-gel-hh', naam:'Gelijkvormig aantonen met hoeken', kort:'Twee driehoeken met dezelfde drie hoeken zijn gelijkvormig. Reken de derde hoek uit met 180°',
+        uit:'<p>Twee driehoeken zijn <b>gelijkvormig</b> als ze <b>dezelfde hoeken</b> hebben. De zijden hoef je dan niet te meten.</p>' +
+          '<p>Vaak weet je van elke driehoek maar <b>twee hoeken</b>. Reken dan de <b>derde</b> uit: de hoeken van een driehoek zijn samen 180°.</p>' +
+          '<p>Driehoek 1 heeft hoeken van 50° en 70°, dus de derde is 60°. Driehoek 2 heeft hoeken van 60° en 50°, dus de derde is 70°. Beide hebben 50°, 60° en 70°: ze zijn <b>gelijkvormig</b>. De volgorde en de grootte van de driehoeken maken niet uit.</p>',
+        wanneer:'je moet laten zien of twee driehoeken gelijkvormig zijn en je hoeken weet.',
+        maak:function(R){
+          var x, ok;
+          do { x = [R.heel(7, 22) * 5, R.heel(7, 22) * 5]; x.push(180 - x[0] - x[1]); ok = x[2] >= 30 && x[2] <= 115 && x[0] !== x[1] && x[1] !== x[2] && x[0] !== x[2]; } while (!ok);
+          var ja = R.heel(0, 2) > 0, y = R.hussel(x.slice()), wijz;
+          if (!ja){ var zelfde = function(p){ return p.slice().sort(function(u, v){ return u - v; }).join() === x.slice().sort(function(u, v){ return u - v; }).join(); }; do { y = R.hussel(x.slice()); wijz = R.heel(0, 1); y[wijz] += R.kies([-10, -5, 5, 10]); y[2] = 180 - y[0] - y[1]; } while (zelfde(y) || y[2] < 25 || y[0] < 25 || y[1] < 25); }
+          var n1 = R.kies(NAMEN3), n2 = R.kies(NAMEN3.filter(function(m){ return m !== n1; }));
+          function fig(h, nm, lab, sch){ var o = [0, 1, 2].sort(function(p, q){ return h[p] - h[q]; }), vv = o[2] < o[0] ? [o[2], o[0], o[1]] : [o[0], o[2], o[1]]; var pts = driePts(h[vv[0]], h[vv[1]]).map(function(p){ return [p[0] * sch, p[1] * sch]; }); return tekenFig(pts, { hoek:vv.map(function(i){ return lab[i]; }), namen:vv.map(function(i){ return nm[i]; }), markeer:false, W:300, H:210, m:36, aria:'driehoek ' + nm.join('') }); }
+          var s1 = 1, s2 = R.kies([0.6, 1.5, 0.75, 1.3]);
+          var bl = function(n){ return '<div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;width:100%">' + fig(x, n1, [x[0] + '°', x[1] + '°', n >= 1 ? x[2] + '°' : ''], s1) + fig(y, n2, [y[0] + '°', y[1] + '°', n >= 2 ? y[2] + '°' : ''], s2) + '</div>'; };
+          var OPT = ['ja: ze hebben dezelfde drie hoeken', 'nee: de hoeken zijn niet allemaal gelijk'];
+          var srt = function(h){ return h.slice().sort(function(p, q){ return p - q; }).join('°, ') + '°'; };
+          return eindKeuze({ vraag:'Zijn de driehoeken gelijkvormig?', context:'In driehoek ' + n1.join('') + ' is ∠' + n1[0] + ' = ' + x[0] + '° en ∠' + n1[1] + ' = ' + x[1] + '°. In driehoek ' + n2.join('') + ' is ∠' + n2[0] + ' = ' + y[0] + '° en ∠' + n2[1] + ' = ' + y[1] + '°. Zijn de driehoeken gelijkvormig?', beeld:bl, zelfBeeld:bl(0), stappen:[
+            St('De derde hoek van driehoek ' + n1.join('') + ': ∠' + n1[2] + ' = 180 ' + MIN + ' ' + x[0] + ' ' + MIN + ' ' + x[1] + ' =', gr(x[2]), 'De hoeken van een driehoek zijn samen 180°.', null, { e:'°' }),
+            St('De derde hoek van driehoek ' + n2.join('') + ': ∠' + n2[2] + ' = 180 ' + MIN + ' ' + y[0] + ' ' + MIN + ' ' + y[1] + ' =', gr(y[2]), 'Ook hier: samen 180°.', null, { e:'°' }),
+            kstap(R, 'Driehoek ' + n1.join('') + ' heeft ' + srt(x) + '. Driehoek ' + n2.join('') + ' heeft ' + srt(y) + '. Zijn ze gelijkvormig?', OPT[ja ? 0 : 1], [], ja ? 'Dezelfde drie hoeken, alleen in een andere volgorde: gelijkvormig.' : 'De rijtjes hoeken zijn niet hetzelfde: niet gelijkvormig.', { orde:OPT }) ] });
         } }
     ] });
 

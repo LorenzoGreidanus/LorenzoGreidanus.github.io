@@ -15,7 +15,8 @@
                                     (opts.soort 'dictee': je eigen dictees, voor een dictee-opdracht in het klasoverzicht)
      EIGEN.volledig/uitslagen/nakijk/instel/wisUitslag(code, ...)  -> met de sleutel, voor de docent
      EIGEN.papier(code, { sid?, naam, klas, versie, h })           -> een papieren toets invoeren of aanpassen
-     EIGEN.inlever(code, { sid, naam, klas, a })                   -> de leerling levert in, de server rekent */
+     EIGEN.inlever(code, { sid, naam, klas, a })                   -> de leerling levert in, de server rekent
+     EIGEN.trek(code, sid, n, aantal)  -> welke vragen een leerling krijgt bij trek (zoals de server), of null */
 var EIGEN = (function(){
   'use strict';
   var SLEUTEL = 'lg-materiaal', WEG = 'lg-materiaal-weg';
@@ -123,6 +124,22 @@ var EIGEN = (function(){
   }
 
   function schud(a){ a = a.slice(); for (var i = a.length - 1; i > 0; i--){ var j = Math.floor(Math.random() * (i + 1)), h = a[i]; a[i] = a[j]; a[j] = h; } return a; }
+  /* Elke leerling een deel van de vragen (trek): welke vragen, vast per leerling. Het zaad
+     is FNV-1a van code + ':' + wie, de reeks mulberry32. Precies dezelfde rekensom als
+     trekVan in server/materiaal.js: de server rekent bij het inleveren zelf na welke
+     vragen dit waren. Geeft de nummers in getrokken volgorde, of null: alle vragen. */
+  function trek(code, wie, n, aantal){
+    aantal = Math.floor(Number(aantal)) || 0;
+    if (!(aantal >= 2 && aantal < n)) return null;
+    var s = String(code) + ':' + String(wie), h = 2166136261 >>> 0, i;
+    for (i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+    var a = h >>> 0;
+    var r = function(){ a = a + 0x6D2B79F5 | 0; var x = Math.imul(a ^ a >>> 15, 1 | a); x = x + Math.imul(x ^ x >>> 7, 61 | x) ^ x; return ((x ^ x >>> 14) >>> 0) / 4294967296; };
+    var l = [];
+    for (i = 0; i < n; i++) l.push(i);
+    for (i = n - 1; i > 0; i--){ var j = Math.floor(r() * (i + 1)), w = l[i]; l[i] = l[j]; l[j] = w; }
+    return l.slice(0, aantal);
+  }
   /* drie andere antwoorden uit dezelfde lijst, zonder dubbele */
   function afleiders(paren, i, kant, n){
     var goed = paren[i][kant].toLowerCase(), gezien = {}, uit = [];
@@ -224,5 +241,5 @@ var EIGEN = (function(){
   return { haal: haal, bewaar: bewaar, weg: weg, mijn: mijn, afstemmen: afstemmen, kiezer: kiezer,
            volledig: volledig, uitslagen: uitslagen, nakijk: nakijk, instel: instel, wisUitslag: wisUitslag, papier: papier, inlever: inlever,
            afbeelding: afbeelding, afbAdres: afbAdres, verklein: verklein,
-           vragenUitLijst: vragenUitLijst, oefeningUitLijst: oefeningUitLijst, plakken: plakken, schud: schud };
+           vragenUitLijst: vragenUitLijst, oefeningUitLijst: oefeningUitLijst, plakken: plakken, schud: schud, trek: trek };
 })();

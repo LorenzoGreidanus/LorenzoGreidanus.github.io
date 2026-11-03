@@ -1060,4 +1060,36 @@
           } }
       ] }
   ]);
+
+  /* ========== erbij: accenttekens ========== */
+  /* [zin, goed, [fout], n(adruk) of k(lank), bij nadruk: 1 = met accent; bij klank: é of è] */
+  var ACCENT = [
+    ['Ik heb maar ___ broer, geen twee.', 'één', ['een', 'eèn'], 'n', 1], ['We hebben maar ___ fiets voor het hele gezin.', 'één', ['een', 'eèn'], 'n', 1],
+    ['Ik ben er maar ___ keer geweest, en nooit meer.', 'één', ['een', 'eèn'], 'n', 1], ['Ik heb ___ hekel aan spruitjes.', 'een', ['één', 'eèn'], 'n', 0],
+    ['Wat ___ prachtige zonsondergang!', 'een', ['één', 'eèn'], 'n', 0], ['Ik ben ___ jou, niet tegen jou.', 'vóór', ['voor', 'vòòr'], 'n', 1],
+    ['Zet je fiets maar ___ het huis.', 'voor', ['vóór', 'vòòr'], 'n', 0], ['Dit is ___ plek om te zwemmen: de allermooiste die er is.', 'dé', ['de', 'dè'], 'n', 1],
+    ['Ik zag ___ hond van de buren in onze tuin.', 'de', ['dé', 'dè'], 'n', 0],
+    ['We dronken koffie in een gezellig ___.', 'café', ['cafe', 'cafè'], 'k', 'é'], ['Dat is echt een ___: dat zegt iedereen.', 'cliché', ['cliche', 'clichè'], 'k', 'é'],
+    ['Deze ruimte is ___: je mag hier niet zomaar binnen.', 'privé', ['prive', 'privè'], 'k', 'é'], ['Mijn tante blijft een week logeren; ze is onze ___.', 'logé', ['loge', 'logè'], 'k', 'é'],
+    ['Mijn opa rijdt in een oude ___ met twee deuren.', 'coupé', ['coupe', 'coupè'], 'k', 'é'], ['De acteur speelde de laatste ___ heel mooi.', 'scène', ['scene', 'scéne'], 'k', 'è'],
+    ['We waren bij de ___ van de nieuwe film.', 'première', ['premiere', 'premiére'], 'k', 'è'], ['De taart was gevuld met ___ en aardbeien.', 'crème', ['creme', 'créme'], 'k', 'è'],
+    ['___, wat doe jij hier?', 'Hé', ['He', 'Hè'], 'k', 'é'], ['Mooi weer vandaag, ___?', 'hè', ['he', 'hé'], 'k', 'è'] ];
+  var ACSOORT = { n:'om nadruk te geven, of om het getal één aan te wijzen', k:'het is een leenwoord of een uitroepje met een bijzondere e-klank' };
+
+  LEERROUTE.voeg('nederlands', [
+    { groep:{ id:'spel-teken' },
+      doelen:[
+        { id:'spel-teken-accent', naam:'Accenttekens', kort:'Een streepje op de klinker: voor nadruk (één, vóór) of voor de klank (café, scène)',
+          uit:'<p>Een <b>accent</b> is een streepje op een klinker. In het Nederlands gebruik je het voor twee dingen.</p><p><b>Nadruk</b>: je wilt laten zien dat een woord de klemtoon krijgt. <i>Ik heb maar <b>één</b> broer</i> (het getal) of <i>Ik ben <b>vóór</b> jou</i>. Zonder nadruk schrijf je gewoon <i>een</i> en <i>voor</i>.</p><p><b>Klank</b>: in leenwoorden en uitroepjes zegt het accent hoe je de e uitspreekt. <b>é</b> klinkt als <i>ee</i>: <i>café, cliché, hé</i>. <b>è</b> klinkt als de e in <i>pet</i>: <i>scène, crème, hè</i>.</p>',
+          wanneer:'je twijfelt of er een streepje op een e moet.',
+          maak:function(R){
+            var it = R.kies(ACCENT), n = it[3] === 'n', st = [];
+            st.push(vast('Waarom zou hier een accent kunnen staan?', [ACSOORT.n, ACSOORT.k], ACSOORT[it[3]], n ? 'Het gaat om een klein woordje als een, voor of de.' : 'Het woord komt uit het Frans, of het is een uitroepje.'));
+            if (n) st.push(vast('Krijgt het woord hier nadruk (of bedoel je het getal 1)?', ['ja', 'nee'], it[4] ? 'ja' : 'nee', it[4] ? 'Lees de zin hardop: je legt de klemtoon op dit woord.' : 'Lees de zin hardop: het woord is hier gewoon een klein woordje zonder nadruk.'));
+            else st.push(vast('Hoe klinkt de e met het accent?', ['als ee, zoals in zee', 'als de e in pet'], it[4] === 'é' ? 'als ee, zoals in zee' : 'als de e in pet', 'Zeg het woord hardop en luister naar de e.'));
+            st.push(kies1(R, 'Welke schrijfwijze is goed?', it[1], it[2], n ? (it[4] ? 'Nadruk of het getal: met een accent.' : 'Geen nadruk: geen accent.') : (it[4] === 'é' ? 'Klinkt als ee: é.' : 'Klinkt als de e in pet: è.')));
+            return slot({ vraag:it[0], context:'Welke schrijfwijze past op de plek van het gat?', stappen:st });
+          } }
+      ] }
+  ]);
 })();

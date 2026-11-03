@@ -3,7 +3,7 @@
    terugrekenen), formules met een kwadraat of een wortel (invullen en terugrekenen),
    formules combineren en formules met eenheden, vergelijkingen oplossen door inklemmen
    en met de grafiek, kwadratische verbanden (tabel, dal of berg, symmetrieas, top,
-   snijpunten met de x-as), exponentiële groei verder (meer perioden, afname, terug in
+   snijpunten met de x-as, grafieken tekenen bij een lineaire en een kwadratische formule), exponentiële groei verder (meer perioden, afname, terug in
    de tijd, een grens) en grafieken in de praktijk (toenamediagram, grootste toename,
    gemiddelde verandering, toenemend en afnemend stijgen). Elke manier een eigen doel.
    De basis van exponentiële groei (groeifactor, procent, N = b · g^t, groeifactor uit
@@ -407,6 +407,75 @@
     var o = { vraag:it.L + ' = ' + fy(Y), context:it.zin(a, b) + ' De formule is ' + f + '. ' + it.terug(Y), eenheid:it.evm, stappen:st };
     if (bl){ o.beeld = bl; o.zelfBeeld = ''; }
     return o;
+  }
+  /* een stap op de verticale as zodat er 5 tot 14 hokjes zijn */
+  function asStap(max){ var l = [1, 2, 5, 10, 20, 25, 50, 100]; for (var i = 0; i < l.length; i++) if (max / l[i] <= 14) return l[i]; return 100; }
+  /* grafiek tekenen bij een lineaire formule: tabel met drie punten, leeg assenstelsel, controlepunt */
+  function mLinTeken(R){
+    var lijst = LIN.filter(function(x){ return x.gr; }), it, a, b, xm, su, xs, ys, xc, yc;
+    for (var p = 0; p < 500; p++){
+      it = R.kies(lijst); a = R.kies(it.as); b = R.kies(it.bs); su = R.kies([1, 2]); xm = 10 * su;
+      xs = [0, xm / 2, xm]; ys = xs.map(function(x){ return rnd(b + a * x); });
+      xc = su * R.kies([1, 2, 3, 4, 6, 7, 8, 9]); yc = rnd(b + a * xc);
+      if (ys[2] >= 0 && yc >= 0 && ys.every(function(y){ return Math.abs(y * 100 - Math.round(y * 100)) < 1e-6; })) break;
+    }
+    var fy = linFy(it), f = linForm(it, a, b), hi = Math.max(ys[0], ys[2]), dy = asStap(hi), ymax = Math.ceil(hi / dy) * dy + dy;
+    var fout = [[xc, rnd(yc + dy)], yc - dy >= 0 ? [xc, rnd(yc - dy)] : [xc + su, rnd(yc + 2 * dy)], [xc + su, yc], [xc, rnd(yc + 2 * dy)]].filter(function(q){ return Math.abs(b + a * q[0] - q[1]) > 1e-9; }).slice(0, 3).map(function(q){ return punt(q[0], q[1]); });
+    function bl(n){
+      var rij = [it.L].concat(ys.map(function(y, i){ return n > i ? fy(y) : ''; })), pts = [];
+      xs.forEach(function(x, i){ if (n > i) pts.push({ x:x, y:ys[i], k:1 }); });
+      if (n >= 4) pts.push({ x:xc, y:yc, k:3 });
+      return stapel(R0.teken.tabel([[it.v].concat(xs.map(function(x){ return T(x); })), rij], { zijkop:true }),
+        stelsel({ x0:0, x1:xm, dx:su, y0:0, y1:ymax, dy:dy, xnaam:it.xn, ynaam:it.yn, lijnen:n >= 4 ? [{ f:function(x){ return b + a * x; }, k:0 }] : [], punten:pts, aria:n >= 4 ? 'de grafiek van ' + f : 'een leeg assenstelsel' }));
+    }
+    var st = xs.map(function(x, i){
+      return S(i === 0 ? 'Vul de tabel in. Bij ' + it.v + ' = 0 is ' + it.L + ' het startgetal:' : 'Bij ' + it.v + ' = ' + T(x) + ': ' + it.L + ' = ' + T(a) + ' ' + X + ' ' + T(x) + ' ' + plus(b) + ' =', [fy(ys[i]), T(ys[i])],
+        i === 0 ? 'Het losse getal in de formule: ' + T(b) + '.' : 'Eerst keer: ' + T(a) + ' ' + X + ' ' + T(x) + ' = ' + T(rnd(a * x)) + '. Dan ' + plus(b) + '.', i === 0 ? F(ys[0], a, 'Dat is het hellingsgetal. Bij ' + it.v + ' = 0 blijft alleen het startgetal over.') : F(ys[i], rnd(a * x), 'Vergeet het startgetal ' + T(b) + ' niet.'));
+    });
+    st.push(K(R, 'Zet de drie punten in het assenstelsel, met ' + T(dy) + ' per hokje op de verticale as, en trek een rechte lijn. Welk punt ligt ook op je lijn?', punt(xc, yc), fout, 'Ga bij ' + it.v + ' = ' + T(xc) + ' omhoog naar je lijn. Narekenen: ' + T(a) + ' ' + X + ' ' + T(xc) + ' ' + plus(b) + ' = ' + T(yc) + '.'));
+    var l = st[st.length - 1];
+    return { vraag:f, context:it.zin(a, b) + ' De formule is ' + f + '. ' + it.wat + ' Teken de grafiek voor ' + it.v + ' van 0 tot ' + T(xm) + '. Maak eerst een tabel met ' + it.v + ' = 0, ' + T(xs[1]) + ' en ' + T(xm) + '.', opties:l.opties, goed:l.goed, beeld:bl, zelfBeeld:bl(0), stappen:st };
+  }
+  /* grafiek tekenen bij een kwadratische formule: tabel rond de top, symmetrie, de top */
+  var KWT = [
+    { a:-5, b:20, c:0, xs:[0, 1, 2, 3, 4], L:'h', v:'t', xn:'t (s)', yn:'h (m)', zin:'Een bal wordt recht omhoog gegooid. De hoogte is h = ' + MIN + '5t² + 20t, met h in meter en t in seconden.' },
+    { a:-5, b:30, c:0, xs:[0, 1, 2, 3, 4, 5, 6], L:'h', v:'t', xn:'t (s)', yn:'h (m)', zin:'Een vuurpijl gaat omhoog. De hoogte is h = ' + MIN + '5t² + 30t, met h in meter en t in seconden.' },
+    { a:-5, b:40, c:0, xs:[0, 2, 4, 6, 8], L:'h', v:'t', xn:'t (s)', yn:'h (m)', zin:'Een pijl wordt omhoog geschoten. De hoogte is h = ' + MIN + '5t² + 40t, met h in meter en t in seconden.' },
+    { a:-5, b:20, c:2, xs:[0, 1, 2, 3, 4], L:'h', v:'t', xn:'t (s)', yn:'h (m)', zin:'Iemand gooit een bal omhoog vanaf 2 meter hoogte. De hoogte is h = ' + MIN + '5t² + 20t + 2, met h in meter en t in seconden.' },
+    { a:-0.5, b:0, c:8, xs:[-4, -2, 0, 2, 4], L:'h', v:'x', xn:'x (m)', yn:'h (m)', zin:'Een boog van een brug heeft de vorm h = ' + MIN + '0,5x² + 8. Hierin is h de hoogte en x de afstand tot het midden, allebei in meter.' },
+    { a:-0.25, b:0, c:9, xs:[-6, -4, -2, 0, 2, 4, 6], L:'h', v:'x', xn:'x (m)', yn:'h (m)', zin:'Een tunnelingang heeft de vorm h = ' + MIN + '0,25x² + 9. Hierin is h de hoogte en x de afstand tot het midden, allebei in meter.' },
+    { a:-1, b:12, c:0, xs:[0, 2, 4, 6, 8, 10, 12], L:'A', v:'x', xn:'x (m)', yn:'A (m²)', zin:'Met 24 meter hek maak je een rechthoekig weiland. Is één zijde x meter, dan is de oppervlakte A = ' + MIN + 'x² + 12x, in m².' },
+    { a:-1, b:10, c:0, xs:[1, 3, 5, 7, 9], L:'A', v:'x', xn:'x (m)', yn:'A (m²)', zin:'Met 20 meter hek maak je een rechthoekige ren. Is één zijde x meter, dan is de oppervlakte A = ' + MIN + 'x² + 10x, in m².' },
+    { a:0.5, b:-4, c:10, xs:[0, 2, 4, 6, 8], L:'T', v:'t', xn:'t (uur)', yn:'T (°C)', zin:'De temperatuur in een kas tijdens een koude nacht is T = 0,5t² ' + MIN + ' 4t + 10. Hierin is T in °C en t het aantal uur na 22.00 uur.' },
+    { a:0.5, b:-4, c:12, xs:[0, 2, 4, 6, 8], L:'T', v:'t', xn:'t (uur)', yn:'T (°C)', zin:'De temperatuur in een schuur tijdens een koude nacht is T = 0,5t² ' + MIN + ' 4t + 12. Hierin is T in °C en t het aantal uur na 20.00 uur.' },
+    { a:-0.5, b:0, c:12, xs:[-4, -2, 0, 2, 4], L:'h', v:'x', xn:'x (m)', yn:'h (m)', zin:'Een boog van een fietsbrug heeft de vorm h = ' + MIN + '0,5x² + 12. Hierin is h de hoogte en x de afstand tot het midden, allebei in meter.' },
+    { a:-1, b:8, c:0, xs:[0, 2, 4, 6, 8], L:'A', v:'x', xn:'x (m)', yn:'A (m²)', zin:'Met 16 meter hek maak je een rechthoekig hok. Is één zijde x meter, dan is de oppervlakte A = ' + MIN + 'x² + 8x, in m².' },
+    { a:-1, b:14, c:0, xs:[1, 4, 7, 10, 13], L:'A', v:'x', xn:'x (m)', yn:'A (m²)', zin:'Met 28 meter hek maak je een rechthoekige moestuin. Is één zijde x meter, dan is de oppervlakte A = ' + MIN + 'x² + 14x, in m².' },
+    { a:-1, b:4, c:0, xs:[0, 1, 2, 3, 4], L:'h', v:'x', xn:'x (m)', yn:'h (m)', zin:'De waterstraal van een fontein heeft de vorm h = ' + MIN + 'x² + 4x. Hierin is h de hoogte en x de afstand tot de spuitmond, allebei in meter.' } ];
+  function mKwTeken(R){
+    var it = R.kies(KWT), a = it.a, b = it.b, c = it.c, xs = it.xs, m = (xs.length - 1) / 2, p = xs[m];
+    function f(x){ return a * x * x + b * x + c; }
+    var ys = xs.map(function(x){ return rnd(f(x)); }), top = ys[m], dal = a > 0, hi = Math.max.apply(null, ys), dy = asStap(hi), ymax = Math.ceil(hi / dy) * dy + dy, su = xs[1] - xs[0];
+    var x0 = Math.min(0, xs[0]), x1 = xs[xs.length - 1], OPT = ['dalparabool', 'bergparabool'];
+    var form = it.L + ' = ' + E([[a, it.v + '²'], [b, it.v], [c, '']]);
+    function sub(x){ return (a === 1 ? '' : T(a) + ' ' + X + ' ') + paren(x) + '²' + (b ? (b < 0 ? ' ' + MIN + ' ' : ' + ') + T(Math.abs(b)) + ' ' + X + ' ' + paren(x) : '') + (c ? ' ' + plus(c) : ''); }
+    function bl(n){
+      var vol = n >= m + 2, pts = [], rij = [it.L].concat(ys.map(function(y, i){ return vol || i < n ? T(y) : ''; }));
+      xs.forEach(function(x, i){ if (vol || i < n) pts.push({ x:x, y:ys[i], k:1 }); });
+      return stapel(R0.teken.tabel([[it.v].concat(xs.map(function(x){ return T(x); })), rij], { zijkop:true }),
+        stelsel({ x0:x0, x1:x1, dx:1, lx:su, y0:0, y1:ymax, dy:dy, xnaam:it.xn, ynaam:it.yn, lijnen:n >= m + 4 ? [{ f:f, k:0 }] : [], punten:pts, aria:n >= m + 4 ? 'de parabool ' + form : 'een leeg assenstelsel' }));
+    }
+    var st = [];
+    for (var i = 0; i <= m; i++){
+      var x = xs[i], hint = 'Eerst het kwadraat: ' + paren(x) + '² = ' + T(x * x) + '. Dan keer ' + T(a) + ': ' + T(rnd(a * x * x)) + '.' + (b ? ' Dan ' + T(b) + ' ' + X + ' ' + paren(x) + ' = ' + T(b * x) + '.' : '') + (c ? ' En dan ' + plus(c) + '.' : '');
+      st.push(S((i === 0 ? 'Vul de tabel in. ' : '') + 'Bij ' + it.v + ' = ' + T(x) + ': ' + it.L + ' = ' + sub(x) + ' =', ys[i], hint, F(ys[i], rnd(a * a * x * x + b * x + c), 'Eerst het kwadraat, dan pas keer ' + T(a) + '.', rnd(a * 2 * x + b * x + c), it.v + '² is ' + it.v + ' keer ' + it.v + ', niet keer 2.')));
+    }
+    st.push(S('De tabel is symmetrisch rond ' + it.v + ' = ' + T(p) + '. Bij ' + it.v + ' = ' + T(xs[m + 1]) + ' komt hetzelfde uit als bij ' + it.v + ' = ' + T(xs[m - 1]) + '. Dus ' + it.L + ' =', ys[m + 1], 'Kijk in de tabel bij ' + it.v + ' = ' + T(xs[m - 1]) + ': daar staat ' + T(ys[m - 1]) + '. De rest van de tabel vul je op dezelfde manier in.'));
+    st.push(K(R, 'Er staat ' + (dal ? 'een positief' : 'een negatief') + ' getal voor ' + it.v + '². Wat voor parabool wordt het?', OPT[dal ? 0 : 1], [], dal ? 'Positief voor ' + it.v + '²: een dalparabool, de top is het laagste punt.' : 'Negatief voor ' + it.v + '²: een bergparabool, de top is het hoogste punt.', { orde:OPT }));
+    st.push(K(R, 'Zet de punten in het assenstelsel, met ' + T(dy) + ' per hokje op de verticale as, en verbind ze met een vloeiende, ronde lijn. Welk punt is de top?', punt(p, top), [punt(p, ys[m - 1]), punt(xs[m + 1], top), punt(top, p)],
+      'De top ligt op de symmetrieas, in het midden van de tabel: bij ' + it.v + ' = ' + T(p) + ' is ' + it.L + ' = ' + T(top) + '.'));
+    var l = st[st.length - 1];
+    return { vraag:form, context:it.zin + ' Teken de grafiek. Maak eerst een tabel met ' + it.v + ' = ' + xs.map(function(x){ return T(x); }).join(', ').replace(/, ([^,]*)$/, ' en $1') + '.', opties:l.opties, goed:l.goed, beeld:bl, zelfBeeld:bl(0), stappen:st };
   }
 
   /* ================= formules met een kwadraat of een wortel ================= */
@@ -1012,7 +1081,10 @@
           wanneer:'een verhaal een vast bedrag of beginwaarde noemt en een bedrag of hoeveelheid per stap.', maak:mLinVerhaal },
         { id:'wvm-a-lin-terug', naam:'Terugrekenen bij een lineaire formule', kort:'Weet je de uitkomst: haal het startgetal eraf en deel door het hellingsgetal',
           uit:'<p>Bij K = 2,4a + 3,5 weet je wat de rit kost: € 27,50. Hoeveel km was de rit?</p><p>Zet de formule in een <b>pijlenketting</b>: a, dan keer 2,4, dan plus 3,5. Reken <b>terug</b> met het omgekeerde, van achter naar voren.</p><p>27,50 − 3,5 = 24 en 24 : 2,4 = <b>10</b> km. Wordt het minder, zoals bij een kaars? Kijk dan hoeveel er af is en deel door wat er per uur af gaat.</p>',
-          wanneer:'je de uitkomst van de formule weet en zoekt wat je hebt ingevuld.', maak:mLinTerug }
+          wanneer:'je de uitkomst van de formule weet en zoekt wat je hebt ingevuld.', maak:mLinTerug },
+        { id:'wvm-a-lin-teken', naam:'De grafiek tekenen bij een lineaire formule', kort:'Maak een tabel met het begin, het midden en het eind, kies een handige schaal en trek een rechte lijn door de punten',
+          uit:'<p>Bij K = 2,5a + 4 teken je de grafiek in drie stappen.</p><p>1. Maak een <b>tabel</b> met drie waarden: het begin (a = 0), het eind van de as (bijvoorbeeld a = 10) en een waarde in het midden (a = 5). Je krijgt K = 4, 16,5 en 29.</p><p>2. Kies een <b>schaal</b> voor de verticale as, zodat de grootste waarde nog past. Bij 29 kun je 5 per hokje nemen, tot 35.</p><p>3. Zet de punten in het assenstelsel en trek met je liniaal een <b>rechte lijn</b>. Zet bij de assen wat ze betekenen, zoals a (km) en K (€).</p><p>Twee punten zijn genoeg voor een rechte lijn. Het derde punt is je controle: ligt het niet op de lijn, dan heb je ergens verkeerd gerekend.</p>',
+          wanneer:'je bij een lineaire formule de grafiek moet tekenen, bijvoorbeeld op een werkblad of het examen.', maak:mLinTeken }
       ] },
 
     /* ---------- formules met een kwadraat of een wortel ---------- */
@@ -1093,7 +1165,10 @@
           wanneer:'je bij een grafiek wilt weten waar y nul is.', maak:mKwNul },
         { id:'wvm-a-kw-top-nul', naam:'De top via de snijpunten met de x-as', kort:'De symmetrieas ligt midden tussen de snijpunten met de x-as; vul die x in voor de top',
           uit:'<p>De snijpunten met de x-as liggen <b>symmetrisch</b>. De symmetrieas ligt er dus precies <b>midden</b> tussen.</p><p>Bij y = x² − 6x + 5 snijdt de parabool de x-as bij x = 1 en x = 5. De as: (1 + 5) : 2 = <b>3</b>.</p><p>Vul x = 3 in: 9 − 18 + 5 = −4. De top is <b>(3, −4)</b>.</p>',
-          wanneer:'je de snijpunten met de x-as weet en de top zoekt.', maak:mKwTopNul }
+          wanneer:'je de snijpunten met de x-as weet en de top zoekt.', maak:mKwTopNul },
+        { id:'wvm-a-kw-teken', naam:'De grafiek tekenen bij een kwadratische formule', kort:'Maak een tabel rond de top, gebruik de symmetrie en verbind de punten met een vloeiende, ronde lijn',
+          uit:'<p>Bij h = ' + MIN + '5t² + 20t teken je de grafiek zo.</p><p>1. Maak een <b>tabel</b>, bijvoorbeeld voor t = 0 tot en met 4. Reken in de goede volgorde: bij t = 1 is 1² = 1, keer ' + MIN + '5 is ' + MIN + '5, plus 20 ' + X + ' 1 = 20, samen 15.</p><p>2. Gebruik de <b>symmetrie</b>. De tabel is 0, 15, 20, 15, 0: links en rechts van de top staan dezelfde getallen. Heb je de helft uitgerekend, dan weet je de rest.</p><p>3. Kies een handige <b>schaal</b>, zet de punten in het assenstelsel en verbind ze met een <b>vloeiende, ronde lijn</b>. De top is rond, niet puntig.</p><p>Een negatief getal voor t² geeft een <b>bergparabool</b>, een positief getal een <b>dalparabool</b>.</p>',
+          wanneer:'je bij een formule met een kwadraat de grafiek moet tekenen.', maak:mKwTeken }
       ] },
 
     /* ---------- exponentiële groei verder ---------- */

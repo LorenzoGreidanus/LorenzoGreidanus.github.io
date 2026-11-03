@@ -1303,5 +1303,268 @@
         } }
     ] });
 
+  /* ================= erbij: tussenwerpsel, trappen van vergelijking, bijvoeglijk naamwoord met of zonder -e ================= */
+  /* [zin, tussenwerpsel, [andere woorden]] */
+  var TSW = [
+    ['Au, ik heb mijn vinger gestoten!', 'Au', ['vinger', 'gestoten']], ['Hoera, we hebben gewonnen!', 'Hoera', ['gewonnen', 'hebben']],
+    ['Oei, de vaas is gevallen.', 'Oei', ['vaas', 'gevallen']], ['Bah, wat een vieze soep.', 'Bah', ['vieze', 'soep']],
+    ['Hallo, ben jij de nieuwe buurjongen?', 'Hallo', ['nieuwe', 'buurjongen']], ['Sst, de baby slaapt.', 'Sst', ['baby', 'slaapt']],
+    ['Boem! Daar viel de kast om.', 'Boem', ['kast', 'viel']], ['Jee, wat ben jij groot geworden!', 'Jee', ['groot', 'geworden']],
+    ['Hé, kijk eens wie daar loopt!', 'Hé', ['kijk', 'loopt']], ['Ach, het geeft niet.', 'Ach', ['geeft', 'niet']],
+    ['Tjonge, wat een drukte op het strand.', 'Tjonge', ['drukte', 'strand']], ['Pff, ik ben echt moe.', 'Pff', ['moe', 'ben']],
+    ['Ja, ik kom morgen ook.', 'Ja', ['kom', 'morgen']], ['Nee, dat is niet mijn jas.', 'Nee', ['jas', 'mijn']],
+    ['Hatsjoe! Ik ben verkouden.', 'Hatsjoe', ['verkouden', 'ben']], ['Oké, dan zien we elkaar om drie uur.', 'Oké', ['zien', 'uur']] ];
+  /* [stellend, vergrotend, overtreffend, ding, ander ding, de groep] */
+  var TRAP = [
+    ['groot', 'groter', 'grootst', 'Mijn huis', 'jouw huis', 'alle huizen in de straat'], ['lang', 'langer', 'langst', 'Tom', 'Sara', 'alle kinderen in de klas'],
+    ['snel', 'sneller', 'snelst', 'Mijn fiets', 'jouw fiets', 'alle fietsen in de stalling'], ['oud', 'ouder', 'oudst', 'Mijn opa', 'haar oma', 'alle mensen in het dorp'],
+    ['zwaar', 'zwaarder', 'zwaarst', 'Mijn tas', 'jouw tas', 'alle tassen in de klas'], ['duur', 'duurder', 'duurst', 'Deze jas', 'die trui', 'alle kleren in de winkel'],
+    ['warm', 'warmer', 'warmst', 'Mijn kamer', 'de keuken', 'alle kamers in huis'], ['goed', 'beter', 'best', 'Mijn cijfer', 'jouw cijfer', 'alle cijfers in de klas'],
+    ['mooi', 'mooier', 'mooist', 'Haar tekening', 'mijn tekening', 'alle tekeningen aan de muur'], ['klein', 'kleiner', 'kleinst', 'Mijn broertje', 'zijn zusje', 'alle kinderen op het plein'],
+    ['dik', 'dikker', 'dikst', 'Dit boek', 'dat boek', 'alle boeken in de kast'], ['leuk', 'leuker', 'leukst', 'Deze film', 'die serie', 'alle films van dit jaar'],
+    ['vies', 'viezer', 'viest', 'Mijn broek', 'jouw jas', 'alle kleren in de wasmand'], ['hoog', 'hoger', 'hoogst', 'Die toren', 'deze flat', 'alle gebouwen in de stad'] ];
+  var TRAPNAAM = ['stellende trap', 'vergrotende trap', 'overtreffende trap'];
+  var TRAPZEGT = ['ze zijn gelijk', 'het ene is meer dan het andere', 'het is het meest van allemaal'];
+  var BNE = { groot:'grote', klein:'kleine', oud:'oude', nieuw:'nieuwe', wit:'witte', mooi:'mooie', dik:'dikke', zwart:'zwarte', breed:'brede', vies:'vieze', warm:'warme', lief:'lieve', rood:'rode', groen:'groene' };
+  var BNZN = [
+    ['huis', 'het', ['groot', 'klein', 'oud', 'nieuw', 'wit', 'mooi']], ['boek', 'het', ['dik', 'oud', 'nieuw', 'mooi']], ['paard', 'het', ['zwart', 'wit', 'groot', 'oud', 'mooi']],
+    ['raam', 'het', ['groot', 'klein', 'breed', 'vies']], ['bed', 'het', ['groot', 'warm', 'nieuw', 'breed']], ['meisje', 'het', ['klein', 'lief']], ['glas', 'het', ['vies', 'groot', 'klein', 'groen']],
+    ['tuin', 'de', ['groot', 'klein', 'mooi', 'groen']], ['fiets', 'de', ['oud', 'nieuw', 'rood', 'zwart']], ['jas', 'de', ['warm', 'dik', 'oud', 'nieuw', 'groen', 'rood', 'zwart']],
+    ['tafel', 'de', ['groot', 'oud', 'breed', 'wit']], ['auto', 'de', ['oud', 'nieuw', 'wit', 'rood', 'zwart', 'vies']], ['stoel', 'de', ['oud', 'nieuw', 'groen', 'klein']] ];
+
+  /* ================= erbij: soorten voornaamwoorden ================= */
+  /* [zin met [woord], onderwerp, wkd of wkg] */
+  var WKD = [
+    ['Sara verveelt [zich] in de les.', 'Sara', 'wkd'], ['Ik schaam [me] voor mijn handschrift.', 'ik', 'wkd'], ['Jullie moeten [je] haasten.', 'jullie', 'wkd'],
+    ['Tom wast [zich] elke ochtend met koud water.', 'Tom', 'wkd'], ['Wij vergissen [ons] in de tijd.', 'wij', 'wkd'], ['De kinderen verstoppen [zich] achter de schuur.', 'de kinderen', 'wkd'],
+    ['Je moet [je] goed voorbereiden op de toets.', 'je', 'wkd'], ['Hij bekeek [zichzelf] in de spiegel.', 'hij', 'wkd'],
+    ['Sara en Tom geven [elkaar] een cadeau.', 'Sara en Tom', 'wkg'], ['De spelers feliciteren [elkaar] na de wedstrijd.', 'de spelers', 'wkg'], ['Wij zien [elkaar] morgen op school.', 'wij', 'wkg'],
+    ['De twee buren helpen [elkaar] met de verhuizing.', 'de twee buren', 'wkg'], ['Jullie moeten [elkaar] laten uitpraten.', 'jullie', 'wkg'], ['Mijn ouders kennen [elkaar] al dertig jaar.', 'mijn ouders', 'wkg'],
+    ['De honden snuffelen aan [elkaar].', 'de honden', 'wkg'], ['Lisa en Emma schrijven [elkaar] elke week een brief.', 'Lisa en Emma', 'wkg'] ];
+  /* [zin, onbepaald voornaamwoord, persoon of ding, [andere woorden]] */
+  var ONB = [
+    ['Er heeft iemand op de deur geklopt.', 'iemand', 'p', ['deur', 'geklopt']], ['Niemand wist het antwoord op de vraag.', 'Niemand', 'p', ['antwoord', 'vraag']],
+    ['Ik heb iets gevonden onder mijn bed.', 'iets', 'd', ['ik', 'bed']], ['Hij heeft vandaag nog niets gegeten.', 'niets', 'd', ['hij', 'vandaag']],
+    ['Iedereen moet zijn eigen lunch meenemen.', 'Iedereen', 'p', ['zijn', 'lunch']], ['Alles in de winkel was in de aanbieding.', 'Alles', 'd', ['winkel', 'aanbieding']],
+    ['Men zegt dat het morgen gaat sneeuwen.', 'Men', 'p', ['het', 'morgen']], ['Zij heeft niemand gezien op het plein.', 'niemand', 'p', ['zij', 'plein']],
+    ['Wil er iemand nog een stuk taart?', 'iemand', 'p', ['taart', 'stuk']], ['We hebben alles opgeruimd.', 'alles', 'd', ['we', 'opgeruimd']],
+    ['Is er iets mis met je fiets?', 'iets', 'd', ['je', 'fiets']], ['Ieder krijgt een eigen kluisje.', 'Ieder', 'p', ['eigen', 'kluisje']],
+    ['Hebben jullie niets gehoord?', 'niets', 'd', ['jullie', 'gehoord']], ['Iemand heeft mijn pen geleend.', 'Iemand', 'p', ['mijn', 'pen']],
+    ['Iedereen in de klas lachte om de grap.', 'Iedereen', 'p', ['klas', 'grap']] ];
+  /* [zin, v(ragend), b(etrekkelijk) of u(itroepend)] */
+  var WAT = [
+    ['Wat een mooie tekening!', 'u'], ['Wat ben jij groot geworden!', 'u'], ['Wat is het hier koud!', 'u'], ['Wat een lekkere taart!', 'u'], ['Wat heb jij een mooie fiets!', 'u'], ['Wat zingt zij mooi!', 'u'],
+    ['Wat eten we vanavond?', 'v'], ['Wat heb jij in je tas?', 'v'], ['Wat is de hoofdstad van Spanje?', 'v'], ['Wat wil jij later worden?', 'v'], ['Wat zei de leraar?', 'v'], ['Wat staat er op het bord?', 'v'],
+    ['Alles wat je zegt, klopt.', 'b'], ['Dat is het mooiste wat ik ooit heb gezien.', 'b'], ['Hij won de wedstrijd, wat niemand had verwacht.', 'b'], ['Het enige wat ik wil, is slapen.', 'b'], ['Ze kwam te laat, wat ze altijd doet.', 'b'], ['Er is veel wat ik nog niet weet.', 'b'] ];
+  var WATNAAM = { v:'vragend', b:'betrekkelijk', u:'uitroepend' };
+  var VNWSOORT = { pers:['persoonlijk', 'het staat in plaats van een persoon of ding (hij, haar, ons)'], bez:['bezittelijk', 'het zegt van wie iets is'],
+    aanw:['aanwijzend', 'het wijst iets aan (deze, die, dit, dat)'], betr:['betrekkelijk', 'het begint een bijzin en verwijst terug naar een woord ervoor'],
+    vrag:['vragend', 'het begint een vraag'], wkd:['wederkerend', 'het verwijst terug naar het onderwerp zelf (zich, me, je)'],
+    wkg:['wederkerig', 'de een doet het bij de ander (elkaar)'], onb:['onbepaald', 'het noemt een persoon of ding, maar niet precies wie of wat'],
+    uitr:['uitroepend', 'het begint een uitroep'] };
+  var VNW = [
+    ['[Hij] fietst elke dag naar school.', 'pers'], ['Ik heb [haar] gisteren gebeld.', 'pers'], ['[Mijn] fiets staat in de schuur.', 'bez'], ['Zij pakt [haar] tas.', 'bez'],
+    ['[Deze] trui is te klein.', 'aanw'], ['Ik wil [die] film zien.', 'aanw'], ['De jongen [die] daar loopt, is mijn neef.', 'betr'], ['Het boek [dat] ik lees, is spannend.', 'betr'],
+    ['[Wie] heeft mijn pen?', 'vrag'], ['[Welke] jas is van jou?', 'vrag'], ['Tom schaamt [zich] voor zijn fout.', 'wkd'], ['Wij vergissen [ons] vaak.', 'wkd'],
+    ['De vrienden helpen [elkaar] met huiswerk.', 'wkg'], ['Jullie moeten [elkaar] niet storen.', 'wkg'], ['[Niemand] was op tijd.', 'onb'], ['Ik heb [iets] lekkers gekocht.', 'onb'],
+    ['[Wat] een mooie dag!', 'uitr'], ['[Wat] een herrie maken jullie!', 'uitr'] ];
+
+  /* ================= erbij: bijstelling ================= */
+  /* [zin, bijstelling, waar hij bij hoort, [andere stukken]] */
+  var BIJST = [
+    ['Mijn buurman, een bekende kok, opent een restaurant.', 'een bekende kok', 'mijn buurman', ['een restaurant', 'opent']],
+    ['Amsterdam, de hoofdstad van Nederland, trekt veel toeristen.', 'de hoofdstad van Nederland', 'Amsterdam', ['veel toeristen', 'trekt']],
+    ['We gaan naar Utrecht, de stad van de Dom.', 'de stad van de Dom', 'Utrecht', ['we', 'gaan']],
+    ['Sara, mijn beste vriendin, is morgen jarig.', 'mijn beste vriendin', 'Sara', ['morgen', 'jarig']],
+    ['Ik sprak met meneer Jansen, onze nieuwe mentor.', 'onze nieuwe mentor', 'meneer Jansen', ['ik', 'sprak']],
+    ['Rex, de hond van de buren, blaft de hele dag.', 'de hond van de buren', 'Rex', ['de hele dag', 'blaft']],
+    ['De Nijl, de langste rivier van Afrika, stroomt door Egypte.', 'de langste rivier van Afrika', 'de Nijl', ['Egypte', 'stroomt']],
+    ['Mijn opa, een oud-zeeman, vertelt graag verhalen.', 'een oud-zeeman', 'mijn opa', ['verhalen', 'graag']],
+    ['Op maandag, de eerste schooldag, krijgen we onze roosters.', 'de eerste schooldag', 'maandag', ['onze roosters', 'we']],
+    ['Hij woont in Groningen, een stad in het noorden.', 'een stad in het noorden', 'Groningen', ['hij', 'woont']],
+    ['Onze trainer, een oud-profvoetballer, is heel streng.', 'een oud-profvoetballer', 'onze trainer', ['heel streng', 'is']],
+    ['Ik heb gegeten bij Lotte, mijn buurmeisje.', 'mijn buurmeisje', 'Lotte', ['ik', 'gegeten']],
+    ['De Mount Everest, de hoogste berg ter wereld, is bijna negen kilometer hoog.', 'de hoogste berg ter wereld', 'de Mount Everest', ['bijna negen kilometer', 'hoog']],
+    ['Ons huis, een oude boerderij, staat aan de rand van het dorp.', 'een oude boerderij', 'ons huis', ['het dorp', 'staat']] ];
+
+  /* ================= erbij: soorten bijzinnen en de beknopte bijzin ================= */
+  /* [zin, bijzin, soort: bvb, bwb, ow of lv, de rest (hoofdzin)] */
+  var BZS = [
+    ['De jongen die naast mij zit, heet Daan.', 'die naast mij zit', 'bvb', 'De jongen heet Daan'], ['Ik lees het boek dat ik van oma kreeg.', 'dat ik van oma kreeg', 'bvb', 'Ik lees het boek'],
+    ['Het huis waar mijn opa woont, is heel oud.', 'waar mijn opa woont', 'bvb', 'Het huis is heel oud'], ['We gingen naar de film waar iedereen het over had.', 'waar iedereen het over had', 'bvb', 'We gingen naar de film'],
+    ['De fiets die gestolen was, is teruggevonden.', 'die gestolen was', 'bvb', 'De fiets is teruggevonden'],
+    ['Omdat het regende, bleven we binnen.', 'Omdat het regende', 'bwb', 'bleven we binnen'], ['Ik ga naar huis als de les afgelopen is.', 'als de les afgelopen is', 'bwb', 'Ik ga naar huis'],
+    ['Toen de bel ging, rende iedereen naar buiten.', 'Toen de bel ging', 'bwb', 'rende iedereen naar buiten'], ['Hij luisterde muziek terwijl hij zijn huiswerk maakte.', 'terwijl hij zijn huiswerk maakte', 'bwb', 'Hij luisterde muziek'],
+    ['Hoewel ze moe was, ging ze naar de training.', 'Hoewel ze moe was', 'bwb', 'ging ze naar de training'],
+    ['Wie te laat komt, moet zich melden.', 'Wie te laat komt', 'ow', 'moet zich melden'], ['Dat je gewonnen hebt, is geweldig.', 'Dat je gewonnen hebt', 'ow', 'is geweldig'],
+    ['Wat je zegt, klopt niet.', 'Wat je zegt', 'ow', 'klopt niet'], ['Wie het snelst klaar is, mag eerder naar huis.', 'Wie het snelst klaar is', 'ow', 'mag eerder naar huis'],
+    ['Ik denk dat het morgen gaat regenen.', 'dat het morgen gaat regenen', 'lv', 'Ik denk'], ['Sara vertelde dat ze ging verhuizen.', 'dat ze ging verhuizen', 'lv', 'Sara vertelde'],
+    ['Weet jij of de les doorgaat?', 'of de les doorgaat', 'lv', 'Weet jij'], ['De juf vroeg wie er jarig was.', 'wie er jarig was', 'lv', 'De juf vroeg'],
+    ['Ik weet niet waar mijn sleutels zijn.', 'waar mijn sleutels zijn', 'lv', 'Ik weet niet'] ];
+  var BZNAAM = { bvb:'bijvoeglijke bijzin', bwb:'bijwoordelijke bijzin', ow:'onderwerpszin', lv:'lijdend-voorwerpszin' };
+  var BZVRAAG = { ow:'wie of wat + gezegde? (het onderwerp)', lv:'wie of wat + gezegde + onderwerp? (het lijdend voorwerp)', bwb:'wanneer, waarom, onder welke voorwaarde of hoe?' };
+  /* [zin, het deel, beknopt (1) of niet (0), gewone bijzin met dezelfde betekenis (alleen bij beknopt), [foute omzettingen]] */
+  var BEKN = [
+    ['Na de film te hebben gezien, gingen we naar huis.', 'Na de film te hebben gezien', 1, 'Nadat we de film hadden gezien', ['Nadat de film ons had gezien', 'Na de film zagen we']],
+    ['Hij vertrok zonder gedag te zeggen.', 'zonder gedag te zeggen', 1, 'zonder dat hij gedag zei', ['zonder dat wij gedag zeiden', 'omdat hij gedag zei']],
+    ['Ik spaar om een nieuwe fiets te kopen.', 'om een nieuwe fiets te kopen', 1, 'zodat ik een nieuwe fiets kan kopen', ['omdat ik een nieuwe fiets heb gekocht', 'zodat de fiets nieuw is']],
+    ['Thuisgekomen, zette Sara de tv aan.', 'Thuisgekomen', 1, 'Toen Sara thuiskwam', ['Toen de tv thuiskwam', 'Nadat Sara wegging']],
+    ['Ze beloofde op tijd te komen.', 'op tijd te komen', 1, 'dat ze op tijd zou komen', ['dat ik op tijd zou komen', 'omdat ze op tijd was']],
+    ['Hij hoopt de wedstrijd te winnen.', 'de wedstrijd te winnen', 1, 'dat hij de wedstrijd wint', ['dat de wedstrijd hem wint', 'omdat hij de wedstrijd won']],
+    ['Zittend in de trein, las ik een boek.', 'Zittend in de trein', 1, 'Terwijl ik in de trein zat', ['Terwijl het boek in de trein zat', 'Nadat ik uit de trein stapte']],
+    ['Na lang te hebben gezocht, vond Mo zijn sleutels.', 'Na lang te hebben gezocht', 1, 'Nadat Mo lang had gezocht', ['Nadat de sleutels lang hadden gezocht', 'Omdat Mo zijn sleutels vond']],
+    ['Nadat we de film hadden gezien, gingen we naar huis.', 'Nadat we de film hadden gezien', 0],
+    ['Hij vertrok zonder dat hij gedag zei.', 'zonder dat hij gedag zei', 0],
+    ['Ik spaar, zodat ik een nieuwe fiets kan kopen.', 'zodat ik een nieuwe fiets kan kopen', 0],
+    ['Toen Sara thuiskwam, zette ze de tv aan.', 'Toen Sara thuiskwam', 0],
+    ['Ze beloofde dat ze op tijd zou komen.', 'dat ze op tijd zou komen', 0],
+    ['Hij hoopt dat hij de wedstrijd wint.', 'dat hij de wedstrijd wint', 0],
+    ['Terwijl ik in de trein zat, las ik een boek.', 'Terwijl ik in de trein zat', 0] ];
+
+  G.push({ groep:{ id:'ws-basis' },
+    doelen:[
+      { id:'ws-tsw', naam:'Tussenwerpsel', kort:'Een uitroepje, groet of geluid dat los van de zin staat: au, hoera, hallo',
+        uit:'<p>Een <b>tussenwerpsel</b> is een uitroepje, een groet of een geluid: <i>au, hoera, oei, bah, hallo, ja, nee, boem</i>.</p><p>Het staat <b>los</b> van de rest van de zin. Vaak staat er een komma of een uitroepteken achter. Haal je het weg, dan is de zin nog steeds compleet: <i>(Au,) ik heb mijn vinger gestoten.</i></p>',
+        wanneer:'je in een zin een los woordje ziet dat een gevoel of geluid laat horen.',
+        maak:function(R){
+          var x = R.kies(TSW), kand = R.hussel([x[1]].concat(x[2]));
+          var st = kand.map(function(w){ var ok = w === x[1];
+            return janee('Is ' + q(w) + ' een uitroepje, groet of geluid dat los van de rest van de zin staat?', ok, ok ? 'Haal ' + q(w) + ' weg: de zin is nog steeds compleet.' : q(w) + ' hoort echt bij de zin. Zonder dit woord klopt de zin niet meer.'); });
+          st.push(keuze(R, 'Welk woord is het tussenwerpsel?', x[1], x[2], 'Het woord dat los staat: ' + q(x[1]) + '.'));
+          return eindKeuze({ vraag:x[0], context:'Welk woord is een <b>tussenwerpsel</b>?', stappen:st });
+        } },
+      { id:'ws-trap', naam:'Trappen van vergelijking', kort:'Groot, groter, grootst: gelijk, meer of het meest',
+        uit:'<p>Met een bijvoeglijk naamwoord kun je dingen vergelijken. Daar zijn drie <b>trappen</b> voor.</p><p>De <b>stellende trap</b>: <i>groot</i>. Ze zijn gelijk: <i>net zo groot als</i>.<br>De <b>vergrotende trap</b>: <i>groter</i>, met <i>dan</i> erachter: <i>groter dan jouw huis</i>.<br>De <b>overtreffende trap</b>: <i>grootst</i>, het meest van allemaal: <i>het grootst van alle huizen</i>.</p><p>Let op de onregelmatige: <i>goed, beter, best</i> en <i>veel, meer, meest</i>.</p>',
+        wanneer:'je twee of meer dingen met elkaar vergelijkt.',
+        maak:function(R){
+          var x = R.kies(TRAP), t = R.heel(0, 2), zin;
+          if (t === 0) zin = x[3] + ' is net zo … als ' + x[4] + '.';
+          else if (t === 1) zin = x[3] + ' is … dan ' + x[4] + '.';
+          else zin = x[3] + ' is het … van ' + x[5] + '.';
+          var w = x[t];
+          return eindKeuze({ vraag:zin, context:'Welke vorm van ' + q(x[0]) + ' past op de puntjes?',
+            beeld:function(n){ return n >= 3 ? R.teken.zin([{ t:zin.replace('…', w), k:3, label:TRAPNAAM[t] }]) : ''; },
+            stappen:[
+              vast('Wat zegt de zin?', TRAPZEGT, TRAPZEGT[t], ['Er staat net zo ... als: ze zijn gelijk.', 'Er staat dan: het ene is meer dan het andere.', 'Er staat het ... van alle: het meest van allemaal.'][t]),
+              vast('Welke trap van vergelijking heb je nodig?', TRAPNAAM, TRAPNAAM[t], 'Gelijk: stellend. Meer dan: vergrotend. Het meest: overtreffend.'),
+              vast('Welk woord past op de puntjes?', [x[0], x[1], x[2]], w, 'De ' + TRAPNAAM[t] + ' van ' + q(x[0]) + ' is ' + q(w) + '.') ] });
+        } },
+      { id:'ws-bn-e', naam:'Bijvoeglijk naamwoord: met of zonder -e', kort:'Voor het woord krijgt het een -e, behalve bij een het-woord met een ervoor',
+        uit:'<p>Een bijvoeglijk naamwoord vóór een zelfstandig naamwoord krijgt meestal een <b>-e</b>: <i>de grote tuin, een grote tuin, het grote huis, mijn grote huis</i>.</p><p>Eén uitzondering: een <b>het-woord</b> met <i>een</i> (of <i>geen, elk, zo’n</i>) ervoor krijgt <b>geen -e</b>: <i>een groot huis</i>.</p><p>Staat het bijvoeglijk naamwoord <b>achter</b> het zelfstandig naamwoord, dan krijgt het nooit een -e: <i>Het huis is groot.</i></p><p>Let op de spelling: <i>wit, witte</i> en <i>rood, rode</i>.</p>',
+        wanneer:'je twijfelt tussen een groot huis en een grote huis.',
+        maak:function(R){
+          var z = R.kies(BNZN), n = z[0], lw = z[1], a = R.kies(z[2]), e = BNE[a], f = R.kies(['een', 'lw', 'mijn', 'na']), zin, ant, st = [];
+          if (f === 'een') zin = 'Dat is een … ' + n + '.';
+          else if (f === 'lw') zin = 'Kijk eens naar ' + lw + ' … ' + n + '.';
+          else if (f === 'mijn') zin = 'Dat is mijn … ' + n + '.';
+          else zin = groot(lw) + ' ' + n + ' is …, dat zie je meteen.';
+          var voor = f !== 'na', zonderE = f === 'na' || (f === 'een' && lw === 'het');
+          ant = zonderE ? a : e;
+          st.push(vast('Staat het bijvoeglijk naamwoord vóór ' + q(n) + ' of erachter?', ['ervoor', 'erachter'], voor ? 'ervoor' : 'erachter', voor ? 'De puntjes staan vlak voor ' + q(n) + '.' : 'De puntjes staan achter ' + q(n) + ', na het werkwoord is.'));
+          if (voor){
+            st.push(vast('Is ' + q(n) + ' een de-woord of een het-woord?', ['de-woord', 'het-woord'], lw + '-woord', 'Zeg het hardop: ' + lw + ' ' + n + '.'));
+            st.push(janee('Staat er <i>een</i> voor (of geen, elk, zo’n)?', f === 'een', f === 'een' ? 'Er staat: een … ' + n + '.' : 'Er staat ' + (f === 'lw' ? lw : 'mijn') + ' voor, geen een.'));
+          }
+          st.push(vast('Welke vorm past?', [a, e], ant, !voor ? 'Achter het zelfstandig naamwoord: nooit een -e.' : zonderE ? 'Het-woord met een ervoor: geen -e.' : 'Voor het zelfstandig naamwoord krijgt het hier wel een -e.'));
+          return eindKeuze({ vraag:zin, context:'Welke vorm van ' + q(a) + ' past op de puntjes?',
+            beeld:function(k){ return k >= st.length ? R.teken.zin([{ t:zin.replace('…', ant), k:3, label:zonderE ? 'zonder -e' : 'met -e' }]) : ''; },
+            stappen:st });
+        } }
+    ] });
+
+  G.push({ groep:{ id:'ws-meer' },
+    doelen:[
+      { id:'ws-wkd', naam:'Wederkerend en wederkerig: zich of elkaar', kort:'Zich gaat terug naar het onderwerp zelf; elkaar is de een bij de ander',
+        uit:'<p>Een <b>wederkerend voornaamwoord</b> verwijst terug naar het onderwerp zelf: <i>me, je, zich, ons, mezelf, zichzelf</i>. <i>Sara verveelt <b>zich</b>.</i> Sara doet het bij zichzelf.</p><p>Een <b>wederkerig voornaamwoord</b> is <b>elkaar</b>. De een doet het bij de ander: <i>Tom en Sara helpen <b>elkaar</b>.</i> Tom helpt Sara en Sara helpt Tom.</p>',
+        wanneer:'je in een zin zich, me, ons of elkaar ziet staan.',
+        maak:function(R){
+          var x = R.kies(WKD), h = haak(x[0]), wkd = x[2] === 'wkd', naam = wkd ? 'wederkerend' : 'wederkerig';
+          return eindKeuze({ vraag:x[0].replace(/[\[\]]/g, ''), context:'Wat voor voornaamwoord is <b>' + R.schoon(h.deel) + '</b>?',
+            beeld:function(n){ return n >= 2 ? haakBeeld(R, x[0], naam, 4) : ''; },
+            stappen:[
+              vast('Het onderwerp is ' + q(x[1]) + '. Gaat ' + q(h.deel) + ' terug naar het onderwerp zelf, of doet de een het bij de ander?', ['terug naar het onderwerp zelf', 'de een bij de ander'], wkd ? 'terug naar het onderwerp zelf' : 'de een bij de ander', wkd ? 'Het woord ' + q(h.deel) + ' gaat terug naar ' + q(x[1]) + ' zelf.' : 'Elkaar: de een doet het bij de ander, en andersom.'),
+              vast('Welk soort voornaamwoord is ' + q(h.deel) + '?', ['wederkerend', 'wederkerig'], naam, 'Bij zichzelf: wederkerend. Bij elkaar: wederkerig.') ] });
+        } },
+      { id:'ws-onb', naam:'Onbepaald voornaamwoord', kort:'Iemand, niemand, iets, niets, alles, iedereen: je weet niet precies wie of wat',
+        uit:'<p>Een <b>onbepaald voornaamwoord</b> staat voor een persoon of een ding, maar zegt <b>niet precies</b> wie of wat.</p><p>Voor personen: <i>iemand, niemand, iedereen, ieder, men</i>. Voor dingen: <i>iets, niets, alles</i>.</p><p>Vergelijk: <i>Hij heeft geklopt</i> (je weet wie) en <i>Iemand heeft geklopt</i> (je weet niet wie).</p>',
+        wanneer:'je een woord ziet als iemand, niets of iedereen.',
+        maak:function(R){
+          var x = R.kies(ONB), p = x[2] === 'p', f = {};
+          x[3].forEach(function(w){ if (/^(ik|je|hij|zij|we|jullie|het|zijn|mijn)$/.test(w)) f[w] = q(w) + ' is wel een voornaamwoord, maar daarbij weet je precies wie of wat bedoeld wordt.'; });
+          return zelfKeuze({ vraag:x[0], context:'Zoek het <b>onbepaald voornaamwoord</b>.',
+            beeld:function(n){ return n >= 2 ? haakBeeld(R, x[0].replace(x[1], '[' + x[1] + ']'), 'onbepaald vnw', 4) : ''; },
+            stappen:[
+              keuze(R, 'Welk woord staat voor een persoon of ding, zonder te zeggen wie of wat precies?', x[1], x[3], 'Zoek iemand, niemand, iedereen, ieder, men, iets, niets of alles.', { fout:f }),
+              vast('Gaat ' + q(x[1]) + ' over een persoon of over een ding?', ['een persoon', 'een ding'], p ? 'een persoon' : 'een ding', p ? q(x[1]) + ' gaat over mensen.' : q(x[1]) + ' gaat over dingen.') ] }, 0);
+        } },
+      { id:'ws-wat', naam:'Wat: vragend, betrekkelijk of uitroepend', kort:'Een vraag, een bijzin die terugverwijst, of een uitroep',
+        uit:'<p>Het woord <b>wat</b> kan drie soorten voornaamwoord zijn.</p><p><b>Vragend</b>: het begint een vraag. <i>Wat eten we?</i><br><b>Betrekkelijk</b>: het verwijst terug naar iets ervoor, zoals <i>alles</i>, <i>het mooiste</i> of de hele zin. <i>Alles wat je zegt, klopt.</i><br><b>Uitroepend</b>: het begint een uitroep. <i>Wat een mooie dag!</i></p>',
+        wanneer:'je wilt weten wat voor woord wat in een zin is.',
+        maak:function(R){
+          var x = R.kies(WAT), s = x[1], st = [];
+          st.push(janee('Verwijst <i>wat</i> terug naar iets wat ervoor staat (zoals alles, het mooiste of de hele zin)?', s === 'b', s === 'b' ? 'Ja, er staat iets voor waar wat naar terugverwijst.' : 'Nee, de zin begint met wat.'));
+          if (s !== 'b') st.push(vast('Wil de zin een antwoord, of roept hij iets uit?', ['een antwoord', 'iets uitroepen'], s === 'v' ? 'een antwoord' : 'iets uitroepen', s === 'v' ? 'Er staat een vraagteken: de zin wil een antwoord.' : 'Er staat een uitroepteken: de zin roept iets uit.'));
+          st.push(vast('Welk soort voornaamwoord is <i>wat</i> hier?', ['vragend', 'betrekkelijk', 'uitroepend'], WATNAAM[s], 'Terugverwijzen: betrekkelijk. Een vraag: vragend. Een uitroep: uitroepend.'));
+          return eindKeuze({ vraag:x[0], context:'Wat voor voornaamwoord is <b>wat</b> in deze zin?', stappen:st });
+        } },
+      { id:'ws-vnw-soort', naam:'Welk soort voornaamwoord?', kort:'Kijk wat het woord doet: aanwijzen, terugverwijzen, vragen of uitroepen',
+        uit:'<p>Er zijn negen soorten <b>voornaamwoorden</b>. Kijk steeds naar wat het woord <b>doet</b>.</p><ul><li><b>persoonlijk</b>: in plaats van iemand (hij, haar, ons)</li><li><b>bezittelijk</b>: van wie (mijn, haar, hun)</li><li><b>aanwijzend</b>: wijst aan (deze, die, dit, dat)</li><li><b>betrekkelijk</b>: begint een bijzin en verwijst terug (die, dat, wat)</li><li><b>vragend</b>: begint een vraag (wie, wat, welke)</li><li><b>wederkerend</b>: terug naar het onderwerp (zich, me)</li><li><b>wederkerig</b>: elkaar</li><li><b>onbepaald</b>: niet precies wie of wat (iemand, niets)</li><li><b>uitroepend</b>: begint een uitroep (wat een ...!)</li></ul><p>Let op: <i>haar</i> en <i>die</i> kunnen verschillende soorten zijn. Kijk naar de zin.</p>',
+        wanneer:'je bij het ontleden een voornaamwoord moet benoemen.',
+        maak:function(R){
+          var x = R.kies(VNW), h = haak(x[0]), S = VNWSOORT[x[1]], ander = Object.keys(VNWSOORT).filter(function(k){ return k !== x[1]; });
+          var f2 = R.hussel(ander).slice(0, 2), f3 = R.hussel(ander).slice(0, 3);
+          return eindKeuze({ vraag:x[0].replace(/[\[\]]/g, ''), context:'Welk soort voornaamwoord is <b>' + R.schoon(h.deel) + '</b>?',
+            beeld:function(n){ return n >= 2 ? haakBeeld(R, x[0], S[0], 4) : ''; },
+            stappen:[
+              keuze(R, 'Wat doet ' + q(h.deel) + ' in deze zin?', S[1], f2.map(function(k){ return VNWSOORT[k][1]; }), 'Lees de zin met het woord erin. Wijst het aan, zegt het van wie, vraagt het of verwijst het terug?'),
+              keuze(R, 'Welk soort voornaamwoord is ' + q(h.deel) + '?', S[0], f3.map(function(k){ return VNWSOORT[k][0]; }), 'Een woord dat ' + S[1] + ', is ' + S[0] + '.') ] });
+        } }
+    ] });
+
+  G.push({ groep:{ id:'zd-rest' },
+    doelen:[
+      { id:'zd-bijst', naam:'De bijstelling', kort:'Een tweede naam voor hetzelfde, tussen komma’s: Sara, mijn beste vriendin, ...',
+        uit:'<p>Een <b>bijstelling</b> geeft een zinsdeel <b>een tweede naam</b>. Hij staat er vlak achter, meestal tussen komma’s.</p><p><i>Sara, <b>mijn beste vriendin</b>, is jarig.</i> Sara en mijn beste vriendin zijn dezelfde persoon.</p><p>De proef: zet de bijstelling op de plek van het woord waar hij bij hoort. <i>Mijn beste vriendin is jarig.</i> Klopt dat, dan is het een bijstelling.</p>',
+        wanneer:'je bij het ontleden een stuk tussen komma’s tegenkomt.',
+        maak:function(R){
+          var x = R.kies(BIJST);
+          return zelfKeuze({ vraag:x[0], context:'Wat is de <b>bijstelling</b> in deze zin?',
+            beeld:function(n){ return n >= 2 ? haakBeeld(R, x[0].replace(x[1], '[' + x[1] + ']'), 'bijstelling', 5) : ''; },
+            stappen:[
+              keuze(R, 'Welk stukje geeft iets of iemand een tweede naam?', x[1], x[3].concat([x[2]]), 'Zoek het stukje tussen komma’s, vlak na een naam of zelfstandig naamwoord.'),
+              keuze(R, 'Bij welk woord hoort ' + q(x[1]) + '?', x[2], x[3], 'Zet ' + q(x[1]) + ' op de plek van het woord ervoor. Gaat het over dezelfde?') ] }, 0);
+        } }
+    ] });
+
+  G.push({ groep:{ id:'gram-zin' },
+    doelen:[
+      { id:'gram-bz-soort', naam:'Soorten bijzinnen', kort:'Hoort de bijzin bij een woord, of is hij een heel zinsdeel?',
+        uit:'<p>Een bijzin kan verschillende taken hebben.</p><p>Een <b>bijvoeglijke bijzin</b> hoort bij een zelfstandig naamwoord en staat er vlak achter: <i>de jongen <b>die naast mij zit</b></i>.</p><p>Een bijzin kan ook een <b>heel zinsdeel</b> zijn:</p><ul><li><b>bijwoordelijke bijzin</b>: wanneer, waarom of onder welke voorwaarde. <i><b>Omdat het regende</b>, bleven we binnen.</i></li><li><b>onderwerpszin</b>: het onderwerp. <i><b>Wie te laat komt</b>, moet zich melden.</i></li><li><b>lijdend-voorwerpszin</b>: het lijdend voorwerp. <i>Ik denk <b>dat het gaat regenen</b>.</i></li></ul>',
+        wanneer:'je bij het ontleden een bijzin tegenkomt.',
+        maak:function(R){
+          var x = R.kies(BZS), s = x[2], st = [];
+          st.push(keuze(R, 'Welk deel is de bijzin?', x[1], [x[3]], 'De bijzin is het deel met de persoonsvorm achteraan.'));
+          st.push(janee('Hoort de bijzin bij één zelfstandig naamwoord, en staat hij er vlak achter?', s === 'bvb', s === 'bvb' ? 'Ja, hij zegt iets over het woord ervoor.' : 'Nee, de bijzin is hier een heel zinsdeel.'));
+          if (s !== 'bvb') st.push(vast('Welke vraag beantwoordt de bijzin?', [BZVRAAG.ow, BZVRAAG.lv, BZVRAAG.bwb], BZVRAAG[s], 'Stel de vraag met de rest van de zin: ' + q(x[3]) + '.'));
+          st.push(vast('Wat voor bijzin is het?', [BZNAAM.bvb, BZNAAM.bwb, BZNAAM.ow, BZNAAM.lv], BZNAAM[s], s === 'bvb' ? 'Bij een woord: bijvoeglijke bijzin.' : 'Het onderwerp: onderwerpszin. Het lijdend voorwerp: lijdend-voorwerpszin. Wanneer of waarom: bijwoordelijke bijzin.'));
+          return eindKeuze({ vraag:x[0], context:'Wat voor bijzin staat er in deze zin?',
+            beeld:function(n){ return n >= st.length ? haakBeeld(R, x[0].replace(x[1], '[' + x[1] + ']'), BZNAAM[s], 4) : ''; },
+            stappen:st });
+        } },
+      { id:'gram-bz-beknopt', naam:'De beknopte bijzin', kort:'Geen onderwerp en geen persoonsvorm: na gegeten te hebben, thuisgekomen',
+        uit:'<p>Een <b>beknopte bijzin</b> is een bijzin zonder eigen onderwerp en zonder persoonsvorm. Je herkent hem aan:</p><ul><li><b>te + hele werkwoord</b>: <i>om een fiets te kopen</i></li><li>een <b>voltooid deelwoord</b>: <i>thuisgekomen</i></li><li>een <b>tegenwoordig deelwoord</b>: <i>zittend in de trein</i></li></ul><p>Je kunt hem uitschrijven tot een gewone bijzin: <i>Na gegeten te hebben</i> wordt <i>Nadat we hadden gegeten</i>.</p>',
+        wanneer:'je een zinsdeel ziet met te en een werkwoord, maar zonder persoonsvorm.',
+        maak:function(R){
+          var x = R.kies(BEKN), ja = x[2] === 1, st = [];
+          st.push(janee('Staat er in ' + q(x[1]) + ' een persoonsvorm?', !ja, ja ? 'Nee: ' + q(x[1]) + ' heeft geen werkwoord dat verandert als je de tijd verandert.' : 'Ja: er staat een persoonsvorm in, die verandert als je de tijd verandert.'));
+          st.push(janee('Heeft ' + q(x[1]) + ' een eigen onderwerp?', !ja, ja ? 'Nee: je weet alleen uit de rest van de zin wie het doet.' : 'Ja: er staat een eigen onderwerp in.'));
+          st.push(janee('Is ' + q(x[1]) + ' een beknopte bijzin?', ja, ja ? 'Geen persoonsvorm en geen onderwerp: een beknopte bijzin.' : 'Er staan een persoonsvorm en een onderwerp in: een gewone bijzin.'));
+          if (ja) st.push(keuze(R, 'Welke gewone bijzin betekent hetzelfde?', x[3], x[4], 'Wie doet het in de hoofdzin? Dat is ook het onderwerp van de bijzin.'));
+          return zelfKeuze({ vraag:x[0], context:'Is <b>' + R.schoon(x[1]) + '</b> een beknopte bijzin?',
+            beeld:function(n){ return n >= st.length ? haakBeeld(R, x[0].replace(x[1], '[' + x[1] + ']'), ja ? 'beknopte bijzin' : 'gewone bijzin', 4) : ''; },
+            stappen:st }, 2);
+        } }
+    ] });
+
   LEERROUTE.voeg('nederlands', G);
 })();

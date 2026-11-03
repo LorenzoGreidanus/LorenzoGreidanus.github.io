@@ -180,10 +180,10 @@
     document.title = mat.naam + ' · meneer Greidanus';
     $('beginNaam').textContent = mat.naam;
     $('beginSoort').textContent = lijst ? 'woordenlijst' : (isToets() ? 'toets' : 'oefening');
-    var n = lijst ? mat.paren.length : mat.items.length;
+    var n = lijst ? mat.paren.length : mat.items.length, k = lijst ? null : getrokken();
     $('beginUitleg').textContent = lijst
       ? n + ' woorden' + (mat.kopA && mat.kopB ? ' (' + mat.kopA + ' en ' + mat.kopB + ')' : '') + '. Je krijgt meerkeuzevragen beide kanten op, een paar keer typen en een ronde koppelen.'
-      : n + (n === 1 ? ' vraag' : ' vragen') + '. ' + (isToets()
+      : (k ? k.length + ' vragen, willekeurig gekozen uit ' + n + '. ' : n + (n === 1 ? ' vraag' : ' vragen') + '. ') + (isToets()
         ? 'Dit is een toets: je levert hem een keer in, en pas daarna zie je je score.'
         : 'Na elke vraag zie je of het goed was.');
     if (mat.voorbeeld) $('beginUitleg').textContent = mat.uitleg + ' Dit is een voorbeeld: je antwoorden gaan nergens heen. Een docent zet er in Eigen materiaal met een klik een eigen kopie van neer, om aan te passen of als toets te geven.';
@@ -229,13 +229,19 @@
   });
   $('nogEens').addEventListener('click', function(){ if (isToets()){ toonBegin(); return; } begin(); });
   /* volg[k]: welke vraag van de docent als k-de komt. Bij husselen voor elke leerling anders;
-     wat er ingeleverd wordt, staat weer in de volgorde van de docent. */
+     wat er ingeleverd wordt, staat weer in de volgorde van de docent.
+     Met trek krijg je een deel van de vragen, vast bij jouw kenmerk (dezelfde rekensom als
+     de server): na herladen dezelfde vragen. Zonder husselen in de volgorde van de docent,
+     met husselen in de volgorde van de trekking, die al door elkaar staat. */
   var volg = [];
   function inVolgorde(l){ var uit = []; volg.forEach(function(i, k){ uit[i] = l[k]; }); return uit; }
+  function getrokken(){ return mat.soort !== 'lijst' && !mat.voorbeeld && mat.trek && window.KLAS ? EIGEN.trek(code, KLAS.sid(), mat.items.length, mat.trek) : null; }
   function begin(){
     oef = mat.soort === 'lijst' ? EIGEN.oefeningUitLijst(mat, 12) : mat;
     volg = oef.items.map(function(x, i){ return i; });
-    if (mat.soort !== 'lijst' && mat.husselen) volg = schud(volg);
+    var k = getrokken();
+    if (k) volg = mat.husselen ? k : k.slice().sort(function(x, y){ return x - y; });
+    else if (mat.soort !== 'lijst' && mat.husselen) volg = schud(volg);
     oef = Object.assign({}, oef, { items: volg.map(function(i){ return oef.items[i]; }) });
     nr = 0; uitslag = []; antwoorden = [];
     $('speelNaam').textContent = mat.naam;

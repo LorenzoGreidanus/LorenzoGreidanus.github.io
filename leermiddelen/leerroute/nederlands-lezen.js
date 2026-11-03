@@ -1990,4 +1990,346 @@
           maak:function(R){ return maakRijmschema(R, R.kies(VERSJES)); } }
       ] }
   ]);
+
+  /* ================= erbij: gevoelswaarde, woordvelden, spreekwoorden, tekstsoorten, toon, argumentatiestructuur, meer structuren, verhaalopbouw, tijd, stijlfiguren en gedichten ================= */
+  /* een keuze in vaste volgorde; goed is de plek in de lijst */
+  function VV(t, opties, goed, hint){ return { tekst:t, opties:opties.slice(), goed:goed, hint:hint }; }
+
+  /* gevoelswaarde: [neutraal, positief, negatief] */
+  var GEVOEL = [
+    ['eten', 'smullen', 'vreten'], ['dun', 'slank', 'broodmager'], ['hond', 'hondje', 'mormel'], ['auto', 'droomauto', 'roestbak'],
+    ['kind', 'schatje', 'snotaap'], ['oud', 'antiek', 'ouderwets'], ['stil', 'rustig', 'saai'], ['geur', 'aroma', 'stank'],
+    ['spullen', 'schatten', 'rommel'], ['opvallend', 'bijzonder', 'raar'], ['nieuwsgierig', 'leergierig', 'bemoeiziek'], ['huis', 'paleisje', 'krot'] ];
+  var GEVNAAM = ['neutraal', 'positief', 'negatief'];
+  var GEVVRAAG = ['Welk woord is neutraal: het zegt alleen wat het is, zonder gevoel?', 'Welk woord klinkt positief?', 'Welk woord klinkt negatief?'];
+  var GEVHINT = ['Een neutraal woord zou je ook in een woordenboek of een nieuwsbericht gebruiken.', 'Welk woord klinkt als een compliment?', 'Welk woord zou iemand gebruiken die het niet leuk vindt?'];
+  /* woordvelden: [overkoepelend begrip, [vier woorden], het woord dat er niet bij hoort] */
+  var VELD = [
+    ['meubels', ['stoel', 'tafel', 'kast', 'bank'], 'deur'], ['vervoermiddelen', ['fiets', 'bus', 'trein', 'auto'], 'station'],
+    ['groenten', ['wortel', 'prei', 'spinazie', 'bloemkool'], 'appel'], ['muziekinstrumenten', ['gitaar', 'piano', 'trompet', 'viool'], 'koptelefoon'],
+    ['gereedschap', ['hamer', 'zaag', 'schroevendraaier', 'tang'], 'spijker'], ['zoogdieren', ['koe', 'walvis', 'vleermuis', 'hond'], 'pinguïn'],
+    ['kledingstukken', ['broek', 'trui', 'jas', 'rok'], 'tas'], ['gevoelens', ['blijdschap', 'angst', 'verdriet', 'boosheid'], 'hoofdpijn'],
+    ['beroepen', ['bakker', 'piloot', 'verpleegkundige', 'kapper'], 'kapsalon'], ['weersverschijnselen', ['regen', 'hagel', 'mist', 'onweer'], 'paraplu'],
+    ['sporten', ['hockey', 'judo', 'tennis', 'zwemmen'], 'scheidsrechter'], ['leestekens', ['komma', 'punt', 'vraagteken', 'puntkomma'], 'hoofdletter'],
+    ['lichaamsdelen', ['elleboog', 'knie', 'schouder', 'enkel'], 'pleister'], ['planeten', ['Mars', 'Venus', 'Jupiter', 'Saturnus'], 'Maan'],
+    ['keukengerei', ['pan', 'garde', 'pollepel', 'vergiet'], 'boterham'] ];
+  /* spreekwoord of uitdrukking: [tekst, s(preekwoord) of u(itdrukking), betekenis] */
+  var SPREEK = [
+    ['Oost west, thuis best.', 's', 'thuis is het het fijnst'], ['Wie niet waagt, die niet wint.', 's', 'wie geen risico neemt, bereikt niets'],
+    ['Haastige spoed is zelden goed.', 's', 'als je te veel haast maakt, gaat het vaak mis'], ['Wie het laatst lacht, lacht het best.', 's', 'pas aan het eind zie je wie echt gewonnen heeft'],
+    ['Beter laat dan nooit.', 's', 'het is beter iets te laat te doen dan helemaal niet'], ['Na regen komt zonneschijn.', 's', 'na een moeilijke tijd komt er weer een betere'],
+    ['Wie a zegt, moet ook b zeggen.', 's', 'als je ergens aan begint, moet je het ook afmaken'], ['Oefening baart kunst.', 's', 'door veel te oefenen word je er goed in'],
+    ['Eerlijk duurt het langst.', 's', 'eerlijk zijn levert op den duur het meest op'], ['Al draagt een aap een gouden ring, het is en blijft een lelijk ding.', 's', 'mooie spullen veranderen niet wie je bent'],
+    ['de kat uit de boom kijken', 'u', 'eerst afwachten hoe iets loopt'], ['met de deur in huis vallen', 'u', 'meteen zeggen waar het om gaat'],
+    ['iemand een hart onder de riem steken', 'u', 'iemand moed geven'], ['de koe bij de hoorns vatten', 'u', 'een moeilijke zaak meteen aanpakken'],
+    ['door de mand vallen', 'u', 'betrapt worden, zodat blijkt hoe het echt zit'], ['een oogje in het zeil houden', 'u', 'opletten'],
+    ['het hoofd koel houden', 'u', 'rustig blijven'], ['tussen twee vuren zitten', 'u', 'tussen twee partijen in zitten en niet kunnen kiezen'],
+    ['iets door de vingers zien', 'u', 'iets toestaan wat eigenlijk niet mag'], ['de spijker op de kop slaan', 'u', 'precies zeggen hoe het zit'] ];
+
+  /* tekstsoorten in de bovenbouw */
+  var TSOORT = {
+    uiteenzetting:{ doel:'de lezer iets uitleggen', kenm:'de schrijver geeft feiten en uitleg, maar geen eigen mening', o:[
+      'Bijen zijn belangrijk voor ons voedsel. Als een bij nectar uit een bloem haalt, blijft er stuifmeel aan haar lijf hangen. Dat stuifmeel brengt ze naar de volgende bloem. Zo kan die bloem vruchten vormen.',
+      'Een tsunami is een reeks zeer hoge golven. Hij ontstaat meestal door een aardbeving onder de zeebodem. Het water boven de bodem wordt dan opgetild en verplaatst zich naar de kust. Op open zee is de golf laag, maar vlak bij de kust wordt hij meters hoog.',
+      'Bij de verkiezingen voor de Tweede Kamer stem je op een persoon van een partij. Daarna worden alle stemmen geteld. Elke partij krijgt een deel van de 150 zetels, naar het aantal stemmen. Partijen die samen meer dan de helft van de zetels hebben, kunnen een regering vormen.',
+      'Je lichaam maakt vitamine D aan als de zon op je huid schijnt. Die vitamine heb je nodig voor sterke botten. In de winter staat de zon laag en kom je minder buiten. Daarom krijgen sommige mensen dan te weinig vitamine D binnen.',
+      'Plastic in zee valt langzaam uit elkaar in steeds kleinere stukjes. Die stukjes heten microplastics. Vissen en vogels zien ze aan voor voedsel. Zo komen microplastics in de voedselketen terecht.'] },
+    beschouwing:{ doel:'de lezer laten zien welke kanten een kwestie heeft', kenm:'de schrijver zet verschillende meningen naast elkaar en kiest zelf geen duidelijke kant', o:[
+      'Moeten telefoons in de klas verboden worden? Voorstanders zeggen dat leerlingen zich zonder telefoon beter concentreren. Tegenstanders wijzen erop dat je met een telefoon snel iets kunt opzoeken. Welke kant het zwaarst weegt, hangt misschien af van de school en de leerlingen.',
+      'Steeds meer jongeren gamen elke dag. Sommige ouders maken zich daar zorgen over: hun kind zit uren achter een scherm. Onderzoekers zien ook voordelen: gamers werken vaak goed samen en lossen snel problemen op. Of gamen goed of slecht is, lijkt vooral af te hangen van hoeveel en wat je speelt.',
+      'Is een dierentuin goed voor dieren? Dierentuinen zeggen dat ze zeldzame soorten helpen overleven. Ze fokken dieren die in het wild bijna verdwenen zijn. Critici vinden dat dieren niet in een verblijf horen, hoe groot dat ook is. Over deze vraag zijn de meningen sterk verdeeld.',
+      'Thuiswerken is heel gewoon geworden. Werknemers besparen er reistijd mee en kunnen hun werk vaak beter indelen. Werkgevers zien juist dat collega’s elkaar minder spreken en dat nieuwe medewerkers minder leren. Veel bedrijven kiezen daarom voor een mix van thuis en op kantoor werken.',
+      'Moeten winkels op zondag open zijn? Voor mensen die doordeweeks werken, is het handig. Winkeliers verdienen er vaak extra mee. Aan de andere kant willen veel werknemers op zondag liever vrij zijn, en sommige mensen vinden de zondag een rustdag. Elke gemeente maakt er een eigen keuze in.'] },
+    betoog:{ doel:'de lezer overtuigen van een mening', kenm:'de schrijver geeft een duidelijk standpunt met argumenten', o:[
+      'Elke school moet een gezonde kantine hebben. Jongeren eten nu te veel suiker en vet. Op school ben je vijf dagen per week, dus daar kun je goede gewoontes leren. Sommigen zeggen dat leerlingen dan buiten school snoep kopen. Maar dat is geen reden om het op school ook te verkopen. Weg met de snoepautomaat!',
+      'De maximumsnelheid in de stad moet omlaag naar dertig kilometer per uur. Bij een botsing op dertig is de kans op ernstig letsel veel kleiner dan op vijftig. Bovendien wordt het rustiger op straat. Een paar minuten extra reistijd is dat zeker waard.',
+      'Vlieg niet naar een vakantiebestemming die je ook met de trein kunt bereiken. Een vliegtuig stoot per reiziger veel meer CO2 uit dan een trein. En in de trein ben je al op vakantie: je leest, je kijkt naar buiten en je staat niet in de rij bij de beveiliging. Neem deze zomer dus de trein!',
+      'Huiswerk in de onderbouw moet worden afgeschaft. Leerlingen hebben na school tijd nodig voor sport, vrienden en rust. Bovendien krijgen leerlingen die thuis geen hulp hebben er een achterstand door. Oefenen kan prima in de les. Scholen moeten dus stoppen met huiswerk voor de onderbouw.',
+      'Jongeren van zestien zouden moeten mogen stemmen. Veel besluiten van nu gaan over hun toekomst, zoals het klimaat. Bovendien leren jongeren op school al hoe de politiek werkt. Wie zegt dat zestienjarigen te jong zijn, onderschat hen. Geef jongeren dus een stem!'] } };
+  var TSKEYS = Object.keys(TSOORT);
+  /* toon: [naam, wat opvalt, [fragmenten]] */
+  var TOON = {
+    zakelijk:['neutrale woorden: alleen feiten, geen gevoel of oordeel', [
+      'De gemeente legt in maart een nieuw fietspad aan langs de Dorpsstraat. Tijdens de werkzaamheden is de straat afgesloten voor auto’s. Fietsers kunnen via de Kerklaan rijden.',
+      'De bibliotheek is vanaf 1 januari op maandag gesloten. Op de andere dagen blijven de openingstijden gelijk. Boeken terugbrengen kan altijd via de inleverbus.',
+      'Voor het onderzoek vulden tweeduizend leerlingen een vragenlijst in. Daaruit blijkt dat veel jongeren door de week minder dan acht uur slapen. In het weekend slapen ze gemiddeld langer.'] ],
+    kritisch:['woorden die iets afkeuren, zoals slecht, valt tegen of jammer', [
+      'Het nieuwe rooster is slecht doordacht. Leerlingen hebben soms drie tussenuren op een dag, en niemand heeft gevraagd wat zij ervan vinden. De schoolleiding moet dit snel verbeteren.',
+      'De nieuwe film van deze regisseur valt tegen. Het verhaal is voorspelbaar en de grappen zijn oud. Jammer van het geld voor een bioscoopkaartje.',
+      'Dat de gemeente het jongerencentrum sluit, is een slecht besluit. Jongeren raken zo hun enige plek in de wijk kwijt. En het geld gaat naar een parkeergarage die niemand nodig heeft.'] ],
+    ironisch:['positieve woorden die eigenlijk negatief bedoeld zijn', [
+      'Geweldig hoor, alweer een bus die niet komt. Wat heerlijk om een half uur in de regen te staan. Ik heb echt niets beters te doen.',
+      'Wat een fantastisch idee om de toetsweek vlak na de kerstvakantie te zetten. Dan kunnen we de hele vakantie lekker leren. Bedankt, school!',
+      'Knap gedaan van de wifi op school: elke dag om tien uur valt hij uit, precies als we iets moeten opzoeken. Dat noem ik nog eens betrouwbaar.'] ],
+    enthousiast:['echt positieve woorden en uitroeptekens', [
+      'Wat een prachtige voorstelling! De spelers zongen geweldig en het decor was adembenemend. Ga hem zien als je de kans krijgt!',
+      'Dit boek moet je echt lezen! Vanaf de eerste bladzijde zat ik erin. Ik heb het in één weekend uitgelezen.',
+      'Ons team heeft de finale gewonnen! Iedereen heeft keihard gewerkt, en dat zie je terug. Wat zijn we trots!'] ],
+    bezorgd:['woorden over angst en zorgen, zoals bang, gevaarlijk of zorgen', [
+      'Steeds meer kinderen kunnen niet goed zwemmen. Dat is gevaarlijk in een land met zoveel water. Ik ben bang dat er deze zomer weer ongelukken gebeuren.',
+      'Mijn opa woont alleen en ziet bijna niemand meer. Ik maak me zorgen dat hij zich eenzaam voelt. Hoeveel ouderen zitten zo de hele dag alleen thuis?',
+      'In onze straat wordt veel te hard gereden. Elke dag steken er kleine kinderen over. Ik vraag me bezorgd af hoe lang het nog goed gaat.'] ] };
+  var TOONKEYS = Object.keys(TOON);
+  /* argumentatiestructuur: [tekst, e(nkelvoudig), m(eervoudig) of o(nderschikkend), standpunt, een argument uit de tekst, iets wat er niet staat] */
+  var ARGSTR = [
+    ['Je moet een fietshelm dragen. Een helm beschermt je hoofd als je valt.', 'e', 'je moet een fietshelm dragen', 'een helm beschermt je hoofd als je valt', 'helmen zijn duur'],
+    ['De kantine moet gratis water aanbieden, want frisdrank bevat veel suiker.', 'e', 'de kantine moet gratis water aanbieden', 'frisdrank bevat veel suiker', 'water is lekkerder dan frisdrank'],
+    ['Scholen moeten later beginnen. Tieners zijn ’s ochtends vroeg nog niet goed wakker.', 'e', 'scholen moeten later beginnen', 'tieners zijn ’s ochtends nog niet goed wakker', 'leraren willen later beginnen'],
+    ['Iedereen moet leren zwemmen, omdat er in Nederland overal water is.', 'e', 'iedereen moet leren zwemmen', 'er is in Nederland overal water', 'zwemmen is een leuke sport'],
+    ['Neem op vakantie de trein. Dat is beter voor het klimaat.', 'e', 'neem op vakantie de trein', 'de trein is beter voor het klimaat', 'de trein is altijd op tijd'],
+    ['Je moet een fietshelm dragen. Een helm beschermt je hoofd als je valt. Bovendien ben je met een felgekleurde helm beter zichtbaar.', 'm', 'je moet een fietshelm dragen', 'een helm beschermt je hoofd als je valt', 'helmen zijn goedkoop'],
+    ['De kantine moet gezonder eten verkopen. Ten eerste eten veel leerlingen te veel suiker. Ten tweede leer je op school goede gewoontes.', 'm', 'de kantine moet gezonder eten verkopen', 'veel leerlingen eten te veel suiker', 'gezond eten is goedkoper'],
+    ['Een huisdier is goed voor kinderen. Ze leren er voor iets zorgen. Daarnaast bewegen ze meer als ze met een hond wandelen.', 'm', 'een huisdier is goed voor kinderen', 'kinderen leren voor iets zorgen', 'katten zijn slimmer dan honden'],
+    ['Telefoons horen niet in de klas. Ze leiden af. Ook worden er stiekem foto’s gemaakt van leraren en klasgenoten.', 'm', 'telefoons horen niet in de klas', 'telefoons leiden af', 'telefoons zijn duur'],
+    ['Lees elke dag een kwartier. Je leert er nieuwe woorden van. Bovendien is lezen ontspannend.', 'm', 'lees elke dag een kwartier', 'je leert er nieuwe woorden van', 'boeken zijn goedkoop'],
+    ['Scholen moeten later beginnen. Tieners zijn ’s ochtends vroeg nog niet goed wakker. Hun biologische klok loopt namelijk later dan die van volwassenen.', 'o', 'scholen moeten later beginnen', 'tieners zijn ’s ochtends vroeg nog niet goed wakker', 'de bus rijdt later'],
+    ['Neem op vakantie de trein. Dat is beter voor het klimaat. Een trein stoot per reiziger namelijk veel minder CO2 uit dan een vliegtuig.', 'o', 'neem op vakantie de trein', 'de trein is beter voor het klimaat', 'de trein is goedkoper'],
+    ['De snelheid in onze wijk moet omlaag. Het is nu te gevaarlijk voor kinderen. Vorig jaar werden er in onze straat drie kinderen aangereden.', 'o', 'de snelheid in onze wijk moet omlaag', 'het is nu te gevaarlijk voor kinderen', 'auto’s maken te veel lawaai'],
+    ['Je moet genoeg water drinken. Anders kun je je slecht concentreren. Je hersenen hebben namelijk veel vocht nodig om goed te werken.', 'o', 'je moet genoeg water drinken', 'anders kun je je slecht concentreren', 'water is gratis'],
+    ['Gamen is niet alleen tijdverspilling. Je leert er ook samenwerken. In veel games moet je namelijk met een team een opdracht uitvoeren.', 'o', 'gamen is niet alleen tijdverspilling', 'je leert er samenwerken', 'games zijn duur'] ];
+  var ARGNAAM = { e:'enkelvoudig', m:'meervoudig', o:'onderschikkend' };
+  /* meer tekststructuren */
+  var STRUCT2 = {
+    'vraag en antwoord':{ vraag:'Welke vraag stelt de schrijver, en wat is het antwoord?', kenm:'de tekst begint met een vraag en daarna volgt het antwoord', o:[
+      'Hoeveel slaap heb je nodig? Dat hangt af van je leeftijd. Een kind van tien heeft ongeveer tien uur slaap nodig. Tieners hebben acht tot tien uur nodig, en volwassenen zeven tot negen.',
+      'Mag je op de fiets bellen met je telefoon in je hand? Nee, dat is verboden. Wie het toch doet, kan een flinke boete krijgen. Handsfree bellen mag wel.',
+      'Waar gaat je afval eigenlijk naartoe? Groente- en fruitafval wordt compost voor in de tuin. Oud papier wordt weer nieuw papier. Het restafval gaat naar een verbrandingsoven, die er stroom van maakt.'] },
+    'chronologisch':{ vraag:'Wat gebeurde er na elkaar?', kenm:'jaartallen en tijdwoorden als eerst, daarna en later', o:[
+      'In de nacht van 31 januari op 1 februari 1953 braken in Zeeland de dijken door. Ruim 1800 mensen kwamen om. Kort daarna begon de regering met het Deltaplan. In de jaren daarna werden er dammen en stormvloedkeringen gebouwd. In 1997 was het laatste deel klaar.',
+      'Eerst zoekt de zalm in zee naar voedsel. Na een paar jaar zwemt hij terug naar de rivier waar hij geboren is. Daar legt het vrouwtje haar eitjes. Een paar maanden later komen de jonge zalmpjes uit. Als ze groot genoeg zijn, zwemmen ook zij naar zee.',
+      'Sara’s dag begint om zeven uur. Eerst ontbijt ze en daarna fietst ze naar school. Om half negen begint de eerste les. Na school traint ze bij de hockeyclub, en ’s avonds maakt ze haar huiswerk.'] },
+    'aspecten':{ vraag:'Welke kanten heeft het onderwerp?', kenm:'steeds een ander kenmerk of onderdeel van hetzelfde onderwerp', o:[
+      'Een egel is een bijzonder dier. Hij heeft duizenden stekels op zijn rug. Hij eet vooral insecten, slakken en wormen. En in de winter houdt hij een winterslaap.',
+      'Japan is een land met veel kanten. Het ligt op een groep eilanden in de Grote Oceaan. Er wonen ruim 120 miljoen mensen. Het land staat bekend om zijn snelle treinen en om sushi.',
+      'Een goede sportschoen moet aan een paar dingen voldoen. Hij moet goed passen. Hij moet je voet steunen als je landt. En hij moet ademen, zodat je voet niet te warm wordt.'] },
+    'verleden, heden en toekomst':{ vraag:'Hoe was het vroeger, hoe is het nu en hoe wordt het later?', kenm:'woorden als vroeger, nu en straks of in de toekomst', o:[
+      'Vroeger schreven mensen brieven met pen en papier. Nu sturen we vooral appjes en e-mails. Misschien praten we straks alleen nog tegen onze telefoon, die alles voor ons typt.',
+      'Honderd jaar geleden werkten veel mensen in Nederland op het land. Tegenwoordig werkt nog maar een klein deel in de landbouw. In de toekomst doen robots misschien een groot deel van het werk op de boerderij.',
+      'Vroeger reden er in de stad vooral paard en wagen. Nu zijn het auto’s, bussen en fietsen. Over twintig jaar rijden er misschien vooral zelfrijdende elektrische auto’s.'] } };
+  var S2KEYS = Object.keys(STRUCT2);
+  /* verhaalopbouw: vier stukken per verhaal: beginsituatie, probleem, climax, oplossing */
+  var OPBOUW = [
+    ['Lotte woont met haar ouders op een boerderij aan de rand van het dorp.', 'Op een avond is haar pony Max verdwenen: het hek staat open.', 'In het donker zoekt Lotte met een zaklamp langs de sloot. Dan hoort ze een zacht gehinnik vlak bij het water.', 'Max staat vast in de modder. Samen met haar vader trekt ze hem eruit, en moe maar blij lopen ze naar huis.'],
+    ['Daan zit in de B1 van de voetbalclub en is reservekeeper.', 'Vlak voor de finale raakt de vaste keeper geblesseerd. Daan moet spelen, terwijl hij nog nooit een belangrijke wedstrijd heeft gekeept.', 'In de laatste minuut krijgt de tegenstander een strafschop. Daan kijkt de spits aan en duikt naar links.', 'Hij houdt de bal tegen. Zijn team wint, en Daan wordt door iedereen op de schouders getild.'],
+    ['Yara is net verhuisd naar een nieuwe stad en kent op school nog niemand.', 'In de pauze zit ze alleen, en een groepje meiden lacht om haar oude jas.', 'Tijdens de gymles valt een van die meiden en verstuikt haar enkel. Yara is de enige die haar helpt en meeloopt naar de EHBO.', 'De volgende dag vraagt het meisje of Yara bij hen komt zitten. Vanaf dat moment hoort Yara erbij.'],
+    ['Opa Kees woont alleen in een klein huis met een grote tuin.', 'Op een ochtend ziet hij dat iemand ’s nachts zijn appels steelt.', 'Die nacht blijft hij wakker achter het raam. Rond middernacht ziet hij een schim over het hek klimmen.', 'Het blijkt de buurjongen te zijn, die appels haalt voor zijn zieke moeder. Opa Kees geeft hem een hele mand mee.'],
+    ['Milan houdt niet van zingen, maar zijn klas doet mee aan een zangwedstrijd.', 'De juf kiest uitgerekend hem voor de solo.', 'Op de avond van de wedstrijd staat hij trillend op het podium. De muziek begint, en even komt er geen geluid uit zijn keel.', 'Dan ziet hij zijn moeder op de eerste rij en begint hij toch te zingen. Na afloop krijgt hij het hardste applaus.'],
+    ['Emma en haar broer gaan elke zomer kamperen in Frankrijk.', 'Tijdens een wandeling raken ze van het pad af en verdwalen ze in het bos.', 'Het wordt donker en het onweer komt dichterbij. Emma klimt in een hoge boom om rond te kijken.', 'In de verte ziet ze de lichtjes van de camping. Nat maar veilig komen ze aan bij de tent van hun ouders.'],
+    ['Nina heeft een hond, Bobbie, die alles opeet wat hij vindt.', 'Op een dag is de ring van Nina’s moeder weg, en iedereen denkt dat Bobbie hem heeft ingeslikt.', 'Bij de dierenarts wordt er een foto gemaakt. Iedereen wacht gespannen op de uitslag.', 'Op de foto is geen ring te zien. Thuis vindt Nina hem gewoon terug in de zeepbak.'],
+    ['In het dorp van Finn staat een oude vuurtoren waar al jaren niemand meer komt.', 'Op een stormachtige nacht ziet Finn een boot zonder licht vlak bij de rotsen varen.', 'Finn rent de vuurtoren in en zoekt de schakelaar van de oude lamp. Zijn handen trillen als hij hem omzet.', 'Het licht gaat aan en de boot draait op het laatste moment weg van de rotsen. De volgende dag staat Finn in de krant.'],
+    ['Ayoub spaart al een jaar voor een nieuwe fiets.', 'Een week voordat hij genoeg geld heeft, wordt zijn oude fiets gestolen.', 'Op een middag ziet hij zijn eigen fiets bij de supermarkt staan. Er komt een jongen naar buiten die het slot openmaakt.', 'Ayoub roept een agent die daar toevallig loopt. Hij krijgt zijn fiets terug, en van zijn spaargeld koopt hij een stevig slot.'],
+    ['Iris zit in groep acht en speelt mee in de musical.', 'Op de dag van de voorstelling is haar tekstboekje kwijt, en haar laatste scène kent ze nog niet goed.', 'Midden in die scène weet ze haar tekst niet meer. Het is doodstil in de zaal.', 'Ze bedenkt ter plekke een grap. Het publiek lacht, en niemand merkt dat het niet in het script stond.'],
+    ['Mo en zijn vader vissen elke zondag aan de rivier.', 'Deze zondag waarschuwt de radio voor hoog water, maar Mo wil toch gaan.', 'Opeens stijgt het water snel en staat hun pad onder water. Mo glijdt uit op de natte stenen.', 'Zijn vader grijpt hem net op tijd vast. Thuis spreken ze af om voortaan eerst naar het weerbericht te luisteren.'],
+    ['Bram bakt elke zaterdag taarten met zijn oma.', 'Oma wordt ziek en kan niet meedoen aan de bakwedstrijd van het dorp, waar ze al weken naar uitkeek.', 'Bram bakt de taart alleen. Een uur voor de wedstrijd zakt de taart in elkaar.', 'Snel maakt hij er een taart met slagroom en fruit van. De jury vindt hem zo origineel dat Bram de tweede prijs wint, die hij aan oma geeft.'] ];
+  var OPNAAM = ['beginsituatie', 'probleem', 'climax', 'oplossing'];
+  var OPDOET = ['de hoofdpersoon en de plek worden voorgesteld', 'er gaat iets mis, of er moet iets gebeuren', 'het spannendste moment: nu moet het gebeuren', 'het probleem wordt opgelost en het verhaal loopt af'];
+  /* tijd in een verhaal: [fragment, vertelde tijd 0 seconden, 1 weken of maanden, 2 een jaar of langer, techniek] */
+  var VTIJD = [
+    ['De bal kwam op hem af. Hij zag de naden draaien, hoorde het publiek de adem inhouden en voelde zijn hart bonzen. Langzaam, heel langzaam, strekte hij zijn arm. Zijn vingertoppen raakten het leer.', 0, 'traag'],
+    ['Ze opende de envelop. Haar handen trilden. Ze vouwde de brief open, las de eerste regel, en nog een keer, en toen pas drong het tot haar door: ze was aangenomen.', 0, 'traag'],
+    ['De auto gleed over het ijs. Alles leek stil te staan: de lichten van de tegenligger, de boom in de berm, de schreeuw van zijn moeder naast hem. Toen kwam de klap.', 0, 'traag'],
+    ['Hij drukte op de bel. Binnen blafte een hond. Voetstappen kwamen dichterbij, een sleutel draaide om, de deurklink bewoog. Toen ging de deur op een kier open.', 0, 'traag'],
+    ['De jaren op de basisschool vlogen voorbij. Lisa leerde lezen, kreeg een broertje, verhuisde twee keer en won een tekenwedstrijd. Voor ze het wist, zat ze in groep acht.', 2, 'snel'],
+    ['Die zomer werkte Tom elke dag op de camping. Hij maakte toiletten schoon, verkocht ijsjes en leerde Duits van de gasten. Eind augustus had hij genoeg geld voor een scooter.', 1, 'snel'],
+    ['In de herfst plantte oma de bloembollen. De winter kwam en ging. In de lente stond de hele tuin vol tulpen.', 1, 'snel'],
+    ['Opa groeide op in een stad vol soldaten. Vijf lange jaren had hij weinig te eten en was hij vaak bang. Pas toen hij twaalf was, was de oorlog voorbij.', 2, 'snel'],
+    ['Sam zwaaide zijn vader uit op het vliegveld. Hij keek het vliegtuig na tot het een stipje was. Tien jaar later stond hij zelf in de vertrekhal, met een koffer in zijn hand.', 2, 'sprong'],
+    ['Noor stapte die avond met kloppend hart in de bus naar het internaat. Drie maanden later kende ze iedereen bij naam.', 1, 'sprong'],
+    ['Het was de laatste schooldag. Iedereen beloofde elkaar te blijven zien. Twintig jaar later zat Daan op de reünie en herkende hij bijna niemand.', 2, 'sprong'],
+    ['Na de ruzie zeiden de twee vrienden geen woord meer tegen elkaar. Een jaar later stonden ze ineens naast elkaar in de rij bij de bakker.', 2, 'sprong'] ];
+  var VTDUUR = ['een paar seconden', 'een paar weken of maanden', 'een jaar of langer'];
+  var VTTECH = { traag:'hij vertraagt: een kort moment krijgt veel woorden', snel:'hij versnelt: een lange tijd vat hij samen in een paar zinnen', sprong:'hij maakt een tijdsprong: een stuk tijd slaat hij helemaal over' };
+  /* meer stijlfiguren */
+  var STIJL2 = {
+    'retorische vraag':{ kenm:'een vraag waar je geen antwoord op hoeft te geven, omdat het antwoord al duidelijk is', o:[
+      'Wie wil er nou niet gezond oud worden?', 'Is het nou echt zo moeilijk om je jas op te hangen?', 'Wie heeft er nou zin in een toets op vrijdagmiddag?',
+      'Hoe vaak moet ik het nog zeggen?', 'Wie houdt er niet van vakantie?', 'Zijn we niet allemaal weleens te laat?'] },
+    ironie:{ kenm:'je zegt het omgekeerde van wat je bedoelt', o:[
+      'Lekker weertje, zeg, zei Tom terwijl het pijpenstelen regende.', 'Wat ben je weer vroeg, zei de juf toen Tom een half uur te laat binnenkwam.', 'Goed geregeld hoor, de trein heeft alweer vertraging.',
+      'Nou, jij hebt je kamer wel heel netjes opgeruimd, zei mama, terwijl ze over een berg kleren stapte.', 'Wat een slim idee om je telefoon mee het zwembad in te nemen.', 'Fijn, een lekke band, precies wat ik vandaag nodig had.'] },
+    eufemisme:{ kenm:'iets naars wordt met een mooier of zachter woord gezegd', o:[
+      'Mijn opa is vorig jaar heengegaan.', 'Onze oude kat is vorige week ingeslapen.', 'Het bedrijf moest afscheid nemen van tweehonderd medewerkers.',
+      'Die leerling is niet zo sterk in wiskunde.', 'Mijn tante is al wat op leeftijd.', 'De buurman is de laatste tijd wat minder goed bij kas.'] },
+    contrast:{ kenm:'twee tegengestelde dingen worden vlak naast elkaar gezet', o:[
+      'Overdag lachte ze, ’s nachts huilde ze.', 'Klein van stuk, groot van hart.', 'De stad was vol, maar zij voelde zich alleen.',
+      'Buiten stormde het, binnen was het stil en warm.', 'Haar woorden waren zacht, haar blik was hard.', 'Oude muren, jonge mensen.'] },
+    climax:{ kenm:'een opsomming die steeds sterker of groter wordt', o:[
+      'Hij was moe, uitgeput, helemaal kapot.', 'Eerst een tik, dan een klap, toen een harde knal.', 'Ze lachte, gierde, brulde van het lachen.',
+      'Het begon met een druppel, toen kwam een bui en uiteindelijk een storm.', 'Hij fluisterde, praatte en schreeuwde ten slotte.', 'Eerst stond er één fan bij het hek, toen honderd, en daarna duizenden.'] } };
+  var ST2KEYS = Object.keys(STIJL2);
+  /* gedichten: [strofen (regels met / ertussen), dichtvorm] */
+  var GEDICHT = [
+    [['Stil ligt het meer daar / een kikker springt in het riet / kringen in het groen'], 'haiku'],
+    [['Eerste sneeuw valt neer / de straat is plotseling stil / mijn adem wordt wit'], 'haiku'],
+    [['Zon op mijn gezicht / de bijen zoemen rondom / het is weer lente'], 'haiku'],
+    [['Een meisje uit Hoorn aan het Meer / at elke dag soep met een peer. / Ze riep: ‘Wat een smaak, / dit eet ik nog vaak!’ / en ze vroeg om een bord nog een keer.'], 'limerick'],
+    [['Er was eens een kat uit Den Bosch / die liep met een hoed door het bos. / Hij tikte zijn hoed / en zei: ‘Dag, het gaat goed!’ / en toen liet hij een muis maar weer los.'], 'limerick'],
+    [['Een visser uit Urk met een baard / die ving op een zondag een paard. / Hij keek heel verbaasd: / ‘Wat ben jij gehaast!’ / en weg zwom het paard met zijn staart.'], 'limerick'],
+    [['Wie altijd wacht tot morgen komt, / die wacht tot alles is verstomd. / Begin vandaag, al is het klein: / zo zal het morgen anders zijn.'], 'kwatrijn'],
+    [['Een vriend is wie je echt begrijpt, / ook als je even niets bereikt. / Hij luistert, lacht en blijft je trouw, / ook in de regen en de kou.'], 'kwatrijn'],
+    [['De trein rijdt door de ochtend / en ik kijk naar buiten.', 'Weilanden, koeien, / een boer op een trekker', 'en heel even mijn eigen gezicht / in het raam.'], 'vrij vers'],
+    [['Mijn opa zegt niet veel.', 'Hij zit op de bank / met zijn handen om een kop thee / en kijkt naar de regen.', 'Soms knikt hij / alsof de regen / iets tegen hem zegt.'], 'vrij vers'] ];
+  var DVORM = { haiku:'drie korte regels, met 5, 7 en 5 lettergrepen', limerick:'vijf regels met rijm aabba en een grappig verhaaltje', kwatrijn:'vier regels die samen één gedachte geven', 'vrij vers':'geen vaste vorm: geen vast aantal regels en meestal geen rijm' };
+  /* enjambement: [regels, na welke regel de zin doorloopt] */
+  var ENJ = [
+    [['Het regent op de daken.', 'De goten lopen over.', 'Ik zit bij het raam en wacht', 'tot jij de hoek om komt.'], 3],
+    [['In de stille klas', 'tikt alleen de klok.', 'Iedereen schrijft.', 'Niemand kijkt op.'], 1],
+    [['De zee is grijs vandaag.', 'Een meeuw schreeuwt boven het strand', 'waar niemand meer loopt.', 'Alleen ik en de wind.'], 2],
+    [['De trein vertrekt om acht uur.', 'Ik ren over het perron', 'en spring er nog net in.', 'Het fluitje klinkt.'], 2],
+    [['Op de hoek van de straat', 'staat een oude lantaarn.', 'Hij brandt al honderd jaar.', 'Niemand weet nog waarom.'], 1],
+    [['De sneeuw valt zacht.', 'De wereld is wit.', 'Ik schrijf mijn naam', 'met mijn vinger in de sneeuw.'], 3],
+    [['Mijn hond wacht bij de deur', 'tot ik thuiskom van school.', 'Dan kwispelt hij.', 'Dan is alles goed.'], 1],
+    [['Oma bakt pannenkoeken.', 'De keuken ruikt naar boter.', 'Mijn broer en ik eten er', 'samen wel twintig op.'], 3] ];
+
+  function regelsVan(strofen){ return strofen.map(function(s){ return s.split(' / ').join('<br>'); }); }
+
+  LEERROUTE.voeg('nederlands', [
+    { groep:{ id:'woord-strategie' },
+      doelen:[
+        { id:'woord-gevoel', naam:'Gevoelswaarde', kort:'Woorden kunnen bijna hetzelfde betekenen en toch neutraal, positief of negatief klinken',
+          uit:'<p>Sommige woorden betekenen bijna hetzelfde, maar ze geven een ander <b>gevoel</b>. Dat heet de <b>gevoelswaarde</b>.</p><p><i>Slank</i> klinkt <b>positief</b>, <i>dun</i> is <b>neutraal</b> en <i>broodmager</i> klinkt <b>negatief</b>.</p><p>Een neutraal woord zegt alleen wat iets is. Met een positief of negatief woord laat de schrijver merken wat hij ervan vindt.</p>',
+          wanneer:'je wilt weten hoe een schrijver over iets denkt, of zelf het juiste woord zoekt.',
+          maak:function(R){
+            var x = R.kies(GEVOEL), volg = R.hussel([0, 1, 2]);
+            return OP('Drie woorden met bijna dezelfde betekenis: ' + R.hussel(x).join(', ') + '.', 'Welke gevoelswaarde heeft elk woord?',
+              volg.map(function(i){ return K(R, GEVVRAAG[i], x[i], x.filter(function(w, j){ return j !== i; }), GEVHINT[i]); }));
+          } },
+        { id:'woord-veld', naam:'Woordvelden: het overkoepelende woord', kort:'Zoek wat de woorden gemeen hebben: dat is het overkoepelende begrip',
+          uit:'<p>Woorden die bij hetzelfde onderwerp horen, vormen een <b>woordveld</b>. <i>Stoel, tafel, kast</i> en <i>bank</i> zijn allemaal <b>meubels</b>.</p><p>Het woord dat ze samen noemt, heet het <b>overkoepelende begrip</b>. Daarmee kun je in een tekst korter schrijven, of snel zien waar een rijtje over gaat.</p>',
+          wanneer:'je een rijtje woorden ziet, of zelf een samenvattend woord zoekt.',
+          maak:function(R){
+            var x = R.kies(VELD), rij = R.hussel(x[1].concat([x[2]]));
+            var andere = ander(R, VELD.map(function(v){ return v[0]; }), [x[0]], 2);
+            return OP('Welk overkoepelend begrip past bij de woorden?', '<div class="lr-tekst"><p>' + rij.join(', ') + '</p></div>', [
+              K(R, 'Welk woord hoort niet in het rijtje?', x[2], R.hussel(x[1]).slice(0, 3), 'Vier woorden hebben iets gemeen. Welk woord valt erbuiten?'),
+              K(R, 'Welk overkoepelend begrip past bij de andere vier?', x[0], andere, 'Wat zijn ' + x[1].join(', ') + ' allemaal?')
+            ]);
+          } }
+      ] },
+    { groep:{ id:'woord-taal' },
+      doelen:[
+        { id:'woord-spreekwoord', naam:'Uitdrukking of spreekwoord?', kort:'Een spreekwoord is een hele zin met een levensles; een uitdrukking zet je in je eigen zin',
+          uit:'<p>Een <b>spreekwoord</b> is een hele, vaste zin met een <b>levensles</b> of wijze raad. Je zegt hem altijd precies zo: <i>Haastige spoed is zelden goed.</i></p><p>Een <b>uitdrukking</b> (ook wel gezegde of zegswijze) is een vaste groep woorden met een figuurlijke betekenis. Je zet hem in je eigen zin, en het werkwoord verandert mee: <i>de kat uit de boom kijken</i>, <i>Ik keek de kat uit de boom.</i></p>',
+          wanneer:'je een vaste uitdrukking tegenkomt en wilt weten wat voor soort het is.',
+          maak:function(R){
+            var x = R.kies(SPREEK), sp = x[1] === 's';
+            return OP(x[0], 'Is dit een uitdrukking of een spreekwoord? Wat betekent het?', [
+              VV('Is het een hele vaste zin, of een stuk dat je in je eigen zin zet?', ['een hele vaste zin', 'een stuk voor in je eigen zin'], sp ? 0 : 1, sp ? 'Er staat een hele zin, met een punt aan het eind.' : 'Er staat een heel werkwoord aan het eind; dat verander je in je eigen zin.'),
+              K(R, 'Wat betekent het?', x[2], ander(R, SPREEK.map(function(s){ return s[2]; }), [x[2]], 2), 'Neem het niet letterlijk. Wanneer zou iemand dit zeggen?'),
+              VV('Is het een uitdrukking of een spreekwoord?', ['uitdrukking', 'spreekwoord'], sp ? 1 : 0, sp ? 'Een hele vaste zin met een levensles: een spreekwoord.' : 'Een vast stuk dat je in je eigen zin zet: een uitdrukking.')
+            ]);
+          } }
+      ] },
+    { groep:{ id:'lees-tekstsoort', niveau:'3F', domein:'lezen', naam:'Tekstsoort en toon',
+        uit:'In de bovenbouw lees je vooral uiteenzettingen, beschouwingen en betogen. Je herkent ze aan wat de schrijver wil. En aan de woorden zie je welke toon de schrijver aanslaat.' },
+      doelen:[
+        { id:'lees-tsoort-boven', naam:'Uiteenzetting, beschouwing of betoog', kort:'Uitleggen, verschillende kanten laten zien of overtuigen',
+          uit:'<p>Een <b>uiteenzetting</b> legt iets uit. De schrijver geeft feiten en uitleg, maar geen eigen mening.</p><p>Een <b>beschouwing</b> laat verschillende kanten van een kwestie zien. De schrijver zet meningen naast elkaar en kiest zelf geen duidelijke kant. Jij vormt je eigen mening.</p><p>Een <b>betoog</b> wil je overtuigen. De schrijver heeft een duidelijk standpunt en geeft argumenten.</p>',
+          wanneer:'een toetsvraag vraagt welke tekstsoort een tekst is.',
+          maak:function(R){
+            var k = R.kies(TSKEYS), S = TSOORT[k], rest = TSKEYS.filter(function(x){ return x !== k; });
+            return OP('Welke tekstsoort is dit?', tekst(R.kies(S.o)), [
+              K(R, 'Wat wil de schrijver met deze tekst?', S.doel, rest.map(function(x){ return TSOORT[x].doel; }), 'Geeft de schrijver alleen uitleg, laat hij twee kanten zien, of wil hij dat jij het met hem eens bent?'),
+              K(R, 'Waaraan zie je dat?', S.kenm, rest.map(function(x){ return TSOORT[x].kenm; }), 'Zoek woorden als moet, dus, sommigen zeggen, tegenstanders of andere kant.'),
+              VV('Welke tekstsoort is het?', TSKEYS, TSKEYS.indexOf(k), 'Uitleggen: uiteenzetting. Kanten laten zien: beschouwing. Overtuigen: betoog.')
+            ]);
+          } },
+        { id:'lees-toon', naam:'De toon van de schrijver', kort:'Kijk naar de woorden: zakelijk, kritisch, ironisch, enthousiast of bezorgd',
+          uit:'<p>De <b>toon</b> zegt hoe de schrijver over zijn onderwerp denkt. Je hoort het aan de woorden.</p><ul><li><b>zakelijk</b>: alleen feiten, geen gevoel</li><li><b>kritisch</b>: de schrijver keurt iets af</li><li><b>ironisch</b>: de schrijver zegt het omgekeerde van wat hij bedoelt</li><li><b>enthousiast</b>: de schrijver is echt blij of positief</li><li><b>bezorgd</b>: de schrijver maakt zich zorgen</li></ul>',
+          wanneer:'een vraag zegt: welke toon heeft de tekst?',
+          maak:function(R){
+            var k = R.kies(TOONKEYS), T = TOON[k], rest = ander(R, TOONKEYS, [k], 2), rest3 = ander(R, TOONKEYS, [k], 3);
+            return OP('Welke toon heeft deze tekst?', tekst(R.kies(T[1])), [
+              K(R, 'Wat voor woorden vallen op?', T[0], rest.map(function(x){ return TOON[x][0]; }), 'Lees de tekst en kijk naar de woorden die een gevoel geven. Of zijn er juist geen?'),
+              K(R, 'Welke toon heeft de tekst?', k, rest3, 'Bij ' + T[0] + ' hoort een ' + k + 'e toon.')
+            ]);
+          } }
+      ] },
+    { groep:{ id:'lees-drog' },
+      doelen:[
+        { id:'lees-arg-struct', naam:'Argumentatiestructuur', kort:'Eén argument, meer losse argumenten, of een argument dat zelf weer wordt gesteund',
+          uit:'<p>De <b>argumentatiestructuur</b> laat zien hoe de argumenten bij het standpunt horen.</p><p><b>Enkelvoudig</b>: één argument. <i>Draag een helm, want die beschermt je hoofd.</i></p><p><b>Meervoudig</b>: twee of meer argumenten die elk los het standpunt steunen. <i>Draag een helm: hij beschermt je hoofd, en bovendien ben je beter zichtbaar.</i></p><p><b>Onderschikkend</b>: een argument wordt zelf weer gesteund door een ander argument. <i>Neem de trein, want dat is beter voor het klimaat. Een trein stoot namelijk minder CO2 uit.</i></p><p>Stel steeds de vraag: waarom? Waarom vindt de schrijver dat, en waarom klopt dat argument?</p>',
+          wanneer:'een examenvraag vraagt naar de opbouw van een betoog.',
+          maak:function(R){
+            var x = R.kies(ARGSTR), s = x[1], f = {}; f[x[3]] = 'Dat is een argument: het zegt waarom.';
+            return OP('Welke argumentatiestructuur heeft deze tekst?', tekst(x[0]), [
+              K(R, 'Wat is het standpunt?', x[2], [x[3], x[4]], 'Wat vindt de schrijver? Vaak staat het in de eerste zin.', { fout:f }),
+              VV('Hoeveel argumenten geven direct antwoord op de vraag: waarom vindt de schrijver dat?', ['één', 'twee'], s === 'm' ? 1 : 0, 'Zet waarom? achter het standpunt. Welke zinnen geven daar zelf antwoord op?'),
+              VV('Wordt een argument zelf nog gesteund door een ander argument?', ['ja', 'nee'], s === 'o' ? 0 : 1, 'Zet waarom? achter het argument. Geeft de tekst daar ook nog antwoord op, bijvoorbeeld met namelijk?'),
+              VV('Welke argumentatiestructuur is het?', ['enkelvoudig', 'meervoudig', 'onderschikkend'], ['e', 'm', 'o'].indexOf(s), 'Eén argument: enkelvoudig. Losse argumenten naast elkaar: meervoudig. Een argument dat zelf gesteund wordt: onderschikkend.')
+            ]);
+          } }
+      ] },
+    { groep:{ id:'lees-structuur' },
+      doelen:[
+        { id:'lees-struct-meer', naam:'Nog vier structuren', kort:'Vraag en antwoord, chronologisch, aspecten, en verleden, heden en toekomst',
+          uit:'<p>Er zijn nog meer <b>tekststructuren</b>.</p><ul><li><b>Vraag en antwoord</b>: de tekst begint met een vraag en geeft dan het antwoord.</li><li><b>Chronologisch</b>: de tekst vertelt wat er na elkaar gebeurde, met jaartallen en woorden als eerst en daarna.</li><li><b>Aspecten</b>: de tekst bespreekt steeds een andere kant van hetzelfde onderwerp.</li><li><b>Verleden, heden en toekomst</b>: hoe was het vroeger, hoe is het nu, en hoe wordt het later?</li></ul>',
+          wanneer:'een tekst geen probleem en oplossing of oorzaak en gevolg heeft, en je toch de opbouw zoekt.',
+          maak:function(R){
+            var k = R.kies(S2KEYS), S = STRUCT2[k], rest = S2KEYS.filter(function(x){ return x !== k; });
+            return OP('Welke tekststructuur heeft deze tekst?', tekst(R.kies(S.o)), [
+              K(R, 'Welke vraag beantwoordt de tekst?', S.vraag, ander(R, rest, [], 2).map(function(x){ return STRUCT2[x].vraag; }), 'Kijk waar de tekst mee begint en hoe hij verdergaat.'),
+              K(R, 'Wat valt op in de tekst?', S.kenm, ander(R, rest, [], 2).map(function(x){ return STRUCT2[x].kenm; }), 'Zoek signaalwoorden: een vraagteken, jaartallen, vroeger en nu, of steeds een nieuw kenmerk.'),
+              VV('Welke tekststructuur is het?', S2KEYS, S2KEYS.indexOf(k), 'De vraag ' + q(S.vraag) + ' hoort bij ' + k + '.')
+            ]);
+          } }
+      ] },
+    { groep:{ id:'fic-verhaal' },
+      doelen:[
+        { id:'fic-opbouw', naam:'De opbouw van een verhaal', kort:'Beginsituatie, probleem, climax en oplossing',
+          uit:'<p>De meeste verhalen hebben dezelfde <b>opbouw</b>.</p><ul><li>De <b>beginsituatie</b>: je leert de hoofdpersoon en de plek kennen.</li><li>Het <b>probleem</b>: er gaat iets mis, of er moet iets gebeuren.</li><li>De <b>climax</b>: het spannendste moment, het hoogtepunt.</li><li>De <b>oplossing</b> (ontknoping): het probleem wordt opgelost en het verhaal loopt af.</li></ul>',
+          wanneer:'je een verhaal navertelt of een vraag krijgt over de opbouw.',
+          maak:function(R){
+            var s = R.kies(OPBOUW), i = R.heel(0, 3);
+            return OP('Welk deel van de opbouw is het gemarkeerde stuk?', tekst(s.map(function(z, j){ return j === i ? '[' + z + ']' : z; })), [
+              K(R, 'Wat gebeurt er in het gemarkeerde stuk?', OPDOET[i], OPDOET.filter(function(x, j){ return j !== i; }), 'Lees het stuk ervoor en erna. Verandert er iets, is het het spannendste moment, of loopt het af?'),
+              VV('Welk deel van de opbouw is het?', OPNAAM, i, 'Bij ‘' + OPDOET[i] + '’ hoort de ' + OPNAAM[i] + '.')
+            ]);
+          } }
+      ] },
+    { groep:{ id:'fic-verhaal-2f' },
+      doelen:[
+        { id:'fic-tijd', naam:'Tijd in een verhaal', kort:'Vertraagt, versnelt of springt de schrijver in de tijd?',
+          uit:'<p>De <b>vertelde tijd</b> is hoe lang de gebeurtenissen in het verhaal duren. Dat kan een paar seconden zijn of vele jaren.</p><p>De schrijver speelt met de tijd:</p><ul><li><b>vertragen</b>: een kort moment krijgt veel woorden, alsof het in slowmotion gaat;</li><li><b>versnellen</b>: een lange tijd vat hij samen in een paar zinnen;</li><li>een <b>tijdsprong</b>: een stuk tijd slaat hij helemaal over, met woorden als <i>tien jaar later</i>.</li></ul>',
+          wanneer:'je wilt snappen waarom een verhaal op een plek langzaam of juist snel gaat.',
+          maak:function(R){
+            var x = R.kies(VTIJD);
+            return OP('Wat doet de schrijver met de tijd?', tekst(x[0]), [
+              VV('Hoeveel tijd gaat er in dit fragment voorbij?', VTDUUR, x[1], 'Kijk naar het eerste en het laatste wat er gebeurt. Hoeveel tijd zit daartussen?'),
+              VV('Wat doet de schrijver met de tijd?', [VTTECH.traag, VTTECH.snel, VTTECH.sprong], ['traag', 'snel', 'sprong'].indexOf(x[2]), x[2] === 'sprong' ? 'Staat er iets als ... later? Dan slaat de schrijver tijd over.' : x[2] === 'snel' ? 'Er gebeurt veel in weinig zinnen.' : 'Het gaat om een paar seconden, maar de schrijver gebruikt veel woorden.')
+            ]);
+          } }
+      ] },
+    { groep:{ id:'fic-beeld' },
+      doelen:[
+        { id:'fic-stijl-meer', naam:'Retorische vraag, ironie, eufemisme, contrast en climax', kort:'Nog vijf stijlfiguren: kijk wat de schrijver met zijn woorden doet',
+          uit:'<ul><li>Een <b>retorische vraag</b> is een vraag waar je geen antwoord op hoeft te geven: <i>Wie wil er nou niet op vakantie?</i></li><li>Bij <b>ironie</b> zeg je het omgekeerde van wat je bedoelt: <i>Lekker weertje!</i> terwijl het stortregent.</li><li>Een <b>eufemisme</b> zegt iets naars met een zachter woord: <i>heengaan</i> voor doodgaan.</li><li>Bij <b>contrast</b> staan twee tegengestelde dingen naast elkaar: <i>klein van stuk, groot van hart</i>.</li><li>Een <b>climax</b> is een opsomming die steeds sterker wordt: <i>moe, uitgeput, kapot</i>.</li></ul>',
+          wanneer:'een vraag zegt: welk stijlmiddel gebruikt de schrijver?',
+          maak:function(R){
+            var k = R.kies(ST2KEYS), S = STIJL2[k];
+            return OP('Welke stijlfiguur zit in deze zin?', tekst(R.kies(S.o)), [
+              K(R, 'Wat doet de schrijver hier?', S.kenm, ander(R, ST2KEYS, [k], 2).map(function(x){ return STIJL2[x].kenm; }), 'Is het een vraag zonder antwoord, het omgekeerde, iets zachter gezegd, een tegenstelling of steeds sterker?'),
+              K(R, 'Welke stijlfiguur is het?', k, ander(R, ST2KEYS, [k], 3), 'Bij ‘' + S.kenm + '’ hoort: ' + k + '.')
+            ]);
+          } },
+        { id:'fic-gedicht', naam:'Strofen, regels en dichtvormen', kort:'Tel strofen en regels, herken haiku, limerick en kwatrijn, en zie het enjambement',
+          uit:'<p>Een gedicht bestaat uit <b>regels</b> (versregels). Een groepje regels bij elkaar is een <b>strofe</b>; tussen twee strofen staat een witregel.</p><p>Loopt een zin door over het eind van een regel, zonder leesteken, dan heet dat een <b>enjambement</b>.</p><p>Bekende <b>dichtvormen</b>: een <b>haiku</b> (drie regels met 5, 7 en 5 lettergrepen), een <b>limerick</b> (vijf regels, rijm aabba, grappig), een <b>kwatrijn</b> (vier regels met één gedachte) en het <b>vrije vers</b> (geen vaste vorm, meestal geen rijm).</p>',
+          wanneer:'je een gedicht leest en de vorm moet beschrijven.',
+          maak:function(R){
+            if (R.heel(0, 2) === 0){
+              var e = R.kies(ENJ), opt = ['na regel 1', 'na regel 2', 'na regel 3'];
+              return OP('Na welke regel staat een enjambement?', tekst([e[0].join('<br>')]), [
+                VV('Wat is een enjambement?', ['een zin die doorloopt over het eind van een regel', 'twee regels die op elkaar rijmen', 'een groepje regels met een witregel ertussen'], 0, 'Denk aan de uitleg: het gaat over een zin en het eind van een regel.'),
+                VV('Na welke regel loopt de zin door naar de volgende regel?', opt, e[1] - 1, 'Zoek de regel zonder leesteken aan het eind, waar de zin pas op de volgende regel af is.')
+              ]);
+            }
+            var g = R.kies(GEDICHT), str = g[0].length, reg = g[0].reduce(function(s, x){ return s + x.split(' / ').length; }, 0), vormen = Object.keys(DVORM);
+            return OP('Welke dichtvorm heeft dit gedicht?', tekst(regelsVan(g[0])), [
+              { tekst:'Hoeveel strofen heeft dit gedicht?', antwoord:String(str), hint:'Een strofe is een groepje regels. Tel de groepjes die door een witregel gescheiden zijn.' },
+              { tekst:'Hoeveel regels heeft het gedicht in totaal?', antwoord:String(reg), hint:'Tel elke regel, ook de korte.' },
+              K(R, 'Welke dichtvorm past?', g[1], vormen.filter(function(v){ return v !== g[1]; }), 'Een haiku is ' + DVORM.haiku + '. Een limerick: ' + DVORM.limerick + '. Een kwatrijn: ' + DVORM.kwatrijn + '. Een vrij vers: ' + DVORM['vrij vers'] + '.')
+            ]);
+          } }
+      ] }
+  ]);
 })();

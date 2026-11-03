@@ -1,7 +1,8 @@
 /* De leerroute wiskunde: verbanden en grafieken. Een tabel bij een formule met
    negatieve getallen, de formule van een lijn door twee punten, het snijpunt van
-   twee lijnen berekenen, en exponentiële groei: groeifactor en procent, de formule
-   N = b · g^t en de groeifactor uit een tabel. Elke manier een eigen doel.
+   twee lijnen berekenen, een evenwijdige lijn en het snijpunt met de x-as, exponentiële
+   groei: groeifactor en procent, de formule N = b · g^t en de groeifactor uit een tabel of
+   een grafiek, en welk verband bij een formule of tabel hoort. Elke manier een eigen doel.
    Startgetal en hellingsgetal aflezen staat in de leerroute rekenen (rekenen-algebra.js).
    Zie leerroute.js voor het formaat. */
 (function(){
@@ -300,6 +301,46 @@
                   E([[e, 'x']]) + ' = ' + T(b2) + ' ' + (b1 < 0 ? '+ ' + (-b1) : MIN + ' ' + b1) + ' = ' + T(b2 - b1) + ', dus x = ' + T(b2 - b1) + ' : ' + paren(e) + ' = ' + T(x0) + '.', F(x0, -x0, 'Let op het teken.')),
                 S('Vul x = ' + T(x0) + ' in bij A: y = ' + (a1 === 1 ? '' : a1 === -1 ? MIN : T(a1) + ' ' + X + ' ') + paren(x0) + (b1 ? (b1 < 0 ? ' ' + MIN + ' ' + (-b1) : ' + ' + b1) : '') + ' =', y0, 'Reken uit: ' + T(a1) + ' ' + X + ' ' + paren(x0) + ' = ' + T(a1 * x0) + '.' + (b1 ? ' Dan ' + (b1 < 0 ? MIN + ' ' + (-b1) : '+ ' + b1) + '.' : '')),
                 SC('Het snijpunt (x, y):', punt(x0, y0), puntC(x0, y0), 'Eerst x, dan y: ' + punt(x0, y0) + '.', F(punt(x0, y0), punt(y0, x0), 'Je draaide ze om. Eerst x, dan y.')) ] };
+          } },
+        { id:'wi-lin-evenwijdig', naam:'Een evenwijdige lijn door een punt', kort:'Evenwijdige lijnen hebben hetzelfde hellingsgetal; het startgetal vind je door het punt in te vullen',
+          uit:'<p>Twee lijnen zijn <b>evenwijdig</b> als ze even steil zijn en elkaar nooit snijden. Ze hebben dan <b>hetzelfde hellingsgetal</b>, alleen het startgetal is anders.</p><p>Lijn k is evenwijdig aan y = 2x ' + MIN + ' 1 en gaat door (3, 10). Dan is het hellingsgetal van k ook <b>2</b>: y = 2x + b.</p><p>Vul het punt in voor b: 10 = 2 ' + X + ' 3 + b, dus b = 10 ' + MIN + ' 6 = <b>4</b>. De formule van k is <b>y = 2x + 4</b>.</p>',
+          wanneer:'je een lijn zoekt die evenwijdig loopt aan een gegeven lijn.',
+          maak:function(R){
+            var a, b0, b, px, py;
+            do { a = R.kies([-3, -2, -1, -0.5, 0.5, 1, 2, 3, 1.5]); b0 = R.heel(-5, 5); px = R.kies([-4, -3, -2, -1, 1, 2, 3, 4]); if (a % 1 && px % 2) px = px > 0 ? px + 1 : px - 1; b = R.heel(-6, 6); py = a * px + b; }
+            while (b === b0 || Math.abs(py) > 8 || px === 0);
+            var fl = formS(a, b0), fk = formS(a, b), yb = bereik(Math.min(py, b, b0), Math.max(py, b, b0), 4);
+            function pl(n){ return assen({ xmin:-6, xmax:6, ymin:Math.max(yb[0], -10), ymax:Math.min(yb[1], 10), vermijd:px, lijnen:[{ a:a, b:b0, k:0, naam:'l' }].concat(n >= 4 ? [{ a:a, b:b, k:3, naam:'k' }] : []), punten:[{ x:px, y:py, k:1, label:'P' + punt(px, py), links:px > 0 }].concat(n >= 3 ? [{ x:0, y:b, k:3 }] : []) }); }
+            return { vraag:'Door ' + punt(px, py) + ', evenwijdig aan ' + fl, context:'Lijn k is evenwijdig aan lijn l: ' + fl + '. Lijn k gaat door het punt P' + punt(px, py) + '. Wat is de formule van k? Schrijf hem zoals y = 2x + 4.', antwoord:fk, controle:formC(a, b), invoer:'tekst', beeld:pl, zelfBeeld:pl(0), stappen:[
+              S('Wat is het hellingsgetal van l?', a, 'Het getal bij de x in ' + fl + '.', F(a, b0, 'Dat is het startgetal. Het hellingsgetal staat bij de x.')),
+              S('k is evenwijdig aan l. Het hellingsgetal van k is dus', a, 'Evenwijdige lijnen zijn even steil: ze hebben hetzelfde hellingsgetal.', F(a, -a, 'Evenwijdig betekent even steil en dezelfde kant op: hetzelfde hellingsgetal, ook het teken.', a === 0 ? null : rnd(-1 / a, 4), 'Dat hoort bij een lijn die er loodrecht op staat. Evenwijdig is hetzelfde hellingsgetal.')),
+              S('Vul P in: ' + T(py) + ' = ' + T(a) + ' ' + X + ' ' + paren(px) + ' + b, dus b = ' + T(py) + ' ' + MIN + ' ' + paren(a * px) + ' =', b, T(a) + ' ' + X + ' ' + paren(px) + ' = ' + T(a * px) + '. Haal dat van ' + T(py) + ' af.', F(b, py + a * px, 'Je telde op. Haal ' + T(a * px) + ' eraf.', b0, 'Dat is het startgetal van l. Lijn k heeft een ander startgetal.')),
+              SC('De formule van k:', fk, formC(a, b), 'Hetzelfde hellingsgetal ' + T(a) + ' en het startgetal ' + T(b) + ': ' + fk + '.', F(fk, fl, 'Dat is lijn l zelf. Lijn k gaat door P en heeft een ander startgetal.')) ] };
+          } },
+        { id:'wi-lin-xas', naam:'Het snijpunt met de x-as', kort:'Op de x-as is y = 0: maak van de formule een vergelijking met 0 en los x op',
+          uit:'<p>Op de <b>x-as</b> is <b>y = 0</b>. Het snijpunt met de x-as vind je dus door y = 0 in te vullen en de vergelijking op te lossen.</p><p>Bij y = 2x ' + MIN + ' 6: 2x ' + MIN + ' 6 = 0, dus 2x = 6 en <b>x = 3</b>. Het snijpunt met de x-as is <b>(3, 0)</b>.</p><p>In een verhaal betekent het vaak: wanneer is het op? Een kaars van 24 cm die per uur 3 cm korter wordt: L = 24 ' + MIN + ' 3t. De kaars is op als L = 0: 24 ' + MIN + ' 3t = 0, dus t = 8 uur.</p><p>Het snijpunt met de <b>y-as</b> is makkelijker: daar is x = 0, dus dat is het startgetal.</p>',
+          wanneer:'je wilt weten waar een lijn de x-as snijdt, of wanneer iets op of leeg is.',
+          maak:function(R){
+            if (R.heel(0, 2) === 0){
+              var V = R.kies([
+                { t:function(b, a){ return 'Een kaars is ' + b + ' cm lang. Elk uur wordt hij ' + T(a) + ' cm korter. De lengte is L = ' + b + ' ' + MIN + ' ' + T(a) + 't, met t in uren.'; }, y:'L', x:'t', vr:'Na hoeveel uur is de kaars op?', eh:'uur', as:[2, 3, 4, 1.5, 2.5], ts:[4, 5, 6, 8, 10, 12] },
+                { t:function(b, a){ return 'Een tank bevat ' + b + ' liter water. Er stroomt elke minuut ' + T(a) + ' liter uit. De inhoud is I = ' + b + ' ' + MIN + ' ' + T(a) + 't, met t in minuten.'; }, y:'I', x:'t', vr:'Na hoeveel minuten is de tank leeg?', eh:'minuten', as:[5, 8, 12, 15, 20], ts:[6, 8, 10, 15, 20, 25] },
+                { t:function(b, a){ return 'Op een tegoedkaart staat € ' + b + '. Elke rit kost € ' + T(a) + '. Het tegoed is G = ' + b + ' ' + MIN + ' ' + T(a) + 'r, met r het aantal ritten.'; }, y:'G', x:'r', vr:'Na hoeveel ritten is het tegoed op?', eh:'ritten', as:[2, 2.5, 4, 5], ts:[6, 8, 10, 12, 16] } ]);
+              var av = R.kies(V.as), tv = R.kies(V.ts), bv = rnd(av * tv, 2);
+              return { vraag:V.vr, context:V.t(bv, av), eenheid:V.eh, antwoord:T(tv), stappen:[
+                S('Op is: ' + V.y + ' =', 0, 'Als het op of leeg is, is er niets meer over.'),
+                S('Dus ' + T(bv) + ' ' + MIN + ' ' + T(av) + V.x + ' = 0, en ' + T(av) + V.x + ' =', bv, 'Tel aan beide kanten ' + T(av) + V.x + ' op.'),
+                S(V.x + ' = ' + T(bv) + ' : ' + T(av) + ' =', tv, 'Deel door ' + T(av) + '.', F(tv, rnd(bv - av, 2), 'Delen, niet aftrekken.'), null) ] };
+            }
+            var a, b, x0;
+            do { a = R.kies([-4, -3, -2, -1, 1, 2, 3, 4, 0.5, -0.5]); x0 = R.kies([-6, -5, -4, -3, -2, -1, 1, 2, 3, 4, 5, 6]); b = -a * x0; } while (b % 1 || Math.abs(b) > 12 || b === 0);
+            var f = formS(a, b), vgl = E([[a, 'x'], [b, '']]) + ' = 0', yb = bereik(Math.min(0, b), Math.max(0, b), 3);
+            function pl(n){ return assen({ xmin:-7, xmax:7, ymin:Math.max(yb[0], -12), ymax:Math.min(yb[1], 12), lijnen:[{ a:a, b:b, k:0 }], punten:n >= 4 ? [{ x:x0, y:0, k:1, label:punt(x0, 0), links:x0 > 0 }] : [] }); }
+            return { vraag:f, context:'Bereken het snijpunt van deze lijn met de x-as. Schrijf het als (x, y).', antwoord:punt(x0, 0), controle:puntC(x0, 0), invoer:'tekst', beeld:pl, zelfBeeld:pl(0), stappen:[
+              S('Op de x-as is y =', 0, 'Elk punt op de x-as heeft hoogte 0.', F(0, b, 'Dat is waar de lijn de y-as snijdt. Op de x-as is y = 0.')),
+              SC('De vergelijking:', vgl, eqC(vgl), 'Vul y = 0 in: ' + vgl + '.'),
+              S('Los op: x =', eqAnt(x0), E([[a, 'x']]) + ' = ' + T(-b) + ', dus x = ' + T(-b) + ' : ' + paren(a) + ' = ' + T(x0) + '.', F(x0, -x0, 'Let op het teken.', b, 'Dat is het startgetal. Los de vergelijking op.')),
+              SC('Het snijpunt met de x-as:', punt(x0, 0), puntC(x0, 0), 'x = ' + T(x0) + ' en y = 0: ' + punt(x0, 0) + '.', F(punt(x0, 0), punt(0, x0), 'Je draaide ze om. Op de x-as is y = 0: (' + T(x0) + ', 0).')) ] };
           } }
       ] },
 
@@ -361,6 +402,71 @@
               S('Controleer: ' + T(ns[2]) + ' : ' + T(ns[1]) + ' =', g, 'Komt er weer ' + T(g) + ' uit? Dan is de groeifactor steeds hetzelfde.'),
               S('De beginwaarde b staat bij t = 0:', b, 'Kijk in de tabel onder t = 0.'),
               SC('De formule: ' + wat + ' =', form, expC(b, g), wat + ' = b · g^t: ' + form + '.') ] };
+          } },
+        { id:'wi-exp-grafiek', naam:'De groeifactor uit een grafiek', kort:'Een kromme die steeds steiler stijgt of steeds minder hard daalt: lees twee punten af en deel',
+          uit:'<p>De grafiek van <b>exponentiële groei</b> is een <b>kromme</b> die steeds <b>steiler</b> omhoog gaat. Bij <b>exponentiële afname</b> daalt de kromme eerst snel en daarna steeds minder hard. Hij komt nooit onder 0.</p><p>De groeifactor vind je zo: lees de waarde bij t = 0 af (de beginwaarde) en bij t = 1. <b>Deel</b> de tweede door de eerste.</p><p>Bij t = 0 staat 8 en bij t = 1 staat 12: de groeifactor is 12 : 8 = <b>1,5</b>. De formule is N = 8 · 1,5^t.</p><p>Een rechte lijn is <b>lineair</b>: daar komt er steeds evenveel bij. Bij exponentieel wordt het steeds met hetzelfde getal <b>vermenigvuldigd</b>.</p>',
+          wanneer:'je de grafiek van exponentiële groei of afname hebt en de formule zoekt.',
+          maak:function(R){
+            var C = R.kies([
+              { b:1, g:2, T:4, max:16, st:1 }, { b:2, g:2, T:4, max:32, st:2 }, { b:3, g:2, T:4, max:48, st:3 }, { b:4, g:1.5, T:5, max:32, st:2 }, { b:8, g:1.5, T:4, max:44, st:2 },
+              { b:16, g:1.5, T:3, max:56, st:4 }, { b:10, g:1.2, T:5, max:26, st:2 }, { b:25, g:1.2, T:5, max:65, st:5 },
+              { b:64, g:0.5, T:5, max:64, st:4 }, { b:40, g:0.5, T:4, max:40, st:2 }, { b:100, g:0.8, T:5, max:100, st:10 }, { b:50, g:0.8, T:5, max:50, st:5 }, { b:80, g:0.75, T:5, max:80, st:5 } ]);
+            var b = C.b, g = C.g, groei = g > 1, n1w = rnd(b * g, 4), wat = R.kies(['N', 'N', 'A', 'H']), per = R.kies(['uur', 'dag', 'week', 'jaar']);
+            var OPT = ['een rechte lijn: lineair', 'een kromme die steeds steiler stijgt: exponentiële groei', 'een kromme die steeds minder hard daalt: exponentiële afname'], goed = groei ? 1 : 2;
+            var form = wat + ' = ' + T(b) + ' · ' + T(g) + '^t';
+            function pl(n){
+              var L = 54, Tp = 22, Wp = 420, Hp = 300, nh = C.max / C.st, s = '', k;
+              function X(t){ return L + t / C.T * Wp; }
+              function Y(v){ return Tp + Hp - v / C.max * Hp; }
+              var elk = nh > 12 ? 2 : 1;
+              for (k = 0; k <= nh; k++){ s += ln(X(0), Y(k * C.st), X(C.T), Y(k * C.st), { w:1, op:k ? 0.18 : 1 }); if (k % elk === 0) s += tx(X(0) - 8, Y(k * C.st) + 5, T(k * C.st), { m:'klein', a:'end' }); }
+              for (k = 0; k <= C.T * 2; k++){ s += ln(X(k / 2), Y(0), X(k / 2), Y(C.max), { w:1, op:k ? 0.18 : 1 }); if (k % 2 === 0) s += tx(X(k / 2), Y(0) + 18, String(k / 2), { m:'klein' }); }
+              s += tx(X(C.T) + 4, Y(0) + 34, 't (' + per + ')', { m:'klein', a:'end', vet:true }) + tx(6, Tp - 6, wat, { m:'klein', a:'start', vet:true });
+              var d = ''; for (var t = 0; t <= C.T + 1e-9; t += 0.05){ var v = b * Math.pow(g, t); if (v > C.max) break; d += (d ? ' L' : 'M') + n1(X(t)) + ' ' + n1(Y(v)); }
+              s += '<path d="' + d + '" style="fill:none;stroke:var(--lr-1);stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round"/>';
+              if (n >= 2) s += cirkel(X(0), Y(b), 6, KL[1], { s:'var(--kaart)', w:2 }) + ln(X(0), Y(b), X(0) + 8, Y(b), { k:KL[1], w:2 });
+              if (n >= 3) s += ln(X(1), Y(0), X(1), Y(n1w), { k:KL[1], w:2.5, dash:'6 4' }) + ln(X(0), Y(n1w), X(1), Y(n1w), { k:KL[1], w:2.5, dash:'6 4' }) + cirkel(X(1), Y(n1w), 6, KL[1], { s:'var(--kaart)', w:2 });
+              return svg(L + Wp + 30, Tp + Hp + 44, s, 'grafiek van een exponentieel verband', 520);
+            }
+            return { vraag:'Welke formule hoort bij de grafiek?', context:'De grafiek laat zien hoe ' + wat + ' verandert in de tijd, met t in ' + (per === 'uur' ? 'uren' : per === 'dag' ? 'dagen' : per === 'week' ? 'weken' : 'jaren') + '. Lees af en schrijf de formule zoals N = 8 · 1,5^t.', antwoord:form, controle:expC(b, g), invoer:'tekst', beeld:pl, zelfBeeld:pl(0), stappen:[
+              K(R, 'Wat voor grafiek is dit?', OPT[goed], OPT.filter(function(o, i){ return i !== goed; }), groei ? 'De kromme wordt steeds steiler: elke stap komt er meer bij. Dat is exponentiële groei.' : 'De kromme daalt eerst snel en dan steeds minder hard. Dat is exponentiële afname.'),
+              S('Lees af: ' + wat + ' bij t = 0 (de beginwaarde) =', b, 'Kijk waar de kromme de verticale as raakt. Eén hokje is ' + T(C.st) + '.'),
+              S('Lees af: ' + wat + ' bij t = 1 =', n1w, 'Ga bij t = 1 recht omhoog naar de kromme en dan naar links. Eén hokje is ' + T(C.st) + '.'),
+              S('De groeifactor: ' + T(n1w) + ' : ' + T(b) + ' =', g, 'Deel de waarde bij t = 1 door de beginwaarde.', F(g, rnd(n1w - b, 4), 'Je trok af. Bij exponentieel deel je.', rnd(b / n1w, 4), 'Andersom: de latere waarde gedeeld door de eerdere.')),
+              SC('De formule: ' + wat + ' =', form, expC(b, g), wat + ' = b · g^t met b = ' + T(b) + ' en g = ' + T(g) + ': ' + form + '.') ] };
+          } },
+        { id:'wi-verband-soort', naam:'Welk verband is het?', kort:'Lineair: steeds evenveel erbij. Kwadratisch: x². Omgekeerd evenredig: x · y vast. Exponentieel: steeds keer hetzelfde',
+          uit:'<p>Er zijn vier soorten verbanden die je moet herkennen.</p><p><b>Lineair</b>: y = ax + b. In de tabel komt er steeds <b>evenveel bij</b>. De grafiek is een rechte lijn.</p><p><b>Kwadratisch</b>: er staat een <b>x²</b> in, zoals y = 2x² ' + MIN + ' 3. De <b>tweede verschillen</b> zijn gelijk. De grafiek is een parabool.</p><p><b>Omgekeerd evenredig</b>: y = 24 / x. De x staat <b>onder de deelstreep</b> en <b>x ' + X + ' y</b> is steeds hetzelfde. De grafiek is een hyperbool.</p><p><b>Exponentieel</b>: N = 500 · 1,04^t. De letter staat <b>in de exponent</b>. In de tabel wordt het steeds met <b>hetzelfde getal vermenigvuldigd</b>.</p>',
+          wanneer:'je een formule of tabel krijgt en moet zeggen wat voor verband het is.',
+          maak:function(R){
+            var SRT = ['lineair', 'kwadratisch', 'omgekeerd evenredig', 'exponentieel'], s = R.heel(0, 3), tabel = R.heel(0, 2) === 0;
+            if (!tabel){
+              var a = R.kies([2, 3, 4, 5, 1.5, 2.5]), c = R.heel(2, 30), L = R.kies([['y', 'x'], ['K', 't'], ['h', 't'], ['N', 't'], ['P', 'n']]), f;
+              if (s === 0) f = L[0] + ' = ' + (R.heel(0, 1) ? T(a) + L[1] + ' + ' + c : c + ' ' + MIN + ' ' + T(a) + L[1]);
+              else if (s === 1) f = L[0] + ' = ' + (R.heel(0, 1) ? T(a) + L[1] + '² + ' + c : MIN + T(a) + L[1] + '² + ' + c + L[1]);
+              else if (s === 2) f = L[0] + ' = ' + R.kies([12, 24, 36, 60, 120, 200]) + ' / ' + L[1];
+              else f = L[0] + ' = ' + R.kies([50, 120, 300, 500, 1000]) + ' · ' + T(R.kies([1.04, 1.2, 1.5, 2, 0.8, 0.9, 0.5])) + '^' + L[1];
+              var WAAR = ['gewoon, keer een getal', 'in het kwadraat', 'onder de deelstreep', 'in de exponent (als macht)'];
+              return { vraag:f, context:'Wat voor verband hoort bij deze formule?', opties:SRT, goed:s, stappen:[
+                K(R, 'Waar staat de letter ' + L[1] + ' in de formule?', WAAR[s], [], [L[1] + ' staat er gewoon, keer een getal: er komt steeds evenveel bij.', 'Er staat ' + L[1] + '²: ' + L[1] + ' in het kwadraat.', L[1] + ' staat onder de deelstreep: je deelt door ' + L[1] + '.', L[1] + ' staat in de macht: ^' + L[1] + '.'][s], { orde:WAAR }),
+                K(R, 'Wat voor verband is het?', SRT[s], [], ['Gewoon keer een getal plus iets: lineair.', 'Een kwadraat: kwadratisch.', 'Delen door de letter: omgekeerd evenredig.', 'De letter in de exponent: exponentieel.'][s], { orde:SRT }) ] };
+            }
+            var xs = [1, 2, 3, 4, 5], ys;
+            if (s === 0){ var la = R.kies([3, 4, 5, 6, -3, -4]), lb = R.heel(2, 20); ys = xs.map(function(x){ return la * x + lb; }); }
+            else if (s === 1){ var kc = R.heel(-5, 10), ka = R.kies([1, 2, 3]); ys = xs.map(function(x){ return ka * x * x + kc; }); }
+            else if (s === 2){ var k = R.kies([60, 120, 180, 240]); ys = xs.map(function(x){ return k / x; }); }
+            else { var eb = R.kies([2, 3, 5, 10]), eg = R.kies([2, 3]); ys = xs.map(function(x){ return eb * Math.pow(eg, x - 1); }); }
+            var VAST = ['wat erbij komt (het verschil)', 'het tweede verschil', 'x ' + X + ' y', 'y gedeeld door de y ervoor'];
+            var d1 = [], i; for (i = 0; i < 4; i++) d1.push(ys[i + 1] - ys[i]);
+            var uitleg = [
+              'Steeds ' + (d1[0] < 0 ? MIN + T(-d1[0]) : '+' + T(d1[0])) + ': er komt steeds evenveel bij.',
+              'De verschillen zijn ' + d1.map(T).join(', ') + '. Die zijn niet gelijk, maar de tweede verschillen wel: steeds ' + T(d1[1] - d1[0]) + '.',
+              'x ' + X + ' y is steeds ' + T(xs[0] * ys[0]) + ': ' + xs.map(function(x, j){ return x + ' ' + X + ' ' + T(ys[j]); }).slice(0, 3).join(', ') + '.',
+              'Steeds ' + X + ' ' + T(ys[1] / ys[0]) + ': ' + T(ys[1]) + ' : ' + T(ys[0]) + ' = ' + T(ys[1] / ys[0]) + ', ' + T(ys[2]) + ' : ' + T(ys[1]) + ' = ' + T(ys[2] / ys[1]) + '.' ][s];
+            function tab(){ return R0.teken.tabel([['x'].concat(xs.map(String)), ['y'].concat(ys.map(function(y){ return T(y); }))], { zijkop:true }); }
+            return { vraag:'tabel ' + ys.map(T).join(' '), vraagHtml:'Wat voor verband hoort bij deze tabel?', context:'Onderzoek wat er in de tabel steeds hetzelfde blijft.', opties:SRT, goed:s, beeld:tab, zelfBeeld:tab(), stappen:[
+              K(R, 'Wat blijft er in deze tabel steeds hetzelfde?', VAST[s], [], uitleg, { orde:VAST }),
+              K(R, 'Wat voor verband is het?', SRT[s], [], ['Steeds evenveel erbij: lineair.', 'Gelijke tweede verschillen: kwadratisch.', 'x ' + X + ' y steeds hetzelfde: omgekeerd evenredig.', 'Steeds keer hetzelfde getal: exponentieel.'][s], { orde:SRT }) ] };
           } }
       ] }
   ]);

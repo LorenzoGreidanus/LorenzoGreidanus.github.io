@@ -1,7 +1,9 @@
 /* Een eigen toets op papier: versie A en B, en per versie een nakijkmodel.
    Gebruikt door papieren-toets.html (printen) en uitslag.js (de punten invoeren).
 
-     PAPIER.volgorde(items, code, versie)  -> de echte nummers (0, 1, ...) in de volgorde van die versie
+     PAPIER.volgorde(items, code, versie, k) -> de echte nummers (0, 1, ...) in de volgorde van die versie;
+                                               met k (bij trek) alleen die vragen
+     PAPIER.getrokken(code, versie, n, trek) -> bij trek de vragen van die versie, op volgorde (of null: alle)
      PAPIER.toets(m, code, versie)          -> het blad om te printen (html)
      PAPIER.model(m, code, versie)          -> het nakijkmodel van die versie (html)
      PAPIER.kort(it)                        -> de vraag in een regel, voor lijsten
@@ -42,10 +44,25 @@ var PAPIER = (function(){
   function gatenVan(tekst){ return (String(tekst || '').match(/\[([^\]]+)\]/g) || []).map(function(x){ return x.slice(1, -1).trim(); }); }
   var LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
+  /* ---------- elke leerling een deel van de vragen (trek) ----------
+     Op papier trekt elke versie zijn eigen vragen, vast bij de code: zaad code + ':versieA'
+     of ':versieB'. Dezelfde rekensom (FNV-1a en mulberry32) als trekVan in server/materiaal.js,
+     die bij het invoeren van de punten zelf nagaat welke vragen bij die versie horen. */
+  function trek(code, wie, n, aantal){
+    aantal = Math.floor(Number(aantal)) || 0;
+    if (!(aantal >= 2 && aantal < n)) return null;
+    var r = reeks(String(code) + ':' + String(wie)), l = [], i;
+    for (i = 0; i < n; i++) l.push(i);
+    for (i = n - 1; i > 0; i--){ var j = Math.floor(r() * (i + 1)), h = l[i]; l[i] = l[j]; l[j] = h; }
+    return l.slice(0, aantal);
+  }
+  function getrokken(code, versie, n, aantal){ var k = trek(code, 'versie' + (versie === 'B' ? 'B' : 'A'), n, aantal); return k ? k.sort(function(x, y){ return x - y; }) : null; }
+
   /* ---------- de volgorde van de vragen ---------- */
-  function blokken(items){
+  function blokken(items, k){
     var bl = [], perKaart = {};
-    items.forEach(function(it, i){
+    (k || items.map(function(x, i){ return i; })).forEach(function(i){
+      var it = items[i];
       if (it.vorm === 'topo'){
         if (!perKaart[it.kaart]){ perKaart[it.kaart] = { kaart: it.kaart, l: [] }; bl.push(perKaart[it.kaart]); }
         perKaart[it.kaart].l.push(i);
@@ -53,8 +70,9 @@ var PAPIER = (function(){
     });
     return bl;
   }
-  function volgorde(items, code, versie){
-    var bl = blokken(items || []);
+  /* k: alleen deze vragen (bij trek), op volgorde */
+  function volgorde(items, code, versie, k){
+    var bl = blokken(items || [], k);
     if (versie === 'B'){
       var nieuw = door(bl, code + '|volgorde|B|' + items.length);
       bl = nieuw.map(function(b){ return b.kaart ? { kaart: b.kaart, l: door(b.l, code + '|kaart|B|' + b.kaart) } : b; });
@@ -202,8 +220,9 @@ var PAPIER = (function(){
 
   /* ---------- het blad ---------- */
   function toets(m, code, versie){
-    var items = m.items || [], orde = volgorde(items, code, versie), kn = kaartNummers(items, orde, code, versie), getekend = {};
-    var heeftMk = items.some(function(it){ return it.vorm === 'mk' || (it.vorm === 'topo' && it.wijze === 'kies'); });
+    var items = m.items || [], orde = volgorde(items, code, versie, getrokken(code, versie, items.length, m.trek)), kn = kaartNummers(items, orde, code, versie), getekend = {};
+    var op = orde.map(function(i){ return items[i]; });
+    var heeftMk = op.some(function(it){ return it.vorm === 'mk' || (it.vorm === 'topo' && it.wijze === 'kies'); });
     var li = [];
     orde.forEach(function(i, k){
       var it = items[i];
@@ -222,7 +241,7 @@ var PAPIER = (function(){
       li.push('<li><span class="ptvak"><i></i>/ ' + (it.punten || 1) + '</span>' + x.html + '</li>');
     });
     return '<article class="blad toetsblad" data-versie="' + versie + '" aria-label="Toets, versie ' + versie + '">' +
-      '<div class="bkop"><div class="bkoptekst"><h2>' + schoon(m.naam) + '</h2><p class="sub">' + items.length + (items.length === 1 ? ' vraag' : ' vragen') + ' · ' + pt(puntenVan(items)) + '</p></div>' +
+      '<div class="bkop"><div class="bkoptekst"><h2>' + schoon(m.naam) + '</h2><p class="sub">' + op.length + (op.length === 1 ? ' vraag' : ' vragen') + ' · ' + pt(puntenVan(op)) + '</p></div>' +
         '<div class="bkoprechts"><span class="versiemerk" aria-label="Versie ' + versie + '"><small>versie</small>' + versie + '</span><span class="cijfervak"><small>cijfer</small></span></div></div>' +
       '<div class="invul"><span>Naam</span><span></span><span>Klas</span><span></span><span>Datum</span><span></span></div>' +
       '<p class="bladintro">' + (heeftMk ? 'Omcirkel bij meerkeuze de letter van het goede antwoord. ' : '') + 'Rechts naast elke vraag staat hoeveel punten hij waard is.</p>' +
@@ -230,12 +249,13 @@ var PAPIER = (function(){
       '<p class="voet">' + schoon(m.naam) + ' · versie ' + versie + ' · meneergreidanus.nl</p></article>';
   }
   function model(m, code, versie){
-    var items = m.items || [], orde = volgorde(items, code, versie), kn = kaartNummers(items, orde, code, versie);
+    var items = m.items || [], orde = volgorde(items, code, versie, getrokken(code, versie, items.length, m.trek)), kn = kaartNummers(items, orde, code, versie);
     var anders = versie === 'B' || orde.some(function(i, k){ return i !== k; });
-    var deels = items.some(function(it){ return /^(koppel|volgorde|groepen|gaten|aanwijzen)$/.test(it.vorm); });
+    var op = orde.map(function(i){ return items[i]; });
+    var deels = op.some(function(it){ return /^(koppel|volgorde|groepen|gaten|aanwijzen)$/.test(it.vorm); });
     var stempel = window.NAGEKEKEN && NAGEKEKEN.stempel ? '<span class="stempel" aria-hidden="true">' + NAGEKEKEN.stempel({ maat: 74 }) + '</span>' : '';
     return '<article class="blad modelblad" data-versie="' + versie + '" aria-label="Nakijkmodel, versie ' + versie + '">' +
-      '<div class="bkop"><div class="bkoptekst"><h2>Nakijkmodel: ' + schoon(m.naam) + '</h2><p class="sub">Versie ' + versie + ' · ' + pt(puntenVan(items)) + '</p></div>' + stempel + '</div>' +
+      '<div class="bkop"><div class="bkoptekst"><h2>Nakijkmodel: ' + schoon(m.naam) + '</h2><p class="sub">Versie ' + versie + ' · ' + pt(puntenVan(op)) + '</p></div>' + stempel + '</div>' +
       (deels ? '<p class="bladintro">Bij koppelen, volgorde, groepen, gatenteksten en aanwijzen telt elk goed deel even zwaar, net als in de site.</p>' : '') +
       '<ol class="pv antw">' + orde.map(function(i){
         var it = items[i], x = vraag(it, code, versie, kn);
@@ -244,6 +264,6 @@ var PAPIER = (function(){
       }).join('') + '</ol>' +
       '<p class="voet">Voer de punten in bij Resultaten, Papieren toets invoeren. Kies daar versie ' + versie + '; de site zet ze terug bij de goede vragen.</p></article>';
   }
-  return { volgorde: volgorde, toets: toets, model: model, kort: kort };
+  return { volgorde: volgorde, toets: toets, model: model, kort: kort, getrokken: getrokken };
 })();
 if (typeof module !== 'undefined') module.exports = PAPIER;

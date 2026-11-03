@@ -1,8 +1,9 @@
 /* De leerroute wiskunde: getallen en algebra. Machten van negatieve getallen,
    termen vermenigvuldigen, twee haakjes, vergelijkingen (balans, terugrekenen,
-   eerst haakjes), ongelijkheden, merkwaardige producten, ontbinden in factoren,
-   kwadratische vergelijkingen (worteltrekken, ontbinden, abc-formule), machten,
-   wortels en formules omwerken. Elke manier een eigen doel.
+   eerst haakjes, met breuken, bij een verhaal), ongelijkheden, merkwaardige producten,
+   ontbinden in factoren (ook met een getal voor x²), kwadratische vergelijkingen
+   (worteltrekken, ontbinden, abc-formule), machten, wortels (vereenvoudigen en
+   rekenregels) en formules omwerken. Elke manier een eigen doel.
    De basis (termen samennemen, één haakje, de balans met positieve getallen)
    staat in de leerroute rekenen (rekenen-algebra.js). Zie leerroute.js voor het formaat. */
 (function(){
@@ -640,6 +641,102 @@
             else { var h = hkVgl(R); m = mHaakjes(R, h); vraag = h.vgl; juist = opties[2]; uitleg = 'x staat in de haakjes én aan de andere kant. Werk eerst de haakjes weg, dan kun je de balans gebruiken.'; }
             return { vraag:vraag, context:'Kies eerst de handigste manier. Los de vergelijking dan op.', beeld:function(n){ return n < 1 ? '' : m.beeld(n - 1); },
               stappen:[K(R, 'Welke manier is hier het handigst?', juist, opties, uitleg, { waarom:uitleg })].concat(m.stappen) };
+          } },
+        { id:'wi-vgl-breuk', naam:'Vergelijkingen met breuken', kort:'Maak de noemer weg: vermenigvuldig beide kanten met de noemer, en los dan op met de balans',
+          uit:'<p>In x/3 + 2 = 5 staat een breuk. Haal eerst de 2 weg: x/3 = 3. Een getal gedeeld door 3 is 3, dus <b>x = 9</b>.</p><p>Staat er meer in de teller, zoals (2x + 1)/3 = x ' + MIN + ' 1? Vermenigvuldig dan <b>beide kanten met de noemer</b>. Links valt de 3 weg: 2x + 1. Rechts moet <b>alles</b> keer 3: 3(x ' + MIN + ' 1) = 3x ' + MIN + ' 3. Nu staat er 2x + 1 = 3x ' + MIN + ' 3, en dat los je op met de balans: <b>x = 4</b>.</p><p>Twee breuken, zoals x/2 + x/3 = 10? Vermenigvuldig alles met een getal waar beide noemers in passen, hier 6: 3x + 2x = 60, dus 5x = 60 en <b>x = 12</b>.</p>',
+          wanneer:'er een breuk met x in de vergelijking staat.',
+          maak:function(R){
+            var s = R.kies(['een', 'teller', 'teller', 'twee', 'beide']), st, rij, vgl, x;
+            if (s === 'een'){
+              var a = R.heel(2, 6), m = nz(R, -8, 8), b = nz(R, -9, 9), c = m + b; x = a * m;
+              vgl = 'x/' + a + ' ' + (b < 0 ? MIN + ' ' + (-b) : '+ ' + b) + ' = ' + T(c);
+              rij = [[vgl, bew(b)], ['x/' + a + ' = ' + T(m), X + ' ' + a], ['x = ' + T(x), '']];
+              st = [S(weg(b).charAt(0).toUpperCase() + weg(b).slice(1) + '. Dan staat er x/' + a + ' =', m, T(c) + ' ' + (b > 0 ? MIN + ' ' + b : '+ ' + (-b)) + ' = ' + T(m) + '.', F(m, c + b, 'Andersom: ' + weg(b) + '.')),
+                S('x gedeeld door ' + a + ' is ' + T(m) + '. Vermenigvuldig beide kanten met ' + a + ': x =', eqAnt(x), T(m) + ' ' + X + ' ' + a + ' = ' + T(x) + '.', F(x, rnd(m / a, 4), 'Het omgekeerde van delen door ' + a + ' is keer ' + a + '.'))];
+            } else if (s === 'teller'){
+              var a2, p, q, r;
+              do { a2 = R.heel(2, 5); p = R.heel(1, 4); x = nz(R, -8, 8); q = nz(R, -9, 9); } while ((p * x + q) % a2 !== 0 || p * x + q === 0 || p % a2 === 0);
+              r = (p * x + q) / a2; vgl = '(' + E([[p, 'x'], [q, '']]) + ')/' + a2 + ' = ' + T(r);
+              rij = [[vgl, X + ' ' + a2], [E([[p, 'x'], [q, '']]) + ' = ' + T(a2 * r), bew(q)]];
+              st = [S('Vermenigvuldig beide kanten met ' + a2 + '. Links valt de noemer weg. Rechts: ' + T(r) + ' ' + X + ' ' + a2 + ' =', a2 * r, T(r) + ' keer ' + a2 + '.', F(a2 * r, rnd(r / a2, 4), 'Keer ' + a2 + ', niet gedeeld door.')),
+                S('Nu staat er ' + E([[p, 'x'], [q, '']]) + ' = ' + T(a2 * r) + '. ' + weg(q).charAt(0).toUpperCase() + weg(q).slice(1) + ': ' + E([[p, 'x']]) + ' =', a2 * r - q, T(a2 * r) + ' ' + (q > 0 ? MIN + ' ' + q : '+ ' + (-q)) + ' = ' + T(a2 * r - q) + '.', F(a2 * r - q, a2 * r + q, 'Andersom: ' + weg(q) + '.'))];
+              if (p !== 1){ rij.push([E([[p, 'x']]) + ' = ' + T(a2 * r - q), ': ' + p]); st.push(S('Deel door ' + p + ': x =', eqAnt(x), T(a2 * r - q) + ' : ' + p + ' = ' + T(x) + '.', F(x, -x, 'Let op het teken.'))); }
+              else st[1].antwoord = eqAnt(x).concat(st[1].antwoord);
+              rij.push(['x = ' + T(x), '']);
+            } else if (s === 'twee'){
+              var nn = R.kies([[2, 3], [2, 4], [3, 4], [2, 5], [3, 6], [4, 6], [2, 6]]), k = nn[0] * nn[1] / ggd(nn[0], nn[1]), u = k / nn[0], w = k / nn[1], mm = nz(R, -5, 6); x = k * mm;
+              var cc = x / nn[0] + x / nn[1];
+              vgl = 'x/' + nn[0] + ' + x/' + nn[1] + ' = ' + T(cc);
+              rij = [[vgl, X + ' ' + k], [u + 'x + ' + w + 'x = ' + T(cc * k), 'samen'], [(u + w) + 'x = ' + T(cc * k), ': ' + (u + w)], ['x = ' + T(x), '']];
+              st = [S('Zoek het kleinste getal waar ' + nn[0] + ' en ' + nn[1] + ' allebei in passen:', k, 'Tel de tafel van ' + nn[1] + ' af: past ' + nn[0] + ' erin?', F(k, nn[0] * nn[1] === k ? null : nn[0] * nn[1], 'Dat kan ook, maar ' + k + ' is kleiner en rekent makkelijker.')),
+                SC('Vermenigvuldig alles met ' + k + '. Links: x/' + nn[0] + ' ' + X + ' ' + k + ' + x/' + nn[1] + ' ' + X + ' ' + k + ' =', E([[u, 'x']]) + ' + ' + E([[w, 'x']]), exprC(E([[u + w, 'x']])), k + ' : ' + nn[0] + ' = ' + u + ' en ' + k + ' : ' + nn[1] + ' = ' + w + ': ' + E([[u, 'x']]) + ' + ' + E([[w, 'x']]) + '.'),
+                S('Rechts moet ook keer ' + k + ': ' + T(cc) + ' ' + X + ' ' + k + ' =', cc * k, 'Vergeet de rechterkant niet.', F(cc * k, cc, 'Ook de rechterkant gaat keer ' + k + '.')),
+                S('Nu staat er ' + (u + w) + 'x = ' + T(cc * k) + '. Deel door ' + (u + w) + ': x =', eqAnt(x), T(cc * k) + ' : ' + (u + w) + ' = ' + T(x) + '.', F(x, -x, 'Let op het teken.'))];
+            } else {
+              var a3, p3, q3, s3, e3;
+              do { a3 = R.heel(2, 5); p3 = R.heel(1, 6); s3 = nz(R, -6, 6); x = nz(R, -8, 8); q3 = a3 * (x + s3) - p3 * x; e3 = p3 - a3; } while (!e3 || e3 === 1 || p3 % a3 === 0 || !q3 || Math.abs(q3) > 20);
+              var rechts = E([[a3, 'x'], [a3 * s3, '']]);
+              vgl = '(' + E([[p3, 'x'], [q3, '']]) + ')/' + a3 + ' = ' + E([[1, 'x'], [s3, '']]);
+              rij = [[vgl, X + ' ' + a3], [E([[p3, 'x'], [q3, '']]) + ' = ' + rechts, bew(a3, 'x')], [E([[e3, 'x'], [q3, '']]) + ' = ' + T(a3 * s3), bew(q3)], [E([[e3, 'x']]) + ' = ' + T(a3 * s3 - q3), ': ' + paren(e3)], ['x = ' + T(x), '']];
+              st = [SC('Vermenigvuldig beide kanten met ' + a3 + '. Links valt de noemer weg. Rechts: ' + a3 + '(' + E([[1, 'x'], [s3, '']]) + ') =', rechts, exprC(rechts, { kaal:true }), 'Alles rechts gaat keer ' + a3 + ': ' + a3 + ' ' + X + ' x en ' + a3 + ' ' + X + ' ' + paren(s3) + '.', F(rechts, E([[a3, 'x'], [s3, '']]), 'Ook de ' + T(s3) + ' gaat keer ' + a3 + '.')),
+                S('Nu staat er ' + E([[p3, 'x'], [q3, '']]) + ' = ' + rechts + '. ' + weg(a3, 'x').charAt(0).toUpperCase() + weg(a3, 'x').slice(1) + '. Hoeveel x blijft er links? ' + p3 + ' ' + MIN + ' ' + a3 + ' =', e3, p3 + ' min ' + a3 + '.', F(e3, p3 + a3, 'Je haalt ' + a3 + 'x weg, dus min.')),
+                S(weg(q3).charAt(0).toUpperCase() + weg(q3).slice(1) + ': ' + E([[e3, 'x']]) + ' = ' + T(a3 * s3) + ' ' + (q3 > 0 ? MIN + ' ' + q3 : '+ ' + (-q3)) + ' =', a3 * s3 - q3, T(a3 * s3) + (q3 > 0 ? ' min ' + q3 : ' plus ' + (-q3)) + '.', F(a3 * s3 - q3, a3 * s3 + q3, 'Andersom: ' + weg(q3) + '.')),
+                S('Deel door ' + paren(e3) + ': x =', eqAnt(x), (e3 < 0 ? 'Delen door een min-getal draait het teken om. ' : '') + T(a3 * s3 - q3) + ' : ' + paren(e3) + ' = ' + T(x) + '.', F(x, -x, 'Let op het teken.'))];
+            }
+            return { vraag:vgl, context:'Los op. Maak eerst de breuk weg.', antwoord:eqAnt(x), beeld:function(n){ return schema(rij, Math.min(n, rij.length - 1)); }, stappen:st };
+          } },
+        { id:'wi-vgl-verhaal', naam:'Een vergelijking bij een verhaal', kort:'Kies een letter voor wat je zoekt, schrijf het verhaal als vergelijking, los op en geef antwoord in woorden',
+          uit:'<p>Sem koopt een etui van € 4 en een aantal schriften van € 3 per stuk. Hij betaalt € 22. Hoeveel schriften koopt hij?</p><p>1. Kies een <b>letter</b> voor wat je zoekt: s = het aantal schriften.</p><p>2. Schrijf het verhaal als <b>vergelijking</b>: 3s + 4 = 22.</p><p>3. <b>Los op</b>: 3s = 18, dus s = 6.</p><p>4. Geef antwoord op de <b>vraag</b>, in woorden: Sem koopt 6 schriften. Controleer in het verhaal: 6 schriften van € 3 is € 18, plus € 4 is € 22. Klopt.</p>',
+          wanneer:'een vraag in een verhaal staat en je niet meteen ziet hoe je hem uitrekent.',
+          maak:function(R){
+            var s = R.kies(['koop', 'raad', 'leeftijd', 'omtrek', 'abo']), x, vgl, fout, a, b, c, ctx, vr, eh, st0, l, rest;
+            if (s === 'koop'){
+              var it = R.kies([['Sem', 'een etui', 'schriften', 'schrift'], ['Noor', 'een rugzak', 'pennen', 'pen'], ['Daan', 'een bal', 'bekers', 'beker'], ['Lina', 'een lijstje', 'kaarten', 'kaart']]);
+              a = R.kies([2, 3, 4, 5]); b = R.heel(3, 15); x = R.heel(3, 9); c = a * x + b; l = 'n';
+              ctx = it[0] + ' koopt ' + it[1] + ' van € ' + b + ' en een aantal ' + it[2] + ' van € ' + a + ' per stuk. ' + it[0] + ' betaalt in totaal € ' + c + '. Neem n voor het aantal ' + it[2] + '.';
+              vr = 'Hoeveel ' + it[2] + ' koopt ' + it[0] + '?'; eh = it[2];
+              vgl = a + 'n + ' + b + ' = ' + c; fout = [b + 'n + ' + a + ' = ' + c, a + 'n = ' + c + ' + ' + b];
+            } else if (s === 'raad'){
+              a = R.kies([2, 3, 4, 5]); b = nz(R, -9, 12); x = R.heel(2, 12); c = a * x + b; l = 'x';
+              ctx = 'Ik denk aan een getal. Ik doe het keer ' + a + ' en ' + (b > 0 ? 'tel er ' + b + ' bij op' : 'trek er ' + (-b) + ' van af') + '. Dan krijg ik ' + c + '. Neem x voor het getal.';
+              vr = 'Aan welk getal denk ik?'; eh = '';
+              vgl = E([[a, 'x'], [b, '']]) + ' = ' + c; fout = [E([[1, 'x'], [b, '']]) + ' = ' + c, a + '(x ' + (b > 0 ? '+ ' + b : MIN + ' ' + (-b)) + ') = ' + c];
+            } else if (s === 'leeftijd'){
+              var nm = R.kies([['Lisa', 'haar broer'], ['Ravi', 'zijn zus'], ['Emma', 'haar neef'], ['Milan', 'zijn nicht']]);
+              b = R.heel(2, 6); x = R.heel(8, 15); c = 2 * x + b; l = 'x';
+              ctx = nm[0] + ' is ' + b + ' jaar ouder dan ' + nm[1] + '. Samen zijn ze ' + c + ' jaar. Neem x voor de leeftijd van ' + nm[1] + '.';
+              vr = 'Hoe oud is ' + nm[1] + '?'; eh = 'jaar';
+              vgl = 'x + (x + ' + b + ') = ' + c; fout = ['x + ' + b + ' = ' + c, 'x + (x ' + MIN + ' ' + b + ') = ' + c];
+            } else if (s === 'omtrek'){
+              b = R.heel(2, 8); x = R.heel(3, 12); c = 4 * x + 2 * b; l = 'b';
+              ctx = 'Een rechthoek is ' + b + ' cm langer dan breed. De omtrek is ' + c + ' cm. Neem b voor de breedte in cm.';
+              vr = 'Hoe breed is de rechthoek?'; eh = 'cm';
+              vgl = '2b + 2(b + ' + b + ') = ' + c; fout = ['b(b + ' + b + ') = ' + c, 'b + (b + ' + b + ') = ' + c];
+            } else {
+              var dz = R.kies([['sportschool', 'inschrijfgeld', 'per maand', 'maanden', 'm'], ['streamingdienst', 'eenmalige kosten', 'per maand', 'maanden', 'm'], ['fietsverhuur', 'borg die je niet terugkrijgt', 'per dag', 'dagen', 'd']]);
+              var pa, pb, inl; do { pa = R.kies([15, 20, 25, 30]); pb = pa + R.kies([5, 10]); x = R.heel(3, 10); inl = (pb - pa) * x; } while (inl > 80);
+              a = pa; b = inl; c = pb; l = dz[4];
+              ctx = 'Bij ' + dz[0] + ' A betaal je € ' + inl + ' ' + dz[1] + ' en € ' + pa + ' ' + dz[2] + '. Bij ' + dz[0] + ' B betaal je alleen € ' + pb + ' ' + dz[2] + '. Neem ' + l + ' voor het aantal ' + dz[3] + '.';
+              vr = 'Na hoeveel ' + dz[3] + ' heb je bij A en B evenveel betaald?'; eh = dz[3];
+              vgl = inl + ' + ' + pa + l + ' = ' + pb + l; fout = [inl + l + ' + ' + pa + ' = ' + pb + l, inl + ' + ' + pa + l + ' = ' + pb];
+            }
+            st0 = K(R, 'Welke vergelijking hoort bij het verhaal?', vgl, fout, s === 'koop' ? 'Het aantal ' + eh + ' keer de prijs per stuk, plus de prijs van het losse ding, is het totaal.' : s === 'raad' ? 'Volg het verhaal: eerst keer ' + a + ', dan ' + (b > 0 ? 'plus ' + b : 'min ' + (-b)) + '. Er komen geen haakjes omheen.' : s === 'leeftijd' ? 'De ander is x + ' + b + ' jaar oud. Samen: x + (x + ' + b + ').' : s === 'omtrek' ? 'De lengte is b + ' + b + '. De omtrek is twee breedtes en twee lengtes.' : 'Bij A betaal je ' + inl + ' + ' + pa + l + ', bij B ' + pb + l + '. Die moeten gelijk zijn.');
+            if (s === 'koop' || s === 'raad'){
+              rest = [S('Los op. ' + weg(b, '').charAt(0).toUpperCase() + weg(b, '').slice(1) + ': ' + a + l + ' =', c - b, T(c) + ' ' + (b > 0 ? MIN + ' ' + b : '+ ' + (-b)) + ' = ' + T(c - b) + '.', F(c - b, c + b, 'Andersom: ' + weg(b, '') + '.')),
+                S('Deel door ' + a + ': ' + l + ' =', [T(x), l + ' = ' + T(x)], T(c - b) + ' : ' + a + ' = ' + x + '.')];
+            } else if (s === 'leeftijd'){
+              rest = [S('Neem samen: x + (x + ' + b + ') = 2x + ' + b + '. ' + 'Trek aan beide kanten ' + b + ' af: 2x =', c - b, c + ' ' + MIN + ' ' + b + ' = ' + (c - b) + '.', F(c - b, c + b, 'Je trekt ' + b + ' af, je telt niet op.')),
+                S('Deel door 2: x =', [T(x), 'x = ' + T(x)], (c - b) + ' : 2 = ' + x + '.')];
+            } else if (s === 'omtrek'){
+              rest = [S('Werk de haakjes weg en neem samen: 2b + 2b + ' + (2 * b) + ' = 4b + ' + (2 * b) + '. Trek ' + (2 * b) + ' af: 4b =', c - 2 * b, c + ' ' + MIN + ' ' + (2 * b) + ' = ' + (c - 2 * b) + '.', F(c - 2 * b, c - b, 'De haakjes gaan keer 2: dat is ' + (2 * b) + ', niet ' + b + '.')),
+                S('Deel door 4: b =', [T(x), 'b = ' + T(x)], (c - 2 * b) + ' : 4 = ' + x + '.')];
+            } else {
+              rest = [S('Trek aan beide kanten ' + a + l + ' af. Hoeveel ' + l + ' blijft er rechts over? ' + c + ' ' + MIN + ' ' + a + ' =', c - a, 'Er staat nu ' + b + ' = ' + (c - a) + l + '.'),
+                S('Deel door ' + (c - a) + ': ' + l + ' =', [T(x), l + ' = ' + T(x)], b + ' : ' + (c - a) + ' = ' + x + '.')];
+            }
+            var chk = s === 'koop' ? x + ' ' + X + ' € ' + a + ' + € ' + b + ' = € ' + c + '.' : s === 'raad' ? x + ' ' + X + ' ' + a + (b > 0 ? ' + ' + b : ' ' + MIN + ' ' + (-b)) + ' = ' + c + '.' : s === 'leeftijd' ? x + ' en ' + (x + b) + ' jaar: samen ' + c + '.' : s === 'omtrek' ? 'breedte ' + x + ', lengte ' + (x + b) + ': 2 ' + X + ' ' + x + ' + 2 ' + X + ' ' + (x + b) + ' = ' + c + '.' : 'A: ' + b + ' + ' + a + ' ' + X + ' ' + x + ' = ' + (b + a * x) + ', B: ' + c + ' ' + X + ' ' + x + ' = ' + (c * x) + '.';
+            rest.push(S('Terug naar het verhaal. ' + vr, x, 'Je vond ' + l + ' = ' + x + '. Controle in het verhaal: ' + chk));
+            var op = { vraag:vr, context:ctx + ' Stel een vergelijking op en los hem op.', antwoord:T(x), stappen:[st0].concat(rest) }; if (eh) op.eenheid = eh; return op;
           } }
       ] },
 
@@ -722,6 +819,19 @@
             var m = mVerschilOnt(R, k, p);
             return { vraag:m.vraag, context:'Ontbind. Schrijf je antwoord zoals (x + 7)(x ' + MIN + ' 7).', antwoord:m.ant, controle:m.ctrl, invoer:'tekst', stappen:m.stappen };
           } },
+        { id:'wi-ont-factor', naam:'Een getal voor x²: eerst buiten haakjes', kort:'Staat er een getal voor x², haal dat dan eerst buiten haakjes; ontbind daarna wat tussen de haakjes staat',
+          uit:'<p>Bij 2x² + 6x ' + MIN + ' 20 werkt de som-productmethode niet meteen, want voor x² staat een 2. Kijk of dat getal in <b>alle termen</b> zit: 2, 6 en 20 zijn allemaal deelbaar door 2.</p><p>Haal het <b>buiten haakjes</b>: 2x² + 6x ' + MIN + ' 20 = 2(x² + 3x ' + MIN + ' 10).</p><p>Ontbind daarna wat tussen de haakjes staat met <b>product en som</b>: product ' + MIN + '10 en som 3, dat zijn 5 en ' + MIN + '2. Dus 2x² + 6x ' + MIN + ' 20 = <b>2(x + 5)(x ' + MIN + ' 2)</b>.</p><p>Vergeet de 2 aan het begin niet in je antwoord.</p>',
+          wanneer:'er een getal voor x² staat dat ook in de andere termen zit.',
+          maak:function(R){
+            var k = R.kies([2, 2, 3, 4, 5]), g; do { g = somProdGetallen(R); } while (Math.abs(k * g.p * g.q) > 60);
+            var p = g.p, q = g.q, binnen = E([[1, 'x²'], [p + q, 'x'], [p * q, '']]), expr = E([[k, 'x²'], [k * (p + q), 'x'], [k * p * q, '']]);
+            var m = mSomProd(R, p, q, true), ant = k + '(' + lin(1, p) + ')(' + lin(1, q) + ')', ctrl = factorC(expr, { voor:String(k), groepen:2 });
+            var st = [S('Welk getal zit in alle drie de termen van ' + expr + '? Haal het buiten haakjes:', k, 'Deel ' + k + ', ' + T(Math.abs(k * (p + q))) + ' en ' + T(Math.abs(k * p * q)) + ' allemaal door hetzelfde getal: het getal voor x².'),
+              SC(expr + ' = ' + k + '(…). Wat staat er tussen de haakjes?', binnen, exprC(binnen), 'Deel elke term door ' + k + ': ' + E([[k, 'x²']]) + ' : ' + k + ' = x², ' + E([[k * (p + q), 'x']]) + ' : ' + k + ' = ' + E([[p + q, 'x']]) + ' en ' + T(k * p * q) + ' : ' + k + ' = ' + T(p * q) + '.', F(binnen, E([[1, 'x²'], [k * (p + q), 'x'], [k * p * q, '']]), 'Deel álle termen door ' + k + ', niet alleen x².'))].concat(m.stappen);
+            st.push(SC('Zet de ' + k + ' er weer voor. ' + expr + ' =', ant, ctrl, 'Het getal buiten haakjes hoort in je antwoord: ' + ant + '.', F(ant, '(' + lin(1, p) + ')(' + lin(1, q) + ')', 'De ' + k + ' voor de haakjes ben je vergeten.')));
+            return { vraag:expr, context:'Ontbind zo ver mogelijk. Schrijf je antwoord zoals 2(x + 5)(x ' + MIN + ' 2).', antwoord:ant, controle:ctrl, invoer:'tekst',
+              beeld:function(n){ return n < 2 ? '' : m.beeld(n - 2); }, stappen:st };
+          } },
         { id:'wi-ont-kies', naam:'Kies de handigste manier', kort:'Geen los getal: buiten haakjes. Kwadraat min kwadraat: a² − b². Anders: de som-productmethode',
           uit:'<p>Kijk eerst welke termen er staan.</p><p>Is er <b>geen los getal</b>, zoals 4x² + 6x? Haal dan <b>buiten haakjes</b>.</p><p>Is het een <b>kwadraat min een kwadraat</b>, zonder x-term, zoals x² − 25? Gebruik <b>a² − b² = (a + b)(a − b)</b>.</p><p>Staan er x², een x-term én een los getal, zoals x² + 5x + 6? Gebruik de <b>som-productmethode</b>.</p>',
           wanneer:'je een uitdrukking moet ontbinden en niet weet hoe.',
@@ -797,6 +907,51 @@
               S('Wat is het grootste kwadraat dat een deler is van ' + n + '?', k * k, 'Probeer de kwadraten van groot naar klein: ' + [49, 36, 25, 16, 9, 4].filter(function(x){ return x <= n; }).join(', ') + '. Welke past precies in ' + n + '?', F.apply(null, [k * k].concat(vk))),
               S(n + ' = ' + (k * k) + ' ' + X + ' …', m, n + ' : ' + (k * k) + '.'),
               SC('√' + n + ' = √' + (k * k) + ' · √' + m + ' =', ant, wortelC(k, m), '√' + (k * k) + ' = ' + k + ', dus ' + ant + '.', foutK) ] };
+          } },
+        { id:'wi-mac-wortelregels', naam:'Rekenen met wortels', kort:'√a · √b = √(a · b) en √a : √b = √(a : b). Optellen kan alleen bij dezelfde wortel: 2√3 + 5√3 = 7√3',
+          uit:'<p>Wortels mag je <b>vermenigvuldigen</b> en <b>delen</b> onder één wortel: √2 · √8 = √16 = <b>4</b> en √72 : √2 = √36 = <b>6</b>.</p><p>Staat er een getal voor, dan doe je getallen keer getallen en wortels keer wortels: 2√3 · 5√3 = 10 · √9 = 10 · 3 = <b>30</b>.</p><p><b>Optellen</b> en aftrekken gaat alleen bij <b>dezelfde wortel</b>, net als bij 2a + 5a: 2√3 + 5√3 = <b>7√3</b>. Bij √12 + √27 vereenvoudig je eerst: 2√3 + 3√3 = 5√3. Maar √2 + √3 is niet √5.</p>',
+          wanneer:'je wortels moet vermenigvuldigen, delen of optellen en een exact antwoord wilt.',
+          maak:function(R){
+            var s = R.kies(['keer', 'keer', 'deel', 'getal', 'plus', 'plusver']), vraag, st, ant, ctrl, b, m, k;
+            function wAnt(n){ var kk = 1; for (var d = 2; d * d <= n; d++) if (n % (d * d) === 0) kk = d; return { k:kk, m:n / (kk * kk) }; }
+            if (s === 'keer' || s === 'deel'){
+              var rad = R.kies([2, 3, 5, 6, 7]), u = R.kies([1, 2, 3, 4, 5, 6]), v; do { v = R.kies([2, 3, 4, 5, 6, 8]); } while (v === u);
+              var A = rad * u * u, B = rad * v * v, prod = A * B, w = Math.sqrt(prod);
+              if (s === 'keer'){
+                var PAAR = [[2, 8], [3, 12], [5, 20], [2, 18], [3, 27], [2, 32], [6, 24], [5, 45], [7, 28], [2, 50], [2, 6], [3, 6], [2, 10], [6, 10], [3, 15], [5, 10], [7, 14], [3, 21]], pr = R.kies(PAAR); if (R.heel(0, 1)) pr = [pr[1], pr[0]]; A = pr[0]; B = pr[1];
+                prod = A * B; var wa = wAnt(prod);
+                vraag = '√' + A + ' · √' + B;
+                ant = wa.m === 1 ? T(wa.k) : wa.k + '√' + wa.m;
+                ctrl = wa.m === 1 ? null : wortelC(wa.k, wa.m);
+                st = [S('Zet alles onder één wortel: √' + A + ' · √' + B + ' = √…', prod, A + ' ' + X + ' ' + B + ' = ' + prod + '.', F(prod, A + B, 'Bij keer vermenigvuldig je wat onder de wortels staat, niet optellen.'))];
+                st.push(ctrl ? SC('Schrijf √' + prod + ' zo eenvoudig mogelijk:', ant, ctrl, 'Het grootste kwadraat in ' + prod + ' is ' + (wa.k * wa.k) + ': √' + prod + ' = ' + ant + '.') : S('√' + prod + ' =', wa.k, wa.k + ' ' + X + ' ' + wa.k + ' = ' + prod + '.'));
+              } else {
+                var uv; do { uv = R.heel(2, 7); } while (rad * uv * uv > 250); u = uv; v = 1; var gr = rad * uv * uv; vraag = '√' + gr + ' : √' + rad; ant = T(u * v); ctrl = null;
+                st = [S('Zet alles onder één wortel: √' + gr + ' : √' + rad + ' = √…', gr / rad, gr + ' : ' + rad + ' = ' + (gr / rad) + '.', F(gr / rad, gr - rad, 'Bij delen deel je wat onder de wortels staat.')),
+                  S('√' + (gr / rad) + ' =', u * v, (u * v) + ' ' + X + ' ' + (u * v) + ' = ' + (gr / rad) + '.')];
+              }
+            } else if (s === 'getal'){
+              var p = R.heel(2, 6), q = R.heel(2, 6), r2 = R.kies([2, 3, 5, 6, 7]);
+              vraag = p + '√' + r2 + ' · ' + q + '√' + r2; ant = T(p * q * r2); ctrl = null;
+              st = [S('Getallen keer getallen: ' + p + ' ' + X + ' ' + q + ' =', p * q, p + ' keer ' + q + '.'),
+                S('Wortels keer wortels: √' + r2 + ' · √' + r2 + ' = √' + (r2 * r2) + ' =', r2, 'Een wortel keer dezelfde wortel geeft het getal eronder.', F(r2, r2 * r2, 'Neem nog de wortel: √' + (r2 * r2) + ' = ' + r2 + '.')),
+                S('Samen: ' + (p * q) + ' ' + X + ' ' + r2 + ' =', p * q * r2, (p * q) + ' keer ' + r2 + '.', F(p * q * r2, (p * q) + '√' + (r2 * r2), 'Schrijf √' + (r2 * r2) + ' als ' + r2 + '.'))];
+            } else if (s === 'plus'){
+              var r3 = R.kies([2, 3, 5, 6, 7, 10]), a = R.heel(1, 8), c = nz(R, -6, 8); if (a + c <= 1) c = R.heel(2, 6);
+              vraag = (a === 1 ? '' : a) + '√' + r3 + (c < 0 ? ' ' + MIN + ' ' + (c === -1 ? '' : -c) : ' + ' + (c === 1 ? '' : c)) + '√' + r3;
+              ant = (a + c) + '√' + r3; ctrl = wortelC(a + c, r3);
+              st = [K(R, 'Mag je deze wortels samennemen?', 'ja: het is steeds √' + r3, ['nee: wortels mag je nooit optellen'], 'Het is dezelfde wortel, net als ' + (a === 1 ? '' : a) + 'a ' + (c < 0 ? MIN + ' ' + (-c) : '+ ' + c) + 'a.'),
+                SC('Tel de getallen voor de wortel op: ' + vraag + ' =', ant, ctrl, a + ' ' + (c < 0 ? MIN + ' ' + (-c) : '+ ' + c) + ' = ' + (a + c) + ', dus ' + ant + '.', F(ant, (a + c) + '√' + (2 * r3), 'Onder de wortel verandert niets: het blijft √' + r3 + '.'))];
+            } else {
+              var r4 = R.kies([2, 3, 5]), f1 = R.heel(2, 4), f2; do { f2 = R.heel(2, 5); } while (f2 === f1);
+              var n1v = r4 * f1 * f1, n2v = r4 * f2 * f2; vraag = '√' + n1v + ' + √' + n2v; ant = (f1 + f2) + '√' + r4; ctrl = wortelC(f1 + f2, r4);
+              st = [SC('Vereenvoudig √' + n1v + ':', f1 + '√' + r4, wortelC(f1, r4), n1v + ' = ' + (f1 * f1) + ' ' + X + ' ' + r4 + ', dus √' + n1v + ' = ' + f1 + '√' + r4 + '.'),
+                SC('Vereenvoudig √' + n2v + ':', f2 + '√' + r4, wortelC(f2, r4), n2v + ' = ' + (f2 * f2) + ' ' + X + ' ' + r4 + ', dus √' + n2v + ' = ' + f2 + '√' + r4 + '.'),
+                SC('Nu is het dezelfde wortel. ' + f1 + '√' + r4 + ' + ' + f2 + '√' + r4 + ' =', ant, ctrl, f1 + ' + ' + f2 + ' = ' + (f1 + f2) + '.', F(ant, '√' + (n1v + n2v), 'Wortels optellen gaat niet onder één wortel. Vereenvoudig eerst.'))];
+            }
+            var op = { vraag:vraag, context:'Schrijf zo eenvoudig mogelijk, zonder af te ronden. Typ een wortel als √ of als het woord wortel, bijvoorbeeld 5√3.', antwoord:ant, stappen:st };
+            if (ctrl){ op.controle = ctrl; op.invoer = 'tekst'; }
+            return op;
           } },
         { id:'wi-om-lin', naam:'Een formule omwerken', kort:'Maak de gevraagde letter vrij: doe aan beide kanten hetzelfde, in omgekeerde volgorde',
           uit:'<p>K = 15a + 40 geeft de prijs K bij a kaartjes. Wil je weten hoeveel kaartjes je voor een prijs krijgt? Dan maak je <b>a vrij</b>.</p><p>Doe het zoals bij een vergelijking, met de <b>balans</b>. Bij a gebeurt eerst × 15 en dan + 40. Terug begin je bij de laatste: trek aan beide kanten 40 af, K − 40 = 15a. Deel dan door 15: <b>a = (K − 40) : 15</b>.</p><p>Zet <b>haakjes</b> om K − 40: alles moet door 15 gedeeld worden.</p>',

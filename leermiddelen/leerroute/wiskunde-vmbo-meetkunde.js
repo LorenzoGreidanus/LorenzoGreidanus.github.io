@@ -1,9 +1,10 @@
 /* De leerroute wiskunde: meetkunde voor de bovenbouw van het vmbo (kb en gt, het examen).
    Halve en kwart cirkels in samengestelde figuren, schaal en oppervlakte op schaal,
    gelijkvormige driehoeken (snavel en zandloper), inhoud in liters, de inhoud van bol en
-   samengestelde ruimtefiguren, de oppervlakte van prisma en cilinder, afstanden in
-   ruimtefiguren met twee keer Pythagoras, hellingshoek en hellingspercentage, en
-   goniometrie in twee stappen. Pythagoras in een assenstelsel, SOS CAS TOA, vergroten en
+   samengestelde ruimtefiguren, de oppervlakte van prisma, cilinder, piramide, kegel en
+   bol, afstanden in ruimtefiguren met twee keer Pythagoras, hellingshoek en
+   hellingspercentage, goniometrie in twee stappen en in ruimtefiguren, en aanzichten
+   op een werktekening. Pythagoras in een assenstelsel, SOS CAS TOA, vergroten en
    de inhoud van piramide en kegel staan in wiskunde-meetkunde.js. Zie leerroute.js voor
    het formaat. */
 (function(){
@@ -866,6 +867,65 @@
             St('Eén cirkel: π ' + X + ' ' + r + '² ≈ (rond af op 1 decimaal)', af(C, 1, 'cm²'), 'Tik in: π × ' + (r * r) + ' = ' + T(C, { dec:4 }) + '…', Fz(af(C, 1, 'cm²'), F(r1(Math.PI * d * d), 'Gebruik de straal, niet de diameter.')), { e:'cm²' }),
             St('De mantel is π ' + X + ' ' + d + ' lang en ' + h + ' breed: π ' + X + ' ' + d + ' ' + X + ' ' + h + ' ≈ (rond af op 1 decimaal)', af(M, 1, 'cm²'), 'De lengte van de rechthoek is de omtrek van de cirkel: π × ' + d + '. Keer de hoogte: ' + T(M, { dec:4 }) + '…', Fz(af(M, 1, 'cm²'), F(r1(Math.PI * r * h), 'Gebruik de diameter ' + d + ', niet de straal.')), { e:'cm²' }),
             St('Totaal: ' + (dicht ? '2 ' + X + ' ' + r1(C) : r1(C)) + ' + ' + r1(M) + ' ≈', af(tot, 1, 'cm²'), dicht ? 'Twee cirkels en de mantel.' : 'Eén cirkel en de mantel.', Fz(af(tot, 1, 'cm²'), dicht ? F(r1(C + M), 'Er zijn twee cirkels: bodem en deksel.') : F(r1(2 * C + M), 'Er is geen deksel: maar één cirkel.')), { e:'cm²' }) ] };
+        } },
+      { id:'wvm-m-opp-pir', naam:'Oppervlakte van een piramide', kort:'Het vierkante grondvlak plus vier driehoeken: elk zijvlak is zijde × hoogte van het zijvlak : 2',
+        uit:'<p>Vouw een piramide met een vierkant grondvlak open. Je krijgt <b>één vierkant</b> en <b>vier gelijke driehoeken</b>.</p><p>Voor een driehoek heb je de <b>hoogte van het zijvlak</b> nodig: de lijn van de top recht naar het midden van een grondribbe. Dat is niet de hoogte van de piramide zelf. Weet je alleen de hoogte van de piramide, reken de hoogte van het zijvlak dan uit met Pythagoras.</p><p>Grondvlak 6 bij 6 cm en zijvlakhoogte 5 cm: 6 × 6 = 36, één driehoek 6 × 5 : 2 = 15, vier driehoeken 60. Samen <b>96 cm²</b>.</p>',
+        wanneer:'je wilt weten hoeveel karton of glas er nodig is voor een piramide.',
+        maak:function(R){
+          var tr = R.kies([[3, 4, 5], [4, 3, 5], [6, 8, 10], [8, 6, 10], [5, 12, 13], [12, 5, 13], [9, 12, 15], [12, 9, 15], [8, 15, 17], [15, 8, 17]]), a = tr[0], h = tr[1], hz = tr[2], z = 2 * a, metH = R.heel(0, 1) === 1;
+          var G2 = z * z, Z = z * hz / 2, tot = G2 + 4 * Z;
+          var wat = R.kies(['Een piramide van karton', 'Een glazen piramide', 'Een cadeaudoos in de vorm van een piramide', 'Een houten piramide']);
+          var bl = fPir(z, z, h, { N:true, maten:[[0, 1, z + ' cm'], [1, 2, z + ' cm']], lijnen:metH ? [[5, 4, 3, true], [5, 6, 3, true], [4, 6, 1]] : [[4, 6, 1]],
+            teksten:metH ? [{ p:[z / 2, Math.min(h, 1.3 * z) / 2, z / 2], t:h + ' cm', dx:-10, a:'end', k:K[3] }] : [{ p:[(z + z / 2) / 2, Math.min(h, 1.3 * z) / 2, z / 2], t:hz + ' cm', dx:12, a:'start', k:K[1] }] });
+          var st = [];
+          if (metH) st.push(St('Bereken eerst de hoogte van een zijvlak, TN. MN is de helft van een grondribbe: ' + a + ' cm. TN = √(' + h + '² + ' + a + '²) =', metE(T(hz), 'cm'), 'Driehoek TMN heeft de rechte hoek bij M: ' + (h * h) + ' + ' + (a * a) + ' = ' + (hz * hz) + ', en √' + (hz * hz) + ' = ' + hz + '.', Fz(metE(T(hz), 'cm'), F(T(Math.sqrt(h * h + z * z)), 'MN is de helft van de grondribbe: ' + a + ', niet ' + z + '.', T(h + a), 'Eerst kwadrateren, dan optellen, dan de wortel.')), { e:'cm' }));
+          st.push(St('Het grondvlak: ' + z + ' ' + X + ' ' + z + ' =', metE(T(G2), 'cm²'), 'Het grondvlak is een vierkant.', null, { e:'cm²' }));
+          st.push(St('Eén zijvlak is een driehoek: ' + z + ' ' + X + ' ' + hz + ' : 2 =', metE(T(Z), 'cm²'), 'Basis keer de hoogte van het zijvlak, gedeeld door 2.', Fz(metE(T(Z), 'cm²'), F(T(z * hz), 'Een driehoek: vergeet niet te delen door 2.', T(z * h / 2), 'Gebruik de hoogte van het zijvlak, niet de hoogte van de piramide.')), { e:'cm²' }));
+          st.push(St('Vier zijvlakken: 4 ' + X + ' ' + T(Z) + ' =', metE(T(4 * Z), 'cm²'), 'De vier driehoeken zijn even groot.', null, { e:'cm²' }));
+          st.push(St('Totaal: ' + G2 + ' + ' + T(4 * Z) + ' =', metE(T(tot), 'cm²'), 'Het grondvlak plus de vier zijvlakken.', Fz(metE(T(tot), 'cm²'), F(T(4 * Z), 'Tel het grondvlak ook mee.')), { e:'cm²' }));
+          return { vraag:'Oppervlakte van de piramide?', context:wat + ' heeft een vierkant grondvlak met zijden van ' + z + ' cm. ' + (metH ? 'De piramide is ' + h + ' cm hoog.' : 'De hoogte van elk zijvlak (de lijn van de top naar het midden van een grondribbe) is ' + hz + ' cm.') + ' Bereken de oppervlakte van alle vlakken samen. De figuur is niet op schaal.', eenheid:'cm²', beeld:bl, zelfBeeld:bl, stappen:st };
+        } },
+      { id:'wvm-m-opp-kegel', naam:'Oppervlakte van een kegel', kort:'Grondcirkel π × r² plus de mantel π × r × s, met s de schuine zijde van de top naar de rand',
+        uit:'<p>Een kegel bestaat uit een <b>cirkel</b> (het grondvlak) en een <b>mantel</b>: het schuine, puntige deel. Vouw je de mantel open, dan krijg je een stuk van een cirkel.</p><p>Grondvlak: <b>π × r²</b>. Mantel: <b>π × r × s</b>. Daarbij is s de <b>schuine zijde</b>: de lengte van de top naar de rand. Weet je alleen de hoogte h, dan reken je s uit met Pythagoras: s² = r² + h².</p><p>Is de kegel open, zoals een feestmuts of een puntzak, dan tel je alleen de mantel.</p>',
+        wanneer:'je de buitenkant van een kegel zoekt, zoals een puntdak of een feestmuts.',
+        maak:function(R){
+          var tr = R.kies([[3, 4, 5], [4, 3, 5], [6, 8, 10], [8, 6, 10], [5, 12, 13], [9, 12, 15], [12, 9, 15], [8, 15, 17]]), open = R.heel(0, 2) === 0, metH = R.heel(0, 1) === 1, r = tr[0], h = tr[1], s = tr[2], C, M, tot;
+          C = Math.PI * r * r; M = Math.PI * r * s; tot = (open ? 0 : C) + M;
+          if (grens(C, 1) || grens(M, 1) || grens(tot, 1) || !eens((open ? 0 : rnd(C, 1)) + rnd(M, 1), tot, 1)){ r = 3; h = 4; s = 5; C = Math.PI * 9; M = Math.PI * 15; tot = (open ? 0 : C) + M; }
+          var wat = open ? R.kies(['Een feestmuts', 'Een puntzak voor patat', 'Een ijshoorntje van papier']) : R.kies(['Een kegel van hout', 'Een verkeerskegel met een dichte bodem', 'Een kegelvormige kaars']);
+          function fig(){
+            var cx = 150, yb = 200, rx = 90, ry = 22, ya = 30, s2 = '';
+            s2 += pg([[cx - rx, yb], [cx, ya], [cx + rx, yb]], { f:K[0], fo:0.1, s:'none', w:0 });
+            s2 += pad('M' + (cx - rx) + ' ' + yb + ' A' + rx + ' ' + ry + ' 0 0 1 ' + (cx + rx) + ' ' + yb, { stip:'6 5', op:0.55, w:2 }) + pad('M' + (cx - rx) + ' ' + yb + ' A' + rx + ' ' + ry + ' 0 0 0 ' + (cx + rx) + ' ' + yb, { w:2.5, f:open ? 'none' : K[0], fo:0.08 });
+            s2 += ln(cx - rx, yb, cx, ya, { w:2.5 }) + ln(cx + rx, yb, cx, ya, { w:2.5 });
+            s2 += ln(cx, yb, cx + rx, yb, { k:K[1], w:3 }) + tx(cx + rx / 2, yb + ry + 18, 'r = ' + r + ' cm', { vet:true, k:K[1], fs:14 }) + cir(cx, yb, 3, { f:'var(--ink)', s:'none', w:0 });
+            if (metH) s2 += ln(cx, ya, cx, yb, { k:K[3], w:2.5, stip:'6 5' }) + tx(cx + 8, (ya + yb) / 2 + 24, 'h = ' + h + ' cm', { a:'start', vet:true, k:K[3], fs:14 });
+            else s2 += tx(cx + rx / 2 + 12, (ya + yb) / 2 - 6, 's = ' + s + ' cm', { a:'start', vet:true, fs:14 });
+            return svg(330, 252, s2, 'een kegel met straal ' + r + ' cm', 330);
+          }
+          var bl = fig(), st = [];
+          if (metH) st.push(St('Bereken eerst de schuine zijde: s = √(' + r + '² + ' + h + '²) =', metE(T(s), 'cm'), (r * r) + ' + ' + (h * h) + ' = ' + (s * s) + ', en √' + (s * s) + ' = ' + s + '.', Fz(metE(T(s), 'cm'), F(T(r + h), 'Eerst kwadrateren, dan optellen, dan de wortel.')), { e:'cm' }));
+          if (!open) st.push(St('De grondcirkel: π ' + X + ' ' + r + '² ≈ (rond af op 1 decimaal)', af(C, 1, 'cm²'), 'Tik in: π × ' + (r * r) + ' = ' + T(C, { dec:4 }) + '…', Fz(af(C, 1, 'cm²'), F(r1(2 * Math.PI * r), 'Dat is de omtrek. Gebruik π × r².')), { e:'cm²' }));
+          else st.push(kstap(R, 'Tel je bij ' + wat.toLowerCase() + ' een grondcirkel mee?', 'nee, hij is open: alleen de mantel', ['ja, de bodem hoort erbij'], 'Er zit geen bodem in: je telt alleen het schuine deel.'));
+          st.push(St('De mantel: π ' + X + ' ' + r + ' ' + X + ' ' + s + ' ≈ (rond af op 1 decimaal)', af(M, 1, 'cm²'), 'Tik in: π × ' + r + ' × ' + s + ' = ' + T(M, { dec:4 }) + '…', Fz(af(M, 1, 'cm²'), metH ? F(r1(Math.PI * r * h), 'Gebruik de schuine zijde s, niet de hoogte h.') : {}), { e:'cm²' }));
+          if (!open) st.push(St('Totaal: ' + r1(C) + ' + ' + r1(M) + ' ≈', af(tot, 1, 'cm²'), 'De grondcirkel plus de mantel.', Fz(af(tot, 1, 'cm²'), F(r1(M), 'Tel de grondcirkel ook mee.')), { e:'cm²' }));
+          return { vraag:'Oppervlakte van de kegel?', context:wat + ' heeft de vorm van een kegel met een straal van ' + r + ' cm' + (metH ? ' en een hoogte van ' + h + ' cm' : ' en een schuine zijde van ' + s + ' cm') + '.' + (open ? ' Er zit geen bodem in.' : '') + ' Bereken de oppervlakte. Rond af op 1 decimaal. De figuur is niet op schaal.', eenheid:'cm²', beeld:bl, zelfBeeld:bl, stappen:st };
+        } },
+      { id:'wvm-m-opp-bol', naam:'Oppervlakte van een bol', kort:'Oppervlakte van een bol = 4 × π × r²; een halve bol zonder bodem is de helft',
+        uit:'<p>De oppervlakte van een <b>bol</b> is <b>4 × π × r²</b>: precies vier keer de cirkel door het midden.</p><p>Let op: gebruik de <b>straal</b>. Staat de diameter gegeven, deel die dan eerst door 2.</p><p>Een <b>halve bol</b>, zoals een koepel zonder vloer, is de helft: 2 × π × r². Zit er wel een platte bodem onder, dan tel je die cirkel erbij: 2 × π × r² + π × r².</p><p>Een bal met een straal van 10 cm: 4 × π × 100 ≈ <b>1256,6 cm²</b>.</p>',
+        wanneer:'je wilt weten hoeveel leer, verf of folie er nodig is voor iets bols.',
+        maak:function(R){
+          var soort = R.kies(['heel', 'heel', 'koepel', 'dicht']), metD = R.heel(0, 1) === 1, r, O;
+          do { r = R.heel(3, 30) / (R.heel(0, 3) === 0 ? 2 : 1); O = (soort === 'heel' ? 4 : soort === 'koepel' ? 2 : 3) * Math.PI * r * r; } while (grens(O, 1) || r % 0.5);
+          var d = 2 * r, wat = soort === 'heel' ? R.kies(['Een voetbal', 'Een strandbal', 'Een kerstbal', 'Een globe']) : soort === 'koepel' ? R.kies(['Een koepel zonder vloer', 'Een halve bol van glas, open aan de onderkant']) : R.kies(['Een halve bol van hout met een platte onderkant', 'Een iglo van ijs met een vloer']);
+          var bl = fBol(soort !== 'heel', metD ? { d:'d = ' + T(d) + ' cm' } : { r:'r = ' + T(r) + ' cm' });
+          var st = [];
+          if (metD) st.push(St('De straal is de helft van de diameter: r = ' + T(d) + ' : 2 =', metE(T(r), 'cm'), 'Deel de diameter door 2.', null, { e:'cm' }));
+          st.push(St('r² = ' + T(r) + '² =', T(rnd(r * r, 4)), T(r) + ' ' + X + ' ' + T(r) + '.', F(T(2 * r), 'Een kwadraat is keer zichzelf, niet keer 2.')));
+          if (soort === 'heel') st.push(St('Oppervlakte = 4 ' + X + ' π ' + X + ' ' + T(rnd(r * r, 4)) + ' ≈ (rond af op 1 decimaal)', af(O, 1, 'cm²'), 'Tik in: 4 × π × ' + T(rnd(r * r, 4)) + ' = ' + T(O, { dec:4 }) + '…', Fz(af(O, 1, 'cm²'), F(r1(Math.PI * r * r), 'Dat is één cirkel. Een bol is 4 keer zo groot.', r1(4 * Math.PI * d * d), 'Gebruik de straal, niet de diameter.')), { e:'cm²' }));
+          else if (soort === 'koepel') st.push(St('Een halve bol zonder vloer: 2 ' + X + ' π ' + X + ' ' + T(rnd(r * r, 4)) + ' ≈ (rond af op 1 decimaal)', af(O, 1, 'cm²'), 'De helft van 4 × π × r²: dat is 2 × π × r² = ' + T(O, { dec:4 }) + '…', Fz(af(O, 1, 'cm²'), F(r1(2 * O), 'Dat is een hele bol. Het is maar de helft.', r1(1.5 * O), 'Er zit geen vloer onder: tel de cirkel niet mee.')), { e:'cm²' }));
+          else st.push(St('De bolle kant 2 ' + X + ' π ' + X + ' r² plus de platte cirkel π ' + X + ' r²: samen 3 ' + X + ' π ' + X + ' ' + T(rnd(r * r, 4)) + ' ≈ (rond af op 1 decimaal)', af(O, 1, 'cm²'), 'Half van de bol is 2πr², de platte bodem is πr²: samen 3 × π × r² = ' + T(O, { dec:4 }) + '…', Fz(af(O, 1, 'cm²'), F(r1(O * 2 / 3), 'Tel de platte bodem ook mee.', r1(O * 4 / 3), 'Het is een halve bol, geen hele.')), { e:'cm²' }));
+          return { vraag:'Oppervlakte?', context:wat + ' heeft ' + (metD ? 'een diameter van ' + T(d) + ' cm' : 'een straal van ' + T(r) + ' cm') + '. Bereken de oppervlakte' + (soort === 'koepel' ? ' van de bolle kant' : soort === 'dicht' ? ' van de bolle kant en de bodem samen' : '') + '. Rond af op 1 decimaal.', eenheid:'cm²', beeld:bl, zelfBeeld:bl, stappen:st };
         } }
     ] });
 
@@ -1081,6 +1141,84 @@
             st.push(St('Tophoek = 2 ' + X + ' ' + r2(ht) + ' ≈ (rond af op 1 decimaal)', af(2 * ht, 1, '°', ['graden']), 'De hoogte deelt de tophoek in twee gelijke stukken: keer 2.', Fz(af(2 * ht, 1, '°'), F(r1(ht), 'Dat is de halve tophoek. Keer 2.')), { e:'°' }));
           }
           return { vraag:'De ' + naamH + ' = ?', context:'Een gelijkbenige driehoek heeft een basis van ' + b + ' cm en twee benen van ' + c + ' cm. Bereken de ' + naamH + '. Rond af op 1 decimaal. De figuur is niet op schaal.', eenheid:'°', beeld:bl, zelfBeeld:bl, stappen:st };
+        } },
+      { id:'wvm-m-gon-ruimte', naam:'Een hoek in een ruimtefiguur', kort:'Zoek de rechthoekige driehoek met de rechte hoek in het grondvlak: tan = hoogte : afstand in het grondvlak',
+        uit:'<p>De hoek tussen een schuine lijn en het <b>grondvlak</b> bereken je in een rechthoekige driehoek die <b>rechtop</b> staat.</p><p>Bij de lichaamsdiagonaal AG van een balk is dat driehoek ACG, met de rechte hoek bij C. CG is de hoogte. AC ligt in het grondvlak: die reken je eerst uit met Pythagoras.</p><p>Bij een piramide T.ABCD is het driehoek AMT, met de rechte hoek bij M, het midden van het grondvlak.</p><p>Je kent dan de <b>overstaande</b> zijde (de hoogte) en de <b>aanliggende</b> zijde (in het grondvlak): gebruik <b>tan</b>.</p>',
+        wanneer:'je de hoek tussen een ribbe of diagonaal en het grondvlak zoekt.',
+        maak:function(R){
+          var pir = R.heel(0, 1) === 1, l, b, h, d, hk, st, bl, ctx, vr;
+          if (!pir){
+            var t = R.kies(TRIP); l = t[0]; b = t[1];
+            do { h = R.heel(3, 20); d = Math.sqrt(l * l + b * b); hk = Math.atan(h / d) / RAD; } while (grens(hk, 1));
+            bl = ruimte(balkPts(l, b, h), BALK_RIBBEN, { namen:['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'], maten:[[0, 1, l + ' cm'], [1, 2, b + ' cm'], [2, 6, h + ' cm']], lijnen:[[0, 2, 3, true], [0, 6, 1]], aria:'balk ABCD.EFGH met de diagonaal AG' });
+            vr = '∠GAC = ?'; ctx = 'Balk ABCD.EFGH heeft AB = ' + l + ' cm, BC = ' + b + ' cm en CG = ' + h + ' cm. Bereken de hoek tussen de lichaamsdiagonaal AG en het grondvlak, ∠GAC. Rond af op 1 decimaal. De figuur is niet op schaal.';
+            st = [kstap(R, 'In welke driehoek zit ∠GAC, met een rechte hoek?', 'driehoek ACG, rechte hoek bij C', ['driehoek ABG, rechte hoek bij B', 'driehoek ACG, rechte hoek bij A'], 'CG staat recht omhoog op het grondvlak, dus de rechte hoek zit bij C.'),
+              St('AC ligt in het grondvlak: AC = √(' + l + '² + ' + b + '²) =', metE(T(d), 'cm'), (l * l) + ' + ' + (b * b) + ' = ' + (l * l + b * b) + ', en de wortel is ' + T(d) + '.', Fz(metE(T(d), 'cm'), F(T(l + b), 'Eerst kwadrateren, dan optellen, dan de wortel.')), { e:'cm' }),
+              kstap(R, 'Vanuit A: CG = ' + h + ' cm is overstaand, AC = ' + T(d) + ' cm is aanliggend. Welke verhouding?', TAN, [], 'Overstaand en aanliggend: tan.', { orde:VL }),
+              St('∠GAC = tan⁻¹(' + h + ' : ' + T(d) + ') ≈ (rond af op 1 decimaal)', af(hk, 1, '°', ['graden']), 'Tik in: tan⁻¹(' + h + ' : ' + T(d) + ') = ' + T(hk, { dec:4 }) + '…', Fz(af(hk, 1, '°'), F(r1(90 - hk), 'Dat is de andere scherpe hoek, bij G.', r1(Math.atan(d / h) / RAD), 'Andersom: overstaand gedeeld door aanliggend.')), { e:'°' })];
+          } else {
+            var z, AM;
+            do { z = R.heel(3, 10) * 2; h = R.heel(4, 20); AM = z * Math.SQRT2 / 2; hk = Math.atan(h / AM) / RAD; } while (grens(hk, 1) || grens(AM, 2) || !eens(Math.atan(h / rnd(AM, 2)) / RAD, hk, 1));
+            bl = fPir(z, z, h, { maten:[[0, 1, z + ' cm'], [1, 2, z + ' cm']], lijnen:[[0, 2, 3, true], [5, 4, 3, true], [0, 4, 1]], teksten:[{ p:[z / 2, Math.min(h, 1.3 * z) / 2, z / 2], t:h + ' cm', dx:-10, a:'end', k:K[3] }] });
+            vr = '∠TAM = ?'; ctx = 'Piramide T.ABCD heeft een vierkant grondvlak met zijden van ' + z + ' cm. De top T ligt ' + h + ' cm recht boven M, het midden van het grondvlak. Bereken de hoek tussen de ribbe TA en het grondvlak, ∠TAM. Rond af op 1 decimaal. De figuur is niet op schaal.';
+            st = [kstap(R, 'In welke driehoek zit ∠TAM, met een rechte hoek?', 'driehoek AMT, rechte hoek bij M', ['driehoek ABT, rechte hoek bij B', 'driehoek AMT, rechte hoek bij A'], 'TM staat recht omhoog op het grondvlak, dus de rechte hoek zit bij M.'),
+              St('AC = √(' + z + '² + ' + z + '²) en AM is de helft. AM ≈ (rond af op 2 decimalen)', af(AM, 2, 'cm'), 'AC = √' + (2 * z * z) + ' = ' + T(2 * AM, { dec:4 }) + '…, de helft is ' + T(AM, { dec:4 }) + '…', Fz(af(AM, 2, 'cm'), F(r2(2 * AM), 'Dat is AC. M ligt in het midden: neem de helft.', T(z / 2), 'Dat is de helft van een zijde. M ligt midden op de diagonaal.')), { e:'cm' }),
+              kstap(R, 'Vanuit A: TM = ' + h + ' cm is overstaand, AM is aanliggend. Welke verhouding?', TAN, [], 'Overstaand en aanliggend: tan.', { orde:VL }),
+              St('∠TAM = tan⁻¹(' + h + ' : ' + r2(AM) + ') ≈ (rond af op 1 decimaal)', af(hk, 1, '°', ['graden']), 'Tik in: tan⁻¹(' + h + ' : ' + r2(AM) + ') = ' + T(Math.atan(h / rnd(AM, 2)) / RAD, { dec:4 }) + '…', Fz(af(hk, 1, '°'), F(r1(90 - hk), 'Dat is de hoek bij T.', r1(Math.atan(h / (z / 2)) / RAD), 'Gebruik AM, het halve diagonaal, niet de halve zijde.')), { e:'°' })];
+          }
+          return { vraag:vr, context:ctx, eenheid:'°', beeld:bl, zelfBeeld:bl, stappen:st };
+        } }
+    ] });
+
+  /* ================= aanzichten en werktekeningen ================= */
+  var VOORWERP = [
+    { n:'Een kast', l:120, b:45, h:180, e:'cm', s:[10, 20] }, { n:'Een bureau', lw:'het', l:140, b:70, h:75, e:'cm', s:[10, 20] }, { n:'Een koelkast', l:60, b:65, h:180, e:'cm', s:[10, 20] },
+    { n:'Een aquarium', lw:'het', l:80, b:35, h:45, e:'cm', s:[5, 10] }, { n:'Een schoenendoos', l:34, b:20, h:12, e:'cm', s:[2] }, { n:'Een container', l:600, b:240, h:260, e:'cm', s:[50, 100] },
+    { n:'Een tuinhuis', lw:'het', l:300, b:250, h:220, e:'cm', s:[25, 50] }, { n:'Een kist', l:90, b:50, h:40, e:'cm', s:[5, 10] }, { n:'Een boekenkast', l:80, b:30, h:200, e:'cm', s:[10, 20] },
+    { n:'Een vrachtwagenbak', l:1350, b:250, h:270, e:'cm', s:[50] } ];
+  var AANZ = { voor:['het vooraanzicht', 'de lengte en de hoogte'], boven:['het bovenaanzicht', 'de lengte en de breedte'], zij:['het zijaanzicht', 'de breedte en de hoogte'] };
+  /* een aanzicht op schaal: twee getallen in willekeurige volgorde, met of zonder cm en het woord bij */
+  function paarCm(p, q){
+    return function(v){
+      var l = (String(v).toLowerCase().replace(/(\d),(\d)/g, '$1.$2').match(/\d+(\.\d+)?/g) || []).map(Number);
+      return l.length === 2 && ((Math.abs(l[0] - p) < 1e-9 && Math.abs(l[1] - q) < 1e-9) || (Math.abs(l[0] - q) < 1e-9 && Math.abs(l[1] - p) < 1e-9));
+    };
+  }
+  G.push({ groep:{ id:'wvm-m-ruimte', niveau:'vmbo', domein:'meetkunde', naam:'Aanzichten en werktekeningen',
+      uit:'Een voorwerp teken je vaak van drie kanten: van voren, van boven en van opzij. Op een werktekening staan die aanzichten op schaal.' },
+    doelen:[
+      { id:'wvm-m-werktek', naam:'Een aanzicht op schaal', kort:'Kies welke twee maten in het aanzicht zitten en deel ze door het schaalgetal',
+        uit:'<p>Bij een balkvormig voorwerp zie je van elke kant een <b>rechthoek</b>. Welke maten erin zitten, hangt af van de kant:</p><ul><li><b>vooraanzicht</b> (van voren): de lengte en de hoogte;</li><li><b>bovenaanzicht</b> (van boven): de lengte en de breedte (de diepte);</li><li><b>zijaanzicht</b> (van opzij): de breedte en de hoogte.</li></ul><p>Op een <b>werktekening</b> teken je zo\'n aanzicht op <b>schaal</b>. Bij schaal 1 : 20 is 1 cm op papier 20 cm in het echt. Deel dus elke echte maat door 20: een kast van 120 cm lang en 180 cm hoog wordt een rechthoek van 6 cm bij 9 cm.</p>',
+        wanneer:'je een voorwerp op schaal moet tekenen, bijvoorbeeld bij techniek.',
+        maak:function(R){
+          var v = R.kies(VOORWERP), kant = R.kies(['voor', 'boven', 'zij']);
+          var mt = kant === 'voor' ? [v.l, v.h] : kant === 'boven' ? [v.l, v.b] : [v.b, v.h], nm = kant === 'voor' ? ['lengte', 'hoogte'] : kant === 'boven' ? ['lengte', 'breedte'] : ['breedte', 'hoogte'];
+          var goedS = v.s.filter(function(z){ return Math.abs(mt[0] / z * 10 % 1) < 1e-9 && Math.abs(mt[1] / z * 10 % 1) < 1e-9; }), sc = R.kies(goedS.length ? goedS : v.s);
+          var p = mt[0] / sc, q = mt[1] / sc, ant = T(p) + ' cm bij ' + T(q) + ' cm', ctrl = paarCm(p, q);
+          var bl = ruimte(balkPts(v.l, v.b, v.h), BALK_RIBBEN, { maten:[[0, 1, 'lengte ' + v.l + ' cm'], [0, 4, 'hoogte ' + v.h + ' cm']], teksten:[{ p:[v.l, 0, v.b / 2], t:'breedte ' + v.b + ' cm', dx:14, dy:16, a:'start' }, { p:[v.l / 2, 0, 0], t:'voorkant', dy:40, k:K[3] }], W:420, H:260, aria:'een balkvormig voorwerp met de lengte, breedte en hoogte' });
+          var OPT = [AANZ.voor[1], AANZ.boven[1], AANZ.zij[1]];
+          return { vraag:'Hoe groot wordt ' + AANZ[kant][0] + ' op de tekening?', context:v.n + ' is ' + v.l + ' cm lang, ' + v.b + ' cm breed (diep) en ' + v.h + ' cm hoog. Je tekent ' + AANZ[kant][0] + ' op schaal 1 : ' + sc + '. Hoe groot wordt de rechthoek op je tekening? Typ zoals 6 cm bij 9 cm.', antwoord:ant, controle:ctrl, invoer:'tekst', beeld:bl, zelfBeeld:bl, stappen:[
+            kstap(R, 'Welke twee maten zie je in ' + AANZ[kant][0] + '?', AANZ[kant][1], [], kant === 'voor' ? 'Van voren zie je hoe lang en hoe hoog het is. De diepte zie je niet.' : kant === 'boven' ? 'Van boven zie je hoe lang en hoe diep het is. De hoogte zie je niet.' : 'Van opzij zie je hoe diep en hoe hoog het is. De lengte zie je niet.', { orde:OPT }),
+            St('De ' + nm[0] + ' op de tekening: ' + mt[0] + ' : ' + sc + ' =', metE(T(p), 'cm'), 'Bij schaal 1 : ' + sc + ' deel je de echte maat door ' + sc + '.', Fz(metE(T(p), 'cm'), F(T(mt[0] * sc), 'Op de tekening wordt het kleiner: delen, niet keer.')), { e:'cm' }),
+            St('De ' + nm[1] + ' op de tekening: ' + mt[1] + ' : ' + sc + ' =', metE(T(q), 'cm'), 'Ook deze maat gedeeld door ' + sc + '.', Fz(metE(T(q), 'cm'), F(T(mt[1] * sc), 'Op de tekening wordt het kleiner: delen, niet keer.')), { e:'cm' }),
+            { tekst:'De rechthoek op je tekening wordt', antwoord:[ant, T(p) + ' bij ' + T(q)], controle:ctrl, invoer:'tekst', hint:'Een rechthoek van ' + ant + '. Teken hem met je geodriehoek.' } ] };
+        } },
+      { id:'wvm-m-aanzicht-maat', naam:'Een echte maat uit een werktekening', kort:'Meet of lees de maat op de tekening en vermenigvuldig met het schaalgetal; let op welk aanzicht welke maat laat zien',
+        uit:'<p>Op een werktekening staan het vooraanzicht, het bovenaanzicht en het zijaanzicht naast elkaar, op schaal. Uit de tekening haal je de <b>echte maten</b>.</p><p>De <b>hoogte</b> zie je in het voor- en zijaanzicht, de <b>lengte</b> in het voor- en bovenaanzicht, de <b>breedte</b> (diepte) in het boven- en zijaanzicht.</p><p>Is het zijaanzicht op schaal 1 : 50 getekend als een rechthoek van 4 cm breed, dan is het voorwerp 4 × 50 = 200 cm diep.</p>',
+        wanneer:'je uit een werktekening wilt halen hoe groot iets echt is.',
+        maak:function(R){
+          var v = R.kies(VOORWERP), sc = R.kies(v.s), kant = R.kies(['voor', 'boven', 'zij']), welk;
+          var opt = kant === 'voor' ? ['lengte', 'hoogte'] : kant === 'boven' ? ['lengte', 'breedte'] : ['breedte', 'hoogte'];
+          welk = R.kies(opt);
+          var echt = welk === 'lengte' ? v.l : welk === 'breedte' ? v.b : v.h, op = echt / sc, mt = kant === 'voor' ? [v.l, v.h] : kant === 'boven' ? [v.l, v.b] : [v.b, v.h];
+          var w = mt[0] / sc, hh = mt[1] / sc, u = Math.min(260 / Math.max(w, 1), 150 / Math.max(hh, 1), 30), s2 = '', x0 = 40, y0 = 30;
+          s2 += rh(x0, y0, w * u, hh * u, K[0]) + tx(x0 + w * u / 2, y0 + hh * u + 20, T(w) + ' cm', { vet:true, fs:14 }) + tx(x0 + w * u + 8, y0 + hh * u / 2 + 5, T(hh) + ' cm', { a:'start', vet:true, fs:14 });
+          s2 += tx(x0, y0 - 10, AANZ[kant][0].replace(/^het /, '') + ', schaal 1 : ' + sc, { a:'start', vet:true, fs:14, k:K[3] });
+          var bl = svg(Math.max(320, x0 + w * u + 90), y0 + hh * u + 34, s2, AANZ[kant][0] + ' op schaal', 420);
+          var andere = opt.filter(function(x){ return x !== welk; })[0], maatOp = welk === opt[0] ? T(w) : T(hh);
+          return { vraag:'Hoe ' + (welk === 'lengte' ? 'lang' : welk === 'breedte' ? 'breed (diep)' : 'hoog') + ' is ' + (v.lw || 'de') + ' ' + v.n.toLowerCase().replace(/^een /, '') + ' echt?', context:'Hieronder staat ' + AANZ[kant][0] + ' van ' + v.n.toLowerCase() + ' op schaal 1 : ' + sc + '. Bereken de echte ' + welk + ' in cm.', eenheid:'cm', beeld:bl, zelfBeeld:bl, stappen:[
+            kstap(R, 'In ' + AANZ[kant][0] + ' zie je ' + AANZ[kant][1] + '. Welke maat op de tekening hoort bij de ' + welk + '?', maatOp + ' cm', [(welk === opt[0] ? T(hh) : T(w)) + ' cm'], 'In ' + AANZ[kant][0] + ' is de ' + opt[0] + ' de liggende zijde en de ' + opt[1] + ' de staande zijde.'),
+            St('Echte ' + welk + ' = ' + maatOp + ' ' + X + ' ' + sc + ' =', metE(T(echt), 'cm'), 'Bij schaal 1 : ' + sc + ' is 1 cm op papier ' + sc + ' cm in het echt: keer ' + sc + '.', Fz(metE(T(echt), 'cm'), F(T(rnd(op / sc, 4)), 'Van tekening naar echt is keer, niet gedeeld door.', T((welk === opt[0] ? hh : w) * sc), 'Dat is de ' + andere + '.')), { e:'cm' }) ] };
         } }
     ] });
 

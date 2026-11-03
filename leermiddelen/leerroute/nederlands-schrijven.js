@@ -1338,4 +1338,362 @@
           } }
       ] }
   ]);
+
+  /* ================= verwarrende woordparen (bij goede zinnen) ================= */
+  /* [zin, goed, fout, soort, 1 = er is een lijdend voorwerp of een heel werkwoord] */
+  var PAAR = [
+    ['Mijn telefoon ___ op tafel.', 'ligt', 'legt', 'll', 0], ['Ik ___ mijn telefoon op tafel.', 'leg', 'lig', 'll', 1],
+    ['Gisteren ___ de kat de hele middag in de zon.', 'lag', 'legde', 'll', 0], ['Mama ___ de baby gisteren om zeven uur in bed.', 'legde', 'lag', 'll', 1],
+    ['Wie heeft mijn boek op de stoel ___?', 'gelegd', 'gelegen', 'll', 1], ['De sleutels hebben de hele dag op de kast ___.', 'gelegen', 'gelegd', 'll', 0],
+    ['Ik ___ de vaas op de vensterbank.', 'zet', 'zit', 'zz', 1], ['Opa ___ elke ochtend in zijn stoel bij het raam.', 'zit', 'zet', 'zz', 0],
+    ['Wie heeft de melk in de koelkast ___?', 'gezet', 'gezeten', 'zz', 1], ['We hebben twee uur in de trein ___.', 'gezeten', 'gezet', 'zz', 0],
+    ['De fiets ___ in de schuur.', 'staat', 'zet', 'sz', 0], ['Ik ___ mijn fiets altijd in de schuur.', 'zet', 'sta', 'sz', 1],
+    ['Gisteren ___ we een uur in de rij voor de kassa.', 'stonden', 'zetten', 'sz', 0], ['Papa ___ de kerstboom gisteren in de hoek.', 'zette', 'stond', 'sz', 1],
+    ['Mijn zusje ___ al fietsen zonder zijwieltjes.', 'kan', 'kent', 'kk', 1], ['Ik ___ de buurman niet zo goed.', 'ken', 'kan', 'kk', 0],
+    ['Wij ___ morgen helaas niet komen.', 'kunnen', 'kennen', 'kk', 1], ['Ze ___ heel goed tekenen.', 'kan', 'kent', 'kk', 1],
+    ['Hij ___ mijn broer van voetbal.', 'kent', 'kan', 'kk', 0], ['___ jij de weg naar het station?', 'Ken', 'Kan', 'kk', 0] ];
+  var PAARNAAM = { ll:'liggen of leggen', zz:'zitten of zetten', sz:'staan of zetten', kk:'kennen of kunnen' };
+
+  /* ================= formuleerfouten ================= */
+  /* dubbelop: [fout, goed, overbodig stuk, [andere stukken], waarom overbodig, p(leonasme) of t(autologie), nog een foute versie] */
+  var DUBBELOP = [
+    ['De leraar tekende een ronde cirkel op het bord.', 'De leraar tekende een cirkel op het bord.', 'ronde', ['op het bord', 'tekende'], 'een cirkel is altijd rond', 'p', 'De leraar tekende een ronde cirkel.'],
+    ['Ze fluisterde zachtjes iets in mijn oor.', 'Ze fluisterde iets in mijn oor.', 'zachtjes', ['in mijn oor', 'iets'], 'fluisteren doe je altijd zacht', 'p', 'Ze fluisterde zachtjes in mijn oor.'],
+    ['Iedereen kreeg een gratis cadeautje.', 'Iedereen kreeg een cadeautje.', 'gratis', ['iedereen', 'kreeg'], 'voor een cadeautje hoef je nooit te betalen', 'p', 'Iedereen kreeg gratis een cadeautje.'],
+    ['Hij slenterde langzaam door de stad.', 'Hij slenterde door de stad.', 'langzaam', ['door de stad', 'hij'], 'slenteren is altijd langzaam lopen', 'p', 'Langzaam slenterde hij door de stad.'],
+    ['De juf herhaalde de vraag nog een keer.', 'De juf herhaalde de vraag.', 'nog een keer', ['de vraag', 'de juf'], 'herhalen is iets nog een keer doen', 'p', 'De juf herhaalde nog een keer de vraag.'],
+    ['In het toneelstuk speelt mijn broer een kleine dwerg.', 'In het toneelstuk speelt mijn broer een dwerg.', 'kleine', ['mijn broer', 'in het toneelstuk'], 'een dwerg is altijd klein', 'p', 'Mijn broer speelt een kleine dwerg.'],
+    ['De nieuwe beginners kregen een rondleiding door de school.', 'De beginners kregen een rondleiding door de school.', 'nieuwe', ['een rondleiding', 'door de school'], 'een beginner is altijd nieuw', 'p', 'De nieuwe beginners kregen een rondleiding.'],
+    ['Op het podium stond een vrouwelijke zangeres.', 'Op het podium stond een zangeres.', 'vrouwelijke', ['op het podium', 'stond'], 'een zangeres is altijd een vrouw', 'p', 'Een vrouwelijke zangeres stond op het podium.'],
+    ['De lift daalde langzaam naar beneden.', 'De lift daalde langzaam.', 'naar beneden', ['langzaam', 'de lift'], 'dalen gaat altijd naar beneden', 'p', 'De lift daalde naar beneden.'],
+    ['De ballon steeg omhoog de lucht in.', 'De ballon steeg de lucht in.', 'omhoog', ['de lucht in', 'de ballon'], 'stijgen gaat altijd omhoog', 'p', 'De ballon steeg omhoog.'],
+    ['Bij de opening kreeg iedereen gratis en voor niets een ijsje.', 'Bij de opening kreeg iedereen gratis een ijsje.', 'en voor niets', ['bij de opening', 'een ijsje'], 'gratis betekent al: voor niets', 't', 'Bij de opening kreeg iedereen voor niets gratis een ijsje.'],
+    ['Deze kluisjes zijn enkel en alleen voor leerlingen.', 'Deze kluisjes zijn alleen voor leerlingen.', 'enkel en', ['voor leerlingen', 'deze kluisjes'], 'enkel en alleen betekenen hetzelfde', 't', 'Deze kluisjes zijn alleen en enkel voor leerlingen.'],
+    ['Hij was moe, maar hij ging echter toch door.', 'Hij was moe, maar hij ging toch door.', 'echter', ['toch', 'moe'], 'maar en echter betekenen hetzelfde', 't', 'Hij was moe, maar echter ging hij door.'],
+    ['Mijn zus doet ook eveneens mee aan de wedstrijd.', 'Mijn zus doet ook mee aan de wedstrijd.', 'eveneens', ['aan de wedstrijd', 'mijn zus'], 'ook en eveneens betekenen hetzelfde', 't', 'Mijn zus doet eveneens ook mee aan de wedstrijd.'],
+    ['De trein is al reeds vertrokken.', 'De trein is al vertrokken.', 'reeds', ['vertrokken', 'de trein'], 'al en reeds betekenen hetzelfde', 't', 'De trein is reeds al vertrokken.'],
+    ['Daarna ging hij vervolgens naar huis.', 'Daarna ging hij naar huis.', 'vervolgens', ['naar huis', 'hij'], 'daarna en vervolgens betekenen hetzelfde', 't', 'Vervolgens ging hij daarna naar huis.'],
+    ['Misschien komt hij mogelijk later.', 'Misschien komt hij later.', 'mogelijk', ['later', 'hij'], 'misschien en mogelijk betekenen hetzelfde', 't', 'Mogelijk komt hij misschien later.'],
+    ['Hij liep snel en vlug naar de bus.', 'Hij liep snel naar de bus.', 'en vlug', ['naar de bus', 'liep'], 'snel en vlug betekenen hetzelfde', 't', 'Hij liep vlug en snel naar de bus.'],
+    ['De wedstrijd werd afgelast en ging niet door.', 'De wedstrijd werd afgelast.', 'en ging niet door', ['de wedstrijd', 'werd'], 'afgelast betekent al: het gaat niet door', 't', 'De wedstrijd ging niet door en werd afgelast.'] ];
+  /* samentrekking: [fout, goed, het stuk dat er één keer staat, soort fout, [andere stukken], nog een foute versie] */
+  var SAMTREK = [
+    ['Ik ben naar huis gefietst en tv gekeken.', 'Ik ben naar huis gefietst en heb tv gekeken.', 'ben', 'hulp', ['naar huis', 'tv'], 'Ik ben naar huis gefietst en ben tv gekeken.'],
+    ['Hij heeft hard gewerkt en daarna naar huis gegaan.', 'Hij heeft hard gewerkt en is daarna naar huis gegaan.', 'heeft', 'hulp', ['hard', 'daarna'], 'Hij heeft hard gewerkt en heeft daarna naar huis gegaan.'],
+    ['Ze is gisteren jarig geweest en veel cadeaus gekregen.', 'Ze is gisteren jarig geweest en heeft veel cadeaus gekregen.', 'is', 'hulp', ['gisteren', 'veel cadeaus'], 'Ze is gisteren jarig geweest en is veel cadeaus gekregen.'],
+    ['Ik heb een fiets gekocht en mijn broer een scooter.', 'Ik heb een fiets gekocht en mijn broer heeft een scooter gekocht.', 'heb', 'getal', ['een fiets', 'mijn broer'], 'Ik heb een fiets gekocht en mijn broer heb een scooter gekocht.'],
+    ['Wij gaan naar de film en jij naar het zwembad.', 'Wij gaan naar de film en jij gaat naar het zwembad.', 'gaan', 'getal', ['naar de film', 'jij'], 'Wij gaan naar de film en jij gaan naar het zwembad.'],
+    ['Mijn ouders werken in de zorg en mijn zus in een winkel.', 'Mijn ouders werken in de zorg en mijn zus werkt in een winkel.', 'werken', 'getal', ['in de zorg', 'mijn zus'], 'Mijn ouders werken in de zorg en mijn zus werken in een winkel.'],
+    ['Ik heb een hond en hem gisteren nog uitgelaten.', 'Ik heb een hond en ik heb hem gisteren nog uitgelaten.', 'heb', 'betekenis', ['een hond', 'gisteren'], 'Ik heb een hond, hem gisteren nog uitgelaten.'],
+    ['Mijn opa heeft een moestuin en daar vorige week bonen in geplant.', 'Mijn opa heeft een moestuin en hij heeft daar vorige week bonen in geplant.', 'heeft', 'betekenis', ['een moestuin', 'vorige week'], 'Mijn opa heeft een moestuin en is daar vorige week bonen in geplant.'],
+    ['Het boek is spannend en lees ik in één avond uit.', 'Het boek is spannend en ik lees het in één avond uit.', 'het boek', 'functie', ['spannend', 'in één avond'], 'Het boek is spannend en leest in één avond uit.'],
+    ['Mijn fiets is gestolen en heeft de politie nog niet gevonden.', 'Mijn fiets is gestolen en de politie heeft hem nog niet gevonden.', 'mijn fiets', 'functie', ['gestolen', 'de politie'], 'Mijn fiets is gestolen en is de politie nog niet gevonden.'],
+    ['Wij hebben een taart gebakken en is heel lekker geworden.', 'Wij hebben een taart gebakken en die is heel lekker geworden.', 'een taart', 'functie', ['wij', 'heel lekker'], 'Wij hebben een taart gebakken en zijn heel lekker geworden.'],
+    ['Tom kocht een ijsje en werd door zijn zus opgegeten.', 'Tom kocht een ijsje en dat werd door zijn zus opgegeten.', 'een ijsje', 'functie', ['Tom', 'zijn zus'], 'Tom kocht een ijsje en hij werd door zijn zus opgegeten.'],
+    ['We verkochten het huis en tuin aan een jong stel.', 'We verkochten het huis en de tuin aan een jong stel.', 'het', 'lidwoord', ['huis', 'een jong stel'], 'We verkochten het huis en het tuin aan een jong stel.'],
+    ['Ik heb de deur en raam dichtgedaan.', 'Ik heb de deur en het raam dichtgedaan.', 'de', 'lidwoord', ['deur', 'dichtgedaan'], 'Ik heb de deur en de raam dichtgedaan.'],
+    ['Hij houdt en zorgt goed voor zijn konijn.', 'Hij houdt van zijn konijn en zorgt er goed voor.', 'voor zijn konijn', 'voorzetsel', ['hij', 'goed'], 'Hij houdt voor en zorgt goed voor zijn konijn.'],
+    ['Ze was blij en trots op haar diploma.', 'Ze was blij met haar diploma en trots erop.', 'op haar diploma', 'voorzetsel', ['ze', 'blij'], 'Ze was blij op en trots op haar diploma.'] ];
+  var SAMTYPE = { hulp:'het tweede deel heeft een ander hulpwerkwoord nodig: hebben in plaats van zijn, of andersom',
+    getal:'het tweede deel heeft een andere vorm van hetzelfde werkwoord nodig, omdat het onderwerp anders is',
+    betekenis:'het werkwoord is in het ene deel een gewoon werkwoord en in het andere deel een hulpwerkwoord',
+    functie:'het woord is in het ene deel een ander zinsdeel dan in het andere deel, bijvoorbeeld onderwerp en lijdend voorwerp',
+    lidwoord:'het tweede woord heeft een ander lidwoord nodig',
+    voorzetsel:'het tweede deel heeft een ander voorzetsel nodig' };
+  /* onduidelijke verwijzing: [zin, verwijswoord, kandidaat 1, kandidaat 2, duidelijke zin, nog steeds onduidelijk] */
+  var ONDUID = [
+    ['Tom belde zijn vader, omdat hij de sleutel kwijt was.', 'hij', 'Tom', 'zijn vader', 'Tom was de sleutel kwijt en belde daarom zijn vader.', 'Tom belde zijn vader, want hij was de sleutel kwijt.'],
+    ['Lisa gaf haar zus een cadeau toen ze jarig was.', 'ze', 'Lisa', 'haar zus', 'Toen haar zus jarig was, gaf Lisa haar een cadeau.', 'Lisa gaf haar zus een cadeau, toen ze jarig was.'],
+    ['De trainer sprak met de keeper nadat hij een fout had gemaakt.', 'hij', 'de trainer', 'de keeper', 'Nadat de keeper een fout had gemaakt, sprak de trainer met hem.', 'De trainer sprak met de keeper, omdat hij een fout had gemaakt.'],
+    ['Sara zei tegen Emma dat ze gewonnen had.', 'ze', 'Sara', 'Emma', 'Sara zei tegen Emma: ‘Ik heb gewonnen.’', 'Sara zei tegen Emma dat zij gewonnen had.'],
+    ['De hond beet de kat, en toen rende hij weg.', 'hij', 'de hond', 'de kat', 'De hond beet de kat, en toen rende de kat weg.', 'De hond beet de kat en hij rende toen weg.'],
+    ['Mijn vader en mijn opa gingen vissen, maar hij ving niets.', 'hij', 'mijn vader', 'mijn opa', 'Mijn vader en mijn opa gingen vissen, maar mijn opa ving niets.', 'Mijn vader en mijn opa gingen vissen, maar hij ving helemaal niets.'],
+    ['Het boek lag naast het schrift, maar het was nat geworden.', 'het', 'het boek', 'het schrift', 'Het boek lag naast het schrift, maar het schrift was nat geworden.', 'Het boek lag naast het schrift, en het was nat geworden.'],
+    ['Daan ging met Milan naar de bioscoop, omdat hij kaartjes had gewonnen.', 'hij', 'Daan', 'Milan', 'Daan had kaartjes gewonnen, dus hij ging met Milan naar de bioscoop.', 'Daan ging met Milan naar de bioscoop, want hij had kaartjes gewonnen.'],
+    ['De leraar gaf de leerling een compliment toen hij binnenkwam.', 'hij', 'de leraar', 'de leerling', 'Toen de leerling binnenkwam, gaf de leraar hem een compliment.', 'De leraar gaf de leerling een compliment, toen hij binnenkwam.'],
+    ['De auto botste tegen de bus, maar hij had geen schade.', 'hij', 'de auto', 'de bus', 'De auto botste tegen de bus, maar de bus had geen schade.', 'De auto botste tegen de bus, maar hij had helemaal geen schade.'],
+    ['Noor leende de fiets van haar zus, omdat die van haar kapot was.', 'haar', 'Noor', 'haar zus', 'Noor leende de fiets van haar zus, omdat haar eigen fiets kapot was.', 'Noor leende de fiets van haar zus, omdat haar fiets kapot was.'],
+    ['De gemeente en de provincie zijn het oneens, want zij wil een nieuwe weg.', 'zij', 'de gemeente', 'de provincie', 'De gemeente en de provincie zijn het oneens, want de gemeente wil een nieuwe weg.', 'De gemeente en de provincie zijn het oneens, omdat zij een nieuwe weg wil.'] ];
+  /* instanties: [zin, waar het naar verwijst, [andere woorden], 1 = meer mensen] */
+  var INST = [
+    ['De gemeente heeft ___ plannen voor het park bekendgemaakt.', 'de gemeente', ['het park', 'plannen'], 0],
+    ['De school viert dit jaar ___ honderdste verjaardag.', 'de school', ['dit jaar', 'verjaardag'], 0],
+    ['De regering legt ___ plannen voor aan de Tweede Kamer.', 'de regering', ['de Tweede Kamer', 'plannen'], 0],
+    ['De politie heeft ___ onderzoek naar de inbraak afgerond.', 'de politie', ['de inbraak', 'onderzoek'], 0],
+    ['De supermarkt verlaagt deze week ___ prijzen.', 'de supermarkt', ['deze week', 'prijzen'], 0],
+    ['De bibliotheek verruimt vanaf maart ___ openingstijden.', 'de bibliotheek', ['maart', 'openingstijden'], 0],
+    ['De club opent volgende maand ___ nieuwe kantine.', 'de club', ['volgende maand', 'kantine'], 0],
+    ['De provincie geeft ___ geld uit aan nieuwe fietspaden.', 'de provincie', ['nieuwe fietspaden', 'geld'], 0],
+    ['De omroep zendt ___ nieuwe serie in het najaar uit.', 'de omroep', ['het najaar', 'serie'], 0],
+    ['De vereniging houdt ___ jaarvergadering in maart.', 'de vereniging', ['maart', 'jaarvergadering'], 0],
+    ['De brandweer oefent elke week met ___ nieuwe ladderwagen.', 'de brandweer', ['elke week', 'ladderwagen'], 0],
+    ['Mijn ouders vieren volgende week ___ trouwdag.', 'mijn ouders', ['volgende week', 'trouwdag'], 1],
+    ['De spelers vierden ___ overwinning in de kantine.', 'de spelers', ['de kantine', 'overwinning'], 1],
+    ['De buren verkopen ___ huis aan een jong stel.', 'de buren', ['een jong stel', 'huis'], 1],
+    ['De leerlingen moeten ___ laptop opladen voor de toets.', 'de leerlingen', ['de toets', 'laptop'], 1] ];
+  /* foutenjacht: [drie zinnen, één met {fout|goed}], [twee goede woorden uit de tekst], nog een foute vorm, uitleg] */
+  var JACHT = [
+    [['Gisteren ging ik met mijn vriendin naar de stad.', 'Ze {vind|vindt} winkelen het leukste wat er is.', 'We kwamen pas om zes uur thuis.'], ['ging', 'kwamen'], 'vint', 'Ze is hetzelfde als hij: stam + t. De stam is vind, dus vindt.'],
+    [['Op zaterdag {fietsde|fietste} ik naar mijn oma.', 'Zij woont in een klein dorp.', 'Daar is het altijd heel rustig.'], ['woont', 'altijd'], 'fietstte', 'De stam fiets eindigt op een s. Die zit in ’t kofschip, dus -te.'],
+    [['Tim wilde geen oude fiets meer.', 'Daarom heeft hij hem {verkogt|verkocht}.', 'Van het geld koopt hij een skateboard.'], ['wilde', 'koopt'], 'verkoopt', 'Verkocht schrijf je met -cht, net als gekocht.'],
+    [['Mijn zus heeft drie {katen|katten}.', 'Ze heten Mimi, Bas en Poes.', 'Elke ochtend krijgen ze brokjes.'], ['heten', 'brokjes'], 'kats', 'Kat heeft een korte a. In het meervoud verdubbel je de t: katten.'],
+    [['Wij gaan in de zomer naar {frankrijk|Frankrijk}.', 'We slapen daar in een tent.', 'Mijn vader neemt zijn fiets mee.'], ['zomer', 'tent'], 'Frankerijk', 'De naam van een land schrijf je met een hoofdletter.'],
+    [['{Wordt|Word} jij ook lid van onze club?', 'We trainen elke woensdag.', 'Nieuwe leden zijn altijd welkom.'], ['trainen', 'welkom'], 'Wort', 'Staat jij achter de persoonsvorm, dan komt er geen t: word jij.'],
+    [['Sara {antwoorde|antwoordde} niet op mijn bericht.', 'Misschien was haar telefoon leeg.', 'Ik bel haar morgen wel even.'], ['was', 'bel'], 'antwoorte', 'De stam is antwoord. Daar komt -de achter: antwoordde, met twee keer een d.'],
+    [['Het ongeluk is gisteren {gebeurt|gebeurd}.', 'Een jongen viel van het klimrek.', 'Gelukkig had hij niets gebroken.'], ['viel', 'gebroken'], 'gebeurdt', 'Gebeurd is hier een voltooid deelwoord. Maak het langer: de gebeurde dingen. Dus met een d.'],
+    [['Onze nieuwe buren zijn erg {vriendelyk|vriendelijk}.', 'Ze brachten zelfs een taart.', 'Daar waren we heel blij mee.'], ['brachten', 'blij'], 'vrindelijk', 'De uitgang -lijk schrijf je met ij.'],
+    [['De bus {vertrekd|vertrekt} om half acht.', 'Kom dus op tijd naar de halte.', 'Anders moet je lopen.'], ['halte', 'lopen'], 'vertreks', 'De bus is hetzelfde als hij: stam vertrek + t.'],
+    [['Ik heb gisteren mijn {huisewerk|huiswerk} vergeten.', 'De leraar was daar niet blij mee.', 'Vandaag neem ik het wel mee.'], ['vergeten', 'neem'], 'huis werk', 'Huis en werk schrijf je zonder iets ertussen aan elkaar: huiswerk.'],
+    [['Mijn moeder werkt in een {ziekehuis|ziekenhuis}.', 'Ze is daar verpleegkundige.', 'Soms moet ze ook nachtdiensten draaien.'], ['verpleegkundige', 'nachtdiensten'], 'ziekenhuiz', 'Ziekenhuis schrijf je met een tussen-n: zieken + huis.'],
+    [['We hebben de hele middag {gevoetbalt|gevoetbald}.', 'Ons team won met drie tegen een.', 'Daarna aten we patat.'], ['won', 'aten'], 'gevoetbalde', 'De stam voetbal eindigt niet op een letter uit ’t kofschip, dus een d. Verlengen helpt ook: gevoetbalde.'],
+    [['Noor {verhuisd|verhuist} volgende week naar Groningen.', 'Ze gaat daar studeren.', 'We gaan haar heel erg missen.'], ['studeren', 'missen'], 'verhuizd', 'Hier is het de persoonsvorm in de tegenwoordige tijd: Noor verhuist, stam + t.'],
+    [['Op {Woensdag|woensdag} zijn we om twaalf uur vrij.', 'Dan gaan we vaak zwemmen.', 'Het zwembad is vlak bij school.'], ['zwemmen', 'zwembad'], 'Woendsdag', 'De dagen van de week schrijf je met een kleine letter.'],
+    [['Ik {zij|zei} tegen mijn vriend dat hij moest opschieten.', 'De film begon namelijk al om acht uur.', 'We waren net op tijd.'], ['moest', 'begon'], 'zijde', 'De verleden tijd van zeggen is zei, met ei.'] ];
+  /* beknopte bijzin: [fout, goed, onderwerp hoofdzin, wat er letterlijk staat, [andere woorden], nog een foute versie] */
+  var BEKNOPT = [
+    ['Na gegeten te hebben, ging de bel.', 'Nadat we hadden gegeten, ging de bel.', 'de bel', 'De bel had gegeten.', ['wij'], 'De bel ging, na gegeten te hebben.'],
+    ['Thuisgekomen, stond het eten al klaar.', 'Toen ik thuiskwam, stond het eten al klaar.', 'het eten', 'Het eten kwam thuis.', ['ik'], 'Het eten stond al klaar, thuisgekomen.'],
+    ['Fietsend naar school, begon het te regenen.', 'Terwijl ik naar school fietste, begon het te regenen.', 'het', 'Het fietste naar school.', ['ik', 'school'], 'Het begon te regenen, fietsend naar school.'],
+    ['Na de film gezien te hebben, werd de zaal schoongemaakt.', 'Nadat wij de film hadden gezien, werd de zaal schoongemaakt.', 'de zaal', 'De zaal had de film gezien.', ['wij', 'de film'], 'De zaal werd schoongemaakt, na de film gezien te hebben.'],
+    ['Om goed te kunnen leren, moet de televisie uit.', 'Om goed te kunnen leren, moet je de televisie uitzetten.', 'de televisie', 'De televisie wil goed leren.', ['je'], 'De televisie moet uit, om goed te kunnen leren.'],
+    ['Lezend in de trein, viel mijn telefoon op de grond.', 'Terwijl ik in de trein las, viel mijn telefoon op de grond.', 'mijn telefoon', 'Mijn telefoon las in de trein.', ['ik', 'de grond'], 'Mijn telefoon viel op de grond, lezend in de trein.'],
+    ['Na lang te hebben getwijfeld, viel de keuze op een rode jas.', 'Nadat ik lang had getwijfeld, koos ik een rode jas.', 'de keuze', 'De keuze had lang getwijfeld.', ['ik', 'een rode jas'], 'De keuze viel op een rode jas, na lang te hebben getwijfeld.'],
+    ['Wakker geworden, scheen de zon al in mijn kamer.', 'Toen ik wakker werd, scheen de zon al in mijn kamer.', 'de zon', 'De zon werd wakker.', ['ik', 'mijn kamer'], 'De zon scheen al in mijn kamer, wakker geworden.'],
+    ['Na mijn huiswerk gemaakt te hebben, belde mijn vriendin.', 'Nadat ik mijn huiswerk had gemaakt, belde mijn vriendin.', 'mijn vriendin', 'Mijn vriendin had mijn huiswerk gemaakt.', ['ik', 'mijn huiswerk'], 'Mijn vriendin belde, na mijn huiswerk gemaakt te hebben.'],
+    ['Boos weglopend, sloeg de deur hard dicht.', 'Toen hij boos wegliep, sloeg de deur hard dicht.', 'de deur', 'De deur liep boos weg.', ['hij'], 'De deur sloeg hard dicht, boos weglopend.'],
+    ['Na het hele weekend geoefend te hebben, ging de presentatie heel goed.', 'Nadat we het hele weekend hadden geoefend, ging de presentatie heel goed.', 'de presentatie', 'De presentatie had het hele weekend geoefend.', ['we', 'het weekend'], 'De presentatie ging heel goed, na het hele weekend geoefend te hebben.'],
+    ['Wachtend op de bus, begon het te sneeuwen.', 'Terwijl ik op de bus wachtte, begon het te sneeuwen.', 'het', 'Het wachtte op de bus.', ['ik', 'de bus'], 'Het begon te sneeuwen, wachtend op de bus.'],
+    ['Om op tijd te zijn, ging de wekker om zes uur.', 'Om op tijd te zijn, zette ik de wekker op zes uur.', 'de wekker', 'De wekker wilde op tijd zijn.', ['ik', 'zes uur'], 'De wekker ging om zes uur, om op tijd te zijn.'],
+    ['Na een uur gezocht te hebben, lag de sleutel gewoon onder de bank.', 'Nadat ik een uur had gezocht, vond ik de sleutel gewoon onder de bank.', 'de sleutel', 'De sleutel had een uur gezocht.', ['ik', 'de bank'], 'De sleutel lag gewoon onder de bank, na een uur gezocht te hebben.'] ];
+  /* zinsbouw: [fout, beter, soort, nog een foute versie] */
+  var ZINSBOUW = [
+    ['De door de gemeente in 2020 voor veel geld gebouwde sporthal is gesloten.', 'De sporthal die de gemeente in 2020 voor veel geld bouwde, is gesloten.', 'tang', 'De in 2020 door de gemeente voor veel geld gebouwde sporthal is gesloten.'],
+    ['Het door de leerlingen van klas 2B tijdens de projectweek gemaakte filmpje won een prijs.', 'Het filmpje dat de leerlingen van klas 2B tijdens de projectweek maakten, won een prijs.', 'tang', 'Het tijdens de projectweek door de leerlingen van klas 2B gemaakte filmpje won een prijs.'],
+    ['Wij hebben de door onze buren op de stoep achtergelaten vuilniszakken weggebracht.', 'Wij hebben de vuilniszakken weggebracht die onze buren op de stoep hadden achtergelaten.', 'tang', 'Wij hebben de op de stoep door onze buren achtergelaten vuilniszakken weggebracht.'],
+    ['De gisteren door de politie na een lange achtervolging aangehouden man is weer vrij.', 'De man die de politie gisteren na een lange achtervolging aanhield, is weer vrij.', 'tang', 'De na een lange achtervolging gisteren door de politie aangehouden man is weer vrij.'],
+    ['Ik heb, omdat de bus te laat was en ik ook nog mijn sleutels kwijt was, de eerste les gemist.', 'Ik heb de eerste les gemist, omdat de bus te laat was en ik ook nog mijn sleutels kwijt was.', 'tang', 'Ik heb, omdat ik mijn sleutels kwijt was en de bus ook nog te laat was, de eerste les gemist.'],
+    ['Zij gaat, als het morgen niet regent en haar vader de auto niet nodig heeft, met de auto naar Utrecht.', 'Als het morgen niet regent en haar vader de auto niet nodig heeft, gaat zij met de auto naar Utrecht.', 'tang', 'Zij gaat, als haar vader de auto niet nodig heeft en het morgen niet regent, met de auto naar Utrecht.'],
+    ['Het doen van een aanvraag voor een vergunning gebeurt via de website.', 'Je vraagt een vergunning aan via de website.', 'naam', 'Het aanvragen van een vergunning vindt plaats via de website.'],
+    ['Na het voltooien van de verbouwing van de kantine vindt de opening plaats.', 'Als de kantine verbouwd is, gaat hij weer open.', 'naam', 'Na de voltooiing van de verbouwing van de kantine vindt de opening plaats.'],
+    ['Het maken van huiswerk heeft bij veel leerlingen een vermindering van hun vrije tijd tot gevolg.', 'Veel leerlingen hebben minder vrije tijd doordat ze huiswerk maken.', 'naam', 'Het maken van huiswerk leidt bij veel leerlingen tot een vermindering van de vrije tijd.'],
+    ['Na het uitbreken van de griep werd overgegaan tot het sluiten van de school.', 'Toen de griep uitbrak, ging de school dicht.', 'naam', 'Na het uitbreken van de griep vond de sluiting van de school plaats.'],
+    ['Het verbeteren van de bereikbaarheid van het station is het doel van de aanleg van de nieuwe weg.', 'De nieuwe weg moet het station beter bereikbaar maken.', 'naam', 'De aanleg van de nieuwe weg heeft de verbetering van de bereikbaarheid van het station als doel.'],
+    ['Bij het uitvallen van een les vindt de opvang van leerlingen in de mediatheek plaats.', 'Valt een les uit, dan ga je naar de mediatheek.', 'naam', 'Bij uitval van een les vindt opvang van de leerlingen in de mediatheek plaats.'],
+    ['Na de vakantie hebben we besloten om de school, die al jaren te klein is, gaan we verbouwen.', 'Na de vakantie gaan we de school verbouwen, want die is al jaren te klein.', 'breuk', 'Na de vakantie hebben we besloten om de school, die al jaren te klein is, gaan verbouwen.'],
+    ['Toen ik thuiskwam en mijn moeder zei dat het eten klaar was, dus ging ik aan tafel.', 'Toen ik thuiskwam, zei mijn moeder dat het eten klaar was, dus ging ik aan tafel.', 'breuk', 'Toen ik thuiskwam en mijn moeder zei dat het eten klaar was, dus ik ging aan tafel.'],
+    ['Wat ik heel jammer vind aan dit boek, het einde is erg vaag.', 'Wat ik heel jammer vind aan dit boek, is dat het einde erg vaag is.', 'breuk', 'Wat ik heel jammer vind aan dit boek, het einde is vaag.'],
+    ['Iedereen die zijn huiswerk niet heeft gemaakt, moeten jullie na de les blijven.', 'Iedereen die zijn huiswerk niet heeft gemaakt, moet na de les blijven.', 'breuk', 'Iedereen die zijn huiswerk niet hebben gemaakt, moeten na de les blijven.'],
+    ['Omdat ik ziek was en daarom kon ik niet naar het feest.', 'Omdat ik ziek was, kon ik niet naar het feest.', 'breuk', 'Omdat ik ziek was en daarom niet naar het feest kon.'] ];
+  var ZBTYPE = { tang:['tangconstructie', 'twee delen die bij elkaar horen, staan ver uit elkaar door een lang stuk ertussen'],
+    naam:['naamwoordstijl', 'er staan veel zelfstandige naamwoorden waar je ook gewone werkwoorden kunt gebruiken'],
+    breuk:['zinsbreuk (anakoloet)', 'de zin begint op de ene manier en gaat op een andere manier verder'] };
+  /* vaste voorzetsels: [zin, goed voorzetsel, [foute voorzetsels], woord dat het voorzetsel vraagt, [andere woorden]] */
+  var VZ = [
+    ['Ze heeft veel interesse ___ geschiedenis.', 'in', ['voor', 'aan'], 'interesse', ['geschiedenis', 'heeft']],
+    ['Hij is erg geïnteresseerd ___ voetbal.', 'in', ['voor', 'aan'], 'geïnteresseerd', ['voetbal', 'erg']],
+    ['Ik ben het niet eens ___ die beslissing.', 'met', ['over', 'aan'], 'eens', ['beslissing', 'niet']],
+    ['Hij is verliefd ___ een meisje uit zijn klas.', 'op', ['met', 'aan'], 'verliefd', ['meisje', 'klas']],
+    ['Ik verheug me ___ de vakantie.', 'op', ['aan', 'over'], 'verheug', ['vakantie', 'me']],
+    ['Ze is bang ___ spinnen.', 'voor', ['op', 'aan'], 'bang', ['spinnen', 'is']],
+    ['Of we gaan, hangt af ___ het weer.', 'van', ['aan', 'op'], 'hangt af', ['het weer', 'gaan']],
+    ['Hij heeft last ___ zijn knie.', 'van', ['met', 'aan'], 'last', ['knie', 'heeft']],
+    ['We moeten rekening houden ___ de buren.', 'met', ['aan', 'op'], 'rekening houden', ['de buren', 'moeten']],
+    ['Ze doet mee ___ de wedstrijd.', 'aan', ['op', 'in'], 'doet mee', ['de wedstrijd', 'ze']],
+    ['Mijn zus is goed ___ wiskunde.', 'in', ['met', 'op'], 'goed', ['wiskunde', 'mijn zus']],
+    ['Ik ben trots ___ mijn broer.', 'op', ['over', 'aan'], 'trots', ['mijn broer', 'ben']],
+    ['Wij wachten al een kwartier ___ de bus.', 'op', ['naar', 'voor'], 'wachten', ['de bus', 'een kwartier']],
+    ['Hij vroeg de juf ___ een extra blad.', 'om', ['naar', 'voor'], 'vroeg', ['de juf', 'een extra blad']],
+    ['De film is gebaseerd ___ een waargebeurd verhaal.', 'op', ['aan', 'van'], 'gebaseerd', ['de film', 'verhaal']],
+    ['De school beschikt ___ een eigen sporthal.', 'over', ['van', 'met'], 'beschikt', ['de school', 'sporthal']],
+    ['Zij is verantwoordelijk ___ de planning.', 'voor', ['over', 'van'], 'verantwoordelijk', ['de planning', 'zij']],
+    ['Ik kijk uit ___ jouw antwoord.', 'naar', ['op', 'voor'], 'kijk uit', ['jouw antwoord', 'ik']] ];
+  var VZFOUT = { 'interesse voor':'Interesse voor is een veelgemaakte fout. Het is interesse in.', 'geïnteresseerd voor':'Geïnteresseerd voor is een veelgemaakte fout. Het is geïnteresseerd in.' };
+
+  /* ================= de zakelijke brief en de sollicitatiebrief ================= */
+  /* [situatie, ontvanger: [heer of mevrouw, naam] of null, betreft, slotzin] */
+  var BRIEF = [
+    ['Je schrijft de gemeente, omdat de lantaarnpaal in jouw straat al weken kapot is.', null, 'Kapotte lantaarnpaal in de Dorpsstraat', 'Ik hoop dat de lamp snel wordt gerepareerd.'],
+    ['Je schrijft de klantenservice van een webwinkel, omdat je nieuwe koptelefoon na een week kapot is.', null, 'Kapotte koptelefoon, bestelnummer 48213', 'Ik ontvang graag binnen twee weken een nieuwe koptelefoon of mijn geld terug.'],
+    ['Je schrijft mevrouw De Vries, de directeur van de sportschool, of zij de sponsorloop van je klas wil steunen.', ['mevrouw', 'De Vries'], 'Sponsoring van de sponsorloop van klas 2B', 'Ik hoor graag of u ons wilt steunen.'],
+    ['Je schrijft meneer Bakker, de eigenaar van de supermarkt, of je bij hem een snuffelstage mag lopen.', ['heer', 'Bakker'], 'Aanvraag snuffelstage', 'Ik zou het fijn vinden als ik bij u een dag mag meelopen.'],
+    ['Je schrijft de bibliotheek, omdat je een boete hebt gekregen voor een boek dat je op tijd hebt teruggebracht.', null, 'Onterechte boete voor een boek', 'Ik vraag u de boete te schrappen.'],
+    ['Je schrijft meneer Jansen, de rector van je school, met het verzoek om meer fietsenrekken.', ['heer', 'Jansen'], 'Verzoek om meer fietsenrekken', 'Ik hoop dat u ons verzoek wilt bespreken met de schoolleiding.'],
+    ['Je schrijft mevrouw Öztürk, de wethouder van sport, omdat het voetbalveld in je wijk vol gaten zit.', ['mevrouw', 'Öztürk'], 'Gaten in het voetbalveld aan de Parkweg', 'Ik hoop dat het veld snel wordt hersteld.'],
+    ['Je schrijft de klantenservice van het busbedrijf, omdat de bus de afgelopen week drie keer niet is gekomen.', null, 'Bus niet gekomen op lijn 12', 'Ik hoop dat u ervoor zorgt dat de bus voortaan wel rijdt.'] ];
+  var SOLDEEL = ['de inleiding', 'de motivatie', 'wat je te bieden hebt', 'het slot'];
+  var SOLDOET = ['hoe je aan de vacature kwam en op welke baan je solliciteert', 'waarom je deze baan wilt', 'wat je kunt en wat je al hebt gedaan', 'dat je graag op gesprek komt of hoe ze je kunnen bereiken'];
+  var SOL = [
+    ['Op uw website las ik dat u een vakkenvuller zoekt.', 0], ['Met veel interesse las ik uw vacature voor een krantenbezorger in het Dorpsblad.', 0],
+    ['Via mijn buurman hoorde ik dat u een afwashulp zoekt.', 0], ['Hierbij solliciteer ik naar de functie van medewerker bediening.', 0],
+    ['Ik wil graag bij u werken, omdat ik het leuk vind om met klanten te praten.', 1], ['Ik zoek een bijbaan waarin ik veel kan leren over koken.', 1],
+    ['Werken met dieren lijkt me geweldig, en daarom spreekt deze baan me erg aan.', 1], ['Ik kom zelf vaak in uw winkel en ik vind de sfeer er erg fijn.', 1],
+    ['Ik ben altijd op tijd en werk graag hard.', 2], ['Vorige zomer heb ik al twee maanden in een bakkerij gewerkt.', 2],
+    ['Op school sta ik bekend als iemand die goed kan samenwerken.', 2], ['Ik heb een diploma EHBO.', 2],
+    ['Graag vertel ik u in een gesprek meer over mezelf.', 3], ['Ik hoop van u te horen.', 3],
+    ['U kunt mij bellen op het nummer onder deze brief.', 3], ['Na schooltijd en in het weekend kan ik altijd langskomen voor een gesprek.', 3] ];
+
+  LEERROUTE.voeg('nederlands', [
+    { groep:{ id:'schrijf-zin' },
+      doelen:[
+        { id:'schrijf-zin-woordpaar', naam:'Liggen of leggen, kennen of kunnen', kort:'Leggen en zetten doe je met iets; kunnen gaat over iets wat je kunt doen',
+          uit:'<p><b>Liggen</b>, <b>zitten</b> en <b>staan</b> zeggen waar iets is: <i>Het boek ligt op tafel.</i></p><p><b>Leggen</b> en <b>zetten</b> zeggen dat je iets ergens neerlegt of neerzet: <i>Ik leg het boek op tafel.</i> Daar hoort altijd iets bij wat je verplaatst: een lijdend voorwerp.</p><p><b>Kennen</b> gaat over iets of iemand die je kent: <i>Ik ken haar.</i> <b>Kunnen</b> gaat over iets wat je kunt doen. Er staat dan een heel werkwoord bij: <i>Ik kan zwemmen.</i></p>',
+          wanneer:'je twijfelt tussen liggen en leggen, zitten en zetten, staan en zetten, of kennen en kunnen.',
+          maak:function(R){
+            var x = R.kies(PAAR), kk = x[3] === 'kk', zin = x[0];
+            var st = kk ?
+              V('Staat er een heel werkwoord bij, zoals fietsen of komen?', ['ja', 'nee'], x[4] ? 0 : 1, 'Kijk of er nog een werkwoord in de zin staat dat zegt wat iemand doet.') :
+              V('Doet het onderwerp iets mét iets anders? Is er iets wat verplaatst wordt?', ['ja', 'nee'], x[4] ? 0 : 1, 'Zoek wie het doet. Wordt er iets neergelegd of neergezet, of is er alleen iets ergens?');
+            return af({ vraag:zin, context:'Welk woord past op de plek van het gat: ' + PAARNAAM[x[3]] + '?',
+              beeld:function(k){ return k >= 2 ? R.teken.zin([{ t:zin.replace(GAT, x[1]), k:x[4] ? 2 : 1, label:x[1] }]) : ''; },
+              stappen:[ st,
+                K(R, 'Welk woord past?', x[1], [x[2]], kk ? (x[4] ? 'Er staat een heel werkwoord bij: dan gebruik je kunnen.' : 'Er staat geen werkwoord bij, het gaat om iets of iemand die je kent: kennen.') : (x[4] ? 'Er wordt iets verplaatst: leggen of zetten.' : 'Er wordt niets verplaatst, het zegt alleen waar iets is: liggen, zitten of staan.')) ] });
+          } }
+      ] },
+    { groep:{ id:'schrijf-form', niveau:'2F', domein:'schrijven', naam:'Formuleerfouten',
+        uit:'In een zin kan van alles misgaan, ook als elk woord goed gespeld is. Iets staat er dubbel, een woord hoort maar bij één deel van de zin, of de lezer weet niet naar wie je verwijst. Hier leer je die fouten vinden en verbeteren.' },
+      doelen:[
+        { id:'schrijf-form-dubbelop', naam:'Dubbelop: pleonasme en tautologie', kort:'Laat weg wat al in een ander woord zit of twee keer hetzelfde zegt',
+          uit:'<p>Soms zeg je iets <b>dubbel</b>. Dan kan er een stuk weg.</p><p>Bij een <b>pleonasme</b> noemt een woord een eigenschap die al in een ander woord zit: <i>een ronde cirkel</i> (een cirkel is altijd rond), <i>omhoog stijgen</i>.</p><p>Bij een <b>tautologie</b> staan twee woorden of woordgroepen met dezelfde betekenis naast elkaar: <i>enkel en alleen</i>, <i>al reeds</i>, <i>maar echter</i>.</p><p>Laat het overbodige stuk weg. De betekenis blijft hetzelfde.</p>',
+          wanneer:'een zin je wat te lang of dubbel lijkt.',
+          maak:function(R){
+            var x = R.kies(DUBBELOP), pl = x[5] === 'p';
+            return af({ vraag:x[0], context:'In deze zin staat iets dubbel. Kies de goede zin.',
+              stappen:[
+                K(R, 'Welk stuk is overbodig?', x[2], x[3], 'Welk stuk vertelt iets wat je al weet uit een ander woord in de zin?'),
+                K(R, 'Waarom is ‘' + x[2] + '’ overbodig?', x[4], trek(R, DUBBELOP.map(function(d){ return d[4]; }), 2, x[4]), 'Kijk naar het woord waar ‘' + x[2] + '’ bij hoort.'),
+                V('Is het een pleonasme of een tautologie?', ['pleonasme', 'tautologie'], pl ? 0 : 1, pl ? 'Het overbodige woord noemt een eigenschap die al in een ander woord zit.' : 'Twee woorden of woordgroepen met dezelfde betekenis staan naast elkaar.'),
+                K(R, 'Welke zin is goed?', x[1], [x[0], x[6]], 'Laat het overbodige stuk weg. De betekenis blijft hetzelfde.') ] });
+          } },
+        { id:'schrijf-form-samentrek', naam:'Foute samentrekking', kort:'Een woord mag maar één keer staan als het in beide delen precies hetzelfde is',
+          uit:'<p>In <i>Ik lees en schrijf graag</i> staat <i>ik</i> maar één keer, al hoort het bij allebei de werkwoorden. Dat heet <b>samentrekken</b>.</p><p>Dat mag alleen als het woord in <b>beide delen precies hetzelfde</b> is: dezelfde vorm en dezelfde taak.</p><p>Fout is: <i>Ik ben naar huis gefietst en tv gekeken</i>. Bij <i>gekeken</i> hoort <i>heb</i>, niet <i>ben</i>. Goed: <i>Ik ben naar huis gefietst en <b>heb</b> tv gekeken.</i></p><p>Let ook op: <i>Ik heb een fiets gekocht en mijn broer een scooter</i> (heb en heeft), <i>het huis en tuin</i> (het en de) en <i>Het boek is spannend en lees ik uit</i> (onderwerp en lijdend voorwerp).</p>',
+          wanneer:'je twee zinnen met en aan elkaar maakt en een woord weglaat.',
+          maak:function(R){
+            var x = R.kies(SAMTREK);
+            return af({ vraag:x[0], context:'In deze zin is een woord fout samengetrokken. Kies de goede zin.',
+              stappen:[
+                K(R, 'Welk stuk staat er maar één keer, maar hoort bij allebei de delen van de zin?', x[2], x[4], 'Zoek wat er na ‘en’ ontbreekt. Welk stuk uit het eerste deel moet je erbij denken?'),
+                K(R, 'Wat gaat er mis?', SAMTYPE[x[3]], trek(R, Object.keys(SAMTYPE).filter(function(k){ return k !== x[3]; }).map(function(k){ return SAMTYPE[k]; }), 2), 'Zet ‘' + x[2] + '’ in gedachten in het tweede deel. Klopt het dan nog?'),
+                K(R, 'Welke zin is goed?', x[1], [x[0], x[5]], 'Schrijf het woord dat anders moet in het tweede deel er gewoon bij.') ] });
+          } },
+        { id:'schrijf-form-verwijs', naam:'Onduidelijk verwijzen', kort:'Kan hij of ze naar twee personen verwijzen? Noem dan de naam',
+          uit:'<p>Met <i>hij, ze, het</i> of <i>haar</i> verwijs je terug naar iemand of iets. Dat gaat mis als er <b>twee mogelijkheden</b> zijn.</p><p><i>Tom belde zijn vader, omdat hij de sleutel kwijt was.</i> Wie was de sleutel kwijt: Tom of zijn vader? Dat weet de lezer niet.</p><p>Maak het duidelijk: noem de naam opnieuw, of zet de zin anders: <i>Tom was de sleutel kwijt en belde daarom zijn vader.</i></p>',
+          wanneer:'je in een zin over twee mensen of dingen schrijft en daarna hij, ze of het gebruikt.',
+          maak:function(R){
+            var x = R.kies(ONDUID), f = {};
+            f[('alleen naar ' + x[2]).toLowerCase()] = 'Kijk nog eens: ‘' + x[1] + '’ kan ook over ' + x[3] + ' gaan.';
+            f[('alleen naar ' + x[3]).toLowerCase()] = 'Kijk nog eens: ‘' + x[1] + '’ kan ook over ' + x[2] + ' gaan.';
+            return af({ vraag:x[0], context:'Deze zin is onduidelijk. Welke zin is wel duidelijk?',
+              stappen:[
+                K(R, 'Naar wie of wat kan ‘' + x[1] + '’ verwijzen?', 'naar ' + x[2] + ' én naar ' + x[3], ['alleen naar ' + x[2], 'alleen naar ' + x[3]], 'Probeer ‘' + x[1] + '’ te vervangen door ' + x[2] + ', en daarna door ' + x[3] + '. Kan het allebei?', { fout:f }),
+                K(R, 'Welke zin is duidelijk?', x[4], [x[0], x[5]], 'Zoek de zin waarin je zeker weet over wie het gaat.') ] });
+          } },
+        { id:'schrijf-form-instantie', naam:'De school en haar leerlingen', kort:'Een instantie met de is één ding: haar (of zijn), nooit hun',
+          uit:'<p>Een <b>instantie</b> zoals <i>de gemeente, de school, de regering</i> of <i>de politie</i> bestaat uit veel mensen. Toch is het taalkundig <b>één</b> ding.</p><p>Verwijs je ernaar, dan schrijf je <b>haar</b> (of <b>zijn</b>), nooit <i>hun</i>: <i>De gemeente maakt <b>haar</b> plannen bekend.</i></p><p>Gaat het echt over meer mensen, zoals <i>de buren</i> of <i>mijn ouders</i>, dan schrijf je wel <b>hun</b>.</p>',
+          wanneer:'je in een formele tekst schrijft over een gemeente, een school, een club of een bedrijf.',
+          maak:function(R){
+            var x = R.kies(INST), mv = x[3] === 1, ant = mv ? 'hun' : 'haar', f = {};
+            if (!mv) f.hun = '‘' + hoofd(x[1]) + '’ is één instantie. Dan schrijf je haar (of zijn), nooit hun.';
+            f.hen = 'Hen gebruik je niet voor een woord dat zegt van wie iets is.';
+            return af({ vraag:x[0], context:'Welk woord past op de plek van het gat?',
+              beeld:function(k){ return k >= 3 ? R.teken.zin([{ t:x[0].replace(GAT, ant), k:mv ? 3 : 2, label:ant }]) : ''; },
+              stappen:[
+                K(R, 'Naar wie of wat verwijst het woord op de plek van het gat?', x[1], x[2], 'Van wie zijn de dingen na het gat? Kijk naar het onderwerp.'),
+                V('Is ‘' + x[1] + '’ één instantie, of zijn het meer mensen?', ['één instantie of één ding', 'meer mensen'], mv ? 1 : 0, mv ? 'Het gaat over meer mensen.' : 'Een instantie met de is taalkundig één ding.'),
+                K(R, 'Welk woord past?', ant, ['haar', 'hun', 'hen'].filter(function(w){ return w !== ant; }), mv ? 'Meer mensen: hun.' : 'Eén instantie: haar.', { fout:f }) ] });
+          } },
+        { id:'schrijf-form-foutenjacht', naam:'Foutenjacht in een tekst', kort:'Lees zin voor zin en let op werkwoorden, hoofdletters en lastige woorden',
+          uit:'<p>Een tekst nakijken doe je <b>zin voor zin</b>. Lees langzaam, alsof je de tekst voor het eerst ziet.</p><p>Let vooral op: <b>werkwoorden</b> (d, t of dt; de of te), <b>hoofdletters</b> (namen, landen, het begin van een zin) en <b>lastige woorden</b> (verdubbelen, ei of ij, -lijk, tussen-n).</p><p>Twijfel je? Pas de regel toe die je kent, zoals ’t kofschip of het verlengtrucje.</p>',
+          wanneer:'je je eigen tekst of die van een ander nakijkt.',
+          maak:function(R){
+            var x = R.kies(JACHT), zi = 0, fout = '', goed = '';
+            var zinnen = x[0].map(function(z, i){ return z.replace(/\{([^|}]+)\|([^}]+)\}/, function(a, f, g){ zi = i; fout = f; goed = g; return f; }); });
+            var woord = K(R, 'Welk woord is fout?', fout, x[1], 'Lees zin ' + (zi + 1) + ' woord voor woord.');
+            var op = { vraag:'Welk woord in deze tekst is fout?', context:blok(R, zinnen.map(function(z, i){ return '<b>' + (i + 1) + '</b> ' + z; })),
+              stappen:[
+                V('In welke zin staat de fout?', ['zin 1', 'zin 2', 'zin 3'], zi, 'Lees elke zin langzaam. Let op werkwoorden, hoofdletters en lastige woorden.'),
+                woord,
+                K(R, 'Hoe schrijf je ‘' + fout + '’ goed?', goed, [fout, x[2]], x[3]) ] };
+            op.opties = woord.opties; op.goed = woord.goed;
+            return op;
+          } }
+      ] },
+    { groep:{ id:'schrijf-form3', niveau:'3F', domein:'schrijven', naam:'Lastige formuleerfouten',
+        uit:'De lastigste formuleerfouten: een beknopte bijzin met het verkeerde onderwerp, zinnen die haperen en het verkeerde vaste voorzetsel. In een zakelijke tekst of op het examen vallen ze meteen op.' },
+      doelen:[
+        { id:'schrijf-form-beknopt', naam:'Foute beknopte bijzin', kort:'Een beknopte bijzin krijgt het onderwerp van de hoofdzin: dat moet kloppen',
+          uit:'<p>Een <b>beknopte bijzin</b> heeft geen eigen onderwerp en geen persoonsvorm: <i>Na gegeten te hebben</i>, <i>Thuisgekomen</i>, <i>Fietsend naar school</i>.</p><p>De lezer pakt dan het <b>onderwerp van de hoofdzin</b> erbij. <i>Na gegeten te hebben, ging de bel</i> betekent dus: de bel had gegeten. Dat is fout.</p><p>Verbeter het zo: maak er een gewone bijzin van met een eigen onderwerp (<i>Nadat we hadden gegeten, ging de bel</i>), of zorg dat de hoofdzin het goede onderwerp heeft.</p>',
+          wanneer:'je een zin begint met na ... te hebben, om ... te of een woord als thuisgekomen.',
+          maak:function(R){
+            var x = R.kies(BEKNOPT), f = {};
+            x[4].forEach(function(w){ f[w.toLowerCase()] = '‘' + w + '’ is niet het onderwerp van de hoofdzin. Zoek wie of wat er na de komma iets doet.'; });
+            return af({ vraag:x[0], context:'Deze zin klopt niet. Kies de goede zin.',
+              stappen:[
+                K(R, 'Wat is het onderwerp van de hoofdzin (het stuk na de komma)?', x[2], x[4], 'Wie of wat + de persoonsvorm na de komma?', { fout:f }),
+                V('Een beknopte bijzin krijgt het onderwerp van de hoofdzin. Er staat dus eigenlijk: ' + x[3] + ' Bedoelt de schrijver dat?', ['ja', 'nee'], 1, 'Lees het nog eens. Is dat wat er gebeurde?'),
+                K(R, 'Welke zin is goed?', x[1], [x[0], x[5]], 'Kies de zin waarin elk deel het goede onderwerp heeft.') ] });
+          } },
+        { id:'schrijf-form-zinsbouw', naam:'Zinnen die haperen', kort:'Tangconstructie, naamwoordstijl of zinsbreuk: maak de zin weer gewoon',
+          uit:'<p>Sommige zinnen kloppen bijna, maar lezen moeizaam.</p><p>Bij een <b>tangconstructie</b> staan twee delen die bij elkaar horen ver uit elkaar: <i>de door de gemeente in 2020 gebouwde sporthal</i>.</p><p>Bij <b>naamwoordstijl</b> gebruik je zelfstandige naamwoorden waar een werkwoord beter is: <i>het doen van een aanvraag</i> in plaats van <i>je vraagt aan</i>.</p><p>Bij een <b>zinsbreuk</b> (anakoloet) begint de zin op de ene manier en gaat hij anders verder: <i>Wat ik jammer vind, het einde is vaag.</i></p>',
+          wanneer:'je zin klopt, maar toch stroef leest.',
+          maak:function(R){
+            var x = R.kies(ZINSBOUW), T = ZBTYPE[x[2]], rest = Object.keys(ZBTYPE).filter(function(k){ return k !== x[2]; });
+            return af({ vraag:x[0], context:'Deze zin hapert. Kies de betere zin.',
+              stappen:[
+                K(R, 'Wat valt op aan deze zin?', T[1], rest.map(function(k){ return ZBTYPE[k][1]; }), 'Lees de zin hardop. Waar loop je vast?'),
+                K(R, 'Hoe heet deze fout?', T[0], rest.map(function(k){ return ZBTYPE[k][0]; }), 'Bij ‘' + T[1] + '’ hoort de naam ' + T[0] + '.'),
+                K(R, 'Welke zin is beter?', x[1], [x[0], x[3]], 'Kies de zin die je in één keer goed kunt lezen.') ] });
+          } },
+        { id:'schrijf-form-voorzetsel', naam:'Het vaste voorzetsel', kort:'Veel woorden hebben een vast voorzetsel: interesse in, trots op, wachten op',
+          uit:'<p>Veel woorden hebben een <b>vast voorzetsel</b>. Dat kun je niet beredeneren: je moet het kennen.</p><p><i>interesse <b>in</b></i> (niet: voor), <i>trots <b>op</b></i>, <i>bang <b>voor</b></i>, <i>het eens zijn <b>met</b></i>, <i>afhangen <b>van</b></i>, <i>beschikken <b>over</b></i>.</p><p>Zoek eerst het woord dat het voorzetsel vraagt. Twijfel je, zoek het dan op in het woordenboek.</p>',
+          wanneer:'je een formele tekst schrijft en twijfelt welk voorzetsel erbij hoort.',
+          maak:function(R){
+            var x = R.kies(VZ), f = {};
+            x[2].forEach(function(v){ var s = VZFOUT[x[3] + ' ' + v]; if (s) f[v] = s; });
+            return af({ vraag:x[0], context:'Welk voorzetsel hoort op de plek van het gat?',
+              beeld:function(k){ return k >= 2 ? R.teken.zin([{ t:x[0].replace(GAT, x[1]), k:4, label:x[3] + ' ' + x[1] }]) : ''; },
+              stappen:[
+                K(R, 'Welk woord vraagt om het vaste voorzetsel?', x[3], x[4], 'Welk woord hoort bij het voorzetsel? Probeer: ' + x[3] + ' ...'),
+                K(R, 'Welk voorzetsel hoort bij ‘' + x[3] + '’?', x[1], x[2], 'Zeg het hardop: ' + x[3] + ' ' + x[1] + ' klinkt goed.', { fout:f }) ] });
+          } }
+      ] },
+    { groep:{ id:'schrijf-mail' },
+      doelen:[
+        { id:'schrijf-brief-delen', naam:'De zakelijke brief', kort:'Betreft, aanhef, slot en groet passen bij een formele lezer',
+          uit:'<p>Een <b>zakelijke brief</b> heeft vaste delen. Bovenaan staan je eigen naam en adres, het adres van de ontvanger, de plaats en de datum.</p><p>Bij <b>Betreft</b> zet je het onderwerp in een paar woorden: <i>Betreft: Kapotte lantaarnpaal</i>.</p><p>De <b>aanhef</b>: ken je de naam, dan <i>Geachte heer Bakker,</i> of <i>Geachte mevrouw De Vries,</i>. Ken je de naam niet: <i>Geachte heer, mevrouw,</i>.</p><p>In het <b>slot</b> zeg je wat je van de lezer verwacht of hoopt. Je sluit af met <i>Met vriendelijke groet,</i> en je naam.</p>',
+          wanneer:'je een brief schrijft aan een bedrijf, de gemeente of iemand die je niet persoonlijk kent.',
+          maak:function(R){
+            var x = R.kies(BRIEF), deel = R.kies(['aanhef', 'betreft', 'slot', 'groet']), st, naam;
+            if (deel === 'aanhef'){
+              var nm = x[1], goed = nm ? 'Geachte ' + nm[0] + ' ' + nm[1] + ',' : 'Geachte heer, mevrouw,';
+              var aan = nm ? (nm[0] === 'heer' ? 'meneer ' : 'mevrouw ') + nm[1] : '';
+              naam = 'aanhef';
+              st = [ V('Weet je de naam van de persoon aan wie je schrijft?', ['ja', 'nee'], nm ? 0 : 1, nm ? 'De naam staat in de situatie.' : 'Je schrijft aan een instantie, niet aan iemand van wie je de naam weet.'),
+                K(R, 'Welke aanhef past?', goed, nm ? ['Hoi ' + aan + ',', 'Lieve ' + aan + ','] : ['Hoi,', 'Lieve mensen,'], nm ? 'Naam bekend: Geachte heer of Geachte mevrouw, met de achternaam.' : 'Naam onbekend: Geachte heer, mevrouw,') ];
+            } else if (deel === 'betreft'){
+              naam = 'regel bij Betreft';
+              st = [ K(R, 'Wat zet je achter Betreft?', 'het onderwerp in een paar woorden', ['een begroeting', 'je hele verhaal'], 'Betreft is een soort kopje boven de brief.'),
+                K(R, 'Welke regel past bij Betreft?', x[2], [ander(R, BRIEF, x)[2], 'Even een vraagje'], 'Het onderwerp van deze brief, kort en duidelijk.') ];
+            } else if (deel === 'slot'){
+              naam = 'slotzin';
+              st = [ K(R, 'Wat doe je in het slot van een zakelijke brief?', 'je zegt wat je van de lezer verwacht of hoopt', ['je begint over een nieuw onderwerp', 'je vertelt iets grappigs over jezelf'], 'Het slot rondt af: wat moet er nu gebeuren?'),
+                K(R, 'Welke slotzin past?', x[3], ['Nou, dat was het wel.', ander(R, BRIEF, x)[3]], 'De slotzin moet passen bij het onderwerp van deze brief.') ];
+            } else {
+              naam = 'groet';
+              st = [ V('Is dit een formele of een informele brief?', ['formeel', 'informeel'], 0, 'Je schrijft aan een instantie of aan iemand die je niet persoonlijk kent.'),
+                K(R, 'Welke groet past onder de brief?', 'Met vriendelijke groet,', ['Doei!', 'Groetjes en een dikke knuffel,', 'Liefs,'], 'Een formele brief sluit je af met een formele groet.') ];
+            }
+            return af({ vraag:'Welke ' + naam + ' past?', context:x[0], stappen:st });
+          } },
+        { id:'schrijf-brief-soll', naam:'De sollicitatiebrief', kort:'Inleiding, motivatie, wat je te bieden hebt en een slot',
+          uit:'<p>Een <b>sollicitatiebrief</b> is een zakelijke brief met een vaste opbouw.</p><p>In de <b>inleiding</b> zeg je op welke baan je solliciteert en hoe je de vacature vond. In de <b>motivatie</b> vertel je waarom je deze baan wilt. Daarna vertel je <b>wat je te bieden hebt</b>: wat je kunt en wat je al hebt gedaan. In het <b>slot</b> zeg je dat je graag op gesprek komt.</p>',
+          wanneer:'je een brief schrijft voor een bijbaan of een stage.',
+          maak:function(R){
+            var x = R.kies(SOL), d = x[1];
+            return af({ vraag:x[0], context:'In welk deel van een sollicitatiebrief hoort deze zin?',
+              stappen:[
+                K(R, 'Waar gaat deze zin over?', SOLDOET[d], SOLDOET.filter(function(s, i){ return i !== d; }), 'Vertelt de zin hoe je de baan vond, waarom je hem wilt, wat je kunt, of hoe het verder gaat?'),
+                V('In welk deel van de brief hoort de zin?', SOLDEEL, d, 'Over ' + SOLDOET[d] + ' schrijf je in ' + SOLDEEL[d] + '.') ] });
+          } }
+      ] }
+  ]);
 })();

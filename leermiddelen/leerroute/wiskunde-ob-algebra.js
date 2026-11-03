@@ -578,6 +578,24 @@
                 S(T(p) + ' ' + X + ' ' + paren(q) + ' =', p * q, (p * q < 0 ? 'Eén min: negatief. ' : (p < 0 ? 'Min keer min is plus. ' : '')) + Math.abs(p) + ' ' + X + ' ' + Math.abs(q) + ' = ' + Math.abs(p * q) + '.', F(p * q, -p * q, 'Let op het teken.', q, 'Ook de ' + T(q) + ' gaat keer ' + T(p) + '.')),
                 SC('Samen: ' + vraag + ' =', res, exprC(res, { kaal:true }), 'Zet de twee stukken achter elkaar: ' + res + '.', F(res, E([[p * a, l], [q, '']]), 'Ook het getal tussen de haakjes gaat keer ' + T(p) + '.')) ] };
           } },
+        { id:'wob-a-let-haakletter', naam:'Een letter voor de haakjes', kort:'Ook een letter voor de haakjes gaat keer elke term: x · x = x², en getallen keer getallen',
+          uit:'<p>Staat er een <b>letter</b> voor de haakjes, dan werkt het net zo: de term ervoor gaat keer <b>elke</b> term erin.</p><p>Bij <b>3x(2x ' + MIN + ' 4)</b> doe je eerst 3x · 2x. Getallen keer getallen: 3 · 2 = 6. Letters keer letters: x · x = <b>x²</b>. Dat geeft 6x². Dan 3x · ' + MIN + '4 = ' + MIN + '12x. Samen: <b>6x² ' + MIN + ' 12x</b>.</p><p>Zijn de letters verschillend, dan zet je ze achter elkaar: a · b = <b>ab</b>. Dus 2a(b + 3) = 2ab + 6a.</p><p>Let op het teken: ' + MIN + 'x(x ' + MIN + ' 5) = ' + MIN + 'x² + 5x, want min keer min is plus.</p>',
+          wanneer:'er een letter, of een getal met een letter, voor de haakjes staat.',
+          beeld:R0.teken.rooster(['2x', MIN + '4'], ['3x'], [['6x²', MIN + '12x']]),
+          maak:function(R){
+            var vorm = R.kies(['xx', 'xx', 'ab']), l = R.kies(['x', 'a', 'p']), p, a, q, m = 'b';
+            do { p = R.kies([1, -1, 2, 3, 4, 5, -2, -3]); a = R.kies([1, 1, 2, 3, 4]); q = nz(R, -9, 9); } while (vorm === 'ab' && p === -1);
+            if (vorm === 'ab'){ l = R.kies(['a', 'p', 'x']); m = l === 'x' ? 'y' : l === 'a' ? 'b' : 'q'; }
+            var voor = E([[p, l]]), t1x = vorm === 'xx' ? l + '²' : [l, m].sort().join(''), binnen = E([[a, vorm === 'xx' ? l : m], [q, '']]);
+            var vraag = voor + '(' + binnen + ')', t1 = E([[p * a, t1x]]), t2 = E([[p * q, l]]), res = E([[p * a, t1x], [p * q, l]]);
+            var uitleg1 = (Math.abs(p * a) === 1 ? '' : 'Getallen keer getallen: ' + T(p) + ' ' + X + ' ' + a + ' = ' + T(p * a) + '. ') + (vorm === 'xx' ? 'Letters keer letters: ' + l + ' · ' + l + ' = ' + l + '².' : 'Letters keer letters: ' + l + ' · ' + m + ' = ' + t1x + '.');
+            return { vraag:vraag, context:'Werk de haakjes weg.', antwoord:res, controle:exprC(res, { kaal:true }), invoer:'tekst',
+              beeld:function(n){ return R0.teken.rooster([E([[a, vorm === 'xx' ? l : m]]), (q < 0 ? MIN : '+') + Math.abs(q)], [voor], [[n >= 1 ? t1 : '', n >= 2 ? t2 : '']]); },
+              stappen:[
+                SC(voor + ' · ' + E([[a, vorm === 'xx' ? l : m]]) + ' =', t1, exprC(t1, { kaal:true }), uitleg1, vorm === 'xx' ? F(t1, E([[p * a, l]]), l + ' · ' + l + ' is ' + l + '², niet ' + l + '.', E([[p * a * 2, l]]), l + ' · ' + l + ' is ' + l + ' keer ' + l + ', niet 2' + l + '.', E([[-p * a, t1x]]), 'Let op het teken.') : F(t1, E([[-p * a, t1x]]), 'Let op het teken.')),
+                SC(voor + ' · ' + paren(q) + ' =', t2, exprC(t2, { kaal:true }), T(p) + ' ' + X + ' ' + paren(q) + ' = ' + T(p * q) + ', en de letter ' + l + ' blijft erachter staan.', F(t2, E([[-p * q, l]]), 'Let op het teken.', T(p * q), 'De letter ' + l + ' van ' + voor + ' hoort er ook bij.')),
+                SC('Samen: ' + vraag + ' =', res, exprC(res, { kaal:true }), 'Zet de twee stukken achter elkaar: ' + res + '. Samennemen kan niet: ' + t1x + ' en ' + l + ' zijn geen gelijksoortige termen.', F(res, E([[p * a, t1x], [q, '']]), 'Ook het getal tussen de haakjes gaat keer ' + voor + '.')) ] };
+          } },
         { id:'wob-a-let-minhaak', naam:'Een min voor de haakjes', kort:'Een min voor de haakjes draait elk teken tussen de haakjes om',
           uit:'<p>Een <b>min voor de haakjes</b> is hetzelfde als −1 keer alles erin. Elk teken <b>draait om</b>.</p><p>−(x − 4) = <b>−x + 4</b>. Uit + wordt −, uit − wordt +.</p><p>Staat er nog iets voor: 10 − (2a + 3) = 10 − 2a − 3. Neem dan de getallen samen: <b>7 − 2a</b>.</p>',
           wanneer:'er een min direct voor haakjes staat.',

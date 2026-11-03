@@ -229,7 +229,7 @@ window.BANK_SPELLEN = (function(){
       uit.push(vraag('Wat voor hoek is dit?', soort + 'e hoek' + (soort === 'recht' ? ' (90°)' : ''), ['scherpe hoek', 'rechte hoek (90°)', 'stompe hoek', 'gestrekte hoek'].filter(function(x){ return x.indexOf(soort) < 0; }), 'Scherp is kleiner dan 90°, recht is precies 90°, stomp zit tussen 90° en 180°, gestrekt is 180°. Deze hoek is ' + gr + '°.', 'hoeken', 1, hoekSvg(gr)));
     });
     for (i = 2; i <= 17; i++){
-      var g2 = i * 10, mis2 = [g2 + 30, g2 - 30, g2 + 60, 180 - g2, g2 + 15].filter(function(x){ return x > 0 && x < 180 && x !== g2; });
+      var g2 = i * 10, mis2 = [g2 + 30, g2 - 30, g2 + 60, 180 - g2, g2 + 15].filter(function(x, j, l){ return x > 0 && x < 180 && x !== g2 && l.indexOf(x) === j; });
       uit.push(vraag('Hoe groot is deze hoek ongeveer?', g2 + '°', schud(mis2).slice(0, 3).map(function(x){ return x + '°'; }), 'Vergelijk met 90° (een rechte hoek) en 45° (de helft daarvan): deze hoek is ' + g2 + '°.', 'hoeken', 2, hoekSvg(g2)));
     }
     DRIE.forEach(function(d, k){

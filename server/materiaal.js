@@ -16,12 +16,16 @@
    de score wordt hier uitgerekend. Bij het ophalen van de uitslagen opnieuw,
    zodat een verbeterde antwoordsleutel meteen voor iedereen telt.
 
-   POST   /zet                  { soort, naam, ... }               -> { code, sleutel }
+   Met trek (een getal) krijgt elke leerling zoveel vragen uit alle vragen, vast
+   per leerling (trekVan). De inlevering bewaart in k welke vragen hij kreeg; de
+   rest telt nergens mee. Een papieren toets trekt per versie (A of B).
+
+   POST   /zet                 { soort, naam, ... }               -> { code, sleutel }
    POST   /werk?code=X          { sleutel, soort, naam, ... }      -> { ok }
    POST   /weg?code=X           { sleutel }                        -> { ok }
    GET    /haal?code=X                                             -> het materiaal (een toets zonder antwoorden)
    POST   /volledig?code=X      { sleutel }                        -> alles, ook de norm
-   POST   /inlever?code=X       { sid, naam, klas, a: [...] }      -> de score per vraag
+   POST   /inlever?code=X       { sid, naam, klas, a: [...] }      -> de score per vraag (met trek ook k)
    POST   /uitslagen?code=X     { sleutel }                        -> alle inleveringen met hun score
    POST   /nakijk?code=X        { sleutel, sid, i, punt }          -> een vraag met de hand nakijken (punt null: weer automatisch)
    POST   /instel?code=X        { sleutel, norm, neutraal, terugzien }
@@ -67,6 +71,27 @@ function schud(a){ a = a.slice(); for (let i = a.length - 1; i > 0; i--){ const 
 /* hoofdletters, spaties en een punt aan het eind tellen niet mee */
 function gelijk(a, b){ const n = x => String(x || "").toLowerCase().replace(/\s+/g, " ").replace(/[.!?,;:]+$/, "").trim(); return n(a) === n(b); }
 function gatenVan(tekst){ return (String(tekst || "").match(/\[([^\]]+)\]/g) || []).map(x => x.slice(1, -1).trim()); }
+/* Elke leerling een deel van de vragen: welke vragen, vast per leerling. Het zaad is
+   FNV-1a van code + ":" + wie (het kenmerk van de leerling, of "versieA" en "versieB"
+   op papier), de reeks mulberry32. Precies dezelfde rekensom staat in eigen.js
+   (EIGEN.trek, voor oefen.html) en papier.js: zo krijgt een leerling na herladen
+   dezelfde vragen, en rekent de server zelf uit welke vragen dat waren.
+   Geeft de nummers in getrokken volgorde (dus al door elkaar), of null: alle vragen. */
+function trekVan(code, wie, n, aantal){
+  aantal = Math.floor(Number(aantal)) || 0;
+  if (!(aantal >= 2 && aantal < n)) return null;
+  const s = String(code) + ":" + String(wie);
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  let a = h >>> 0;
+  const r = () => { a = a + 0x6D2B79F5 | 0; let x = Math.imul(a ^ a >>> 15, 1 | a); x = x + Math.imul(x ^ x >>> 7, 61 | x) ^ x; return ((x ^ x >>> 14) >>> 0) / 4294967296; };
+  const l = [];
+  for (let i = 0; i < n; i++) l.push(i);
+  for (let i = n - 1; i > 0; i--){ const j = Math.floor(r() * (i + 1)); const w = l[i]; l[i] = l[j]; l[j] = w; }
+  return l.slice(0, aantal);
+}
+/* de getrokken nummers op volgorde, voor in een inlevering (k) */
+function kVan(code, wie, n, aantal){ const k = trekVan(code, wie, n, aantal); return k ? k.sort((x, y) => x - y) : null; }
 /* Een getypte naam bij topografie, net zo ruim als in het spel (topografie.html):
    hoofdletters, accenten, streepjes, spaties en een lidwoord tellen niet, en een
    typefout mag vanaf zes letters, twee vanaf twaalf. */
@@ -164,6 +189,9 @@ function netjes(inz){
     if (inz.husselen === true) uit.husselen = true;
     uit.items = (Array.isArray(inz.items) ? inz.items : []).map(item).filter(Boolean).slice(0, MAX_ITEMS);
     if (!uit.items.length) return { fout: "een oefening heeft minstens een vraag nodig" };
+    /* elke leerling zoveel vragen uit alle vragen: van 2 tot een minder dan alles; 0 is alles */
+    const trek = Math.floor(Number(inz.trek)) || 0;
+    if (trek > 0 && uit.items.length > 2) uit.trek = Math.max(2, Math.min(uit.items.length - 1, trek));
   }
   if (JSON.stringify(uit).length > MAX_JSON) return { fout: "dit is te groot; maak er twee van" };
   return uit;
@@ -445,6 +473,7 @@ export class Materiaal extends DurableObject {
     else if (m.soort === "topo") Object.assign(uit, { kaart: m.kaart, plekken: m.plekken });
     else if (m.modus === "toets") Object.assign(uit, { modus: "toets", verborgen: true, husselen: !!m.husselen, items: m.items.map(verborgen) });
     else Object.assign(uit, { modus: m.modus, husselen: !!m.husselen, items: m.items });
+    if (m.soort === "oefening" && m.trek) uit.trek = m.trek;
     return json(uit);
   }
   async volledig(code, inz){
@@ -468,15 +497,21 @@ export class Materiaal extends DurableObject {
     if (oud && m.modus === "toets") return json({ fout: "je hebt deze toets al ingeleverd", al: true }, 409);
     if (!oud && (m.n || 0) >= MAX_UITSLAGEN) return json({ fout: "voor deze toets zijn al " + MAX_UITSLAGEN + " inleveringen binnen" }, 400);
     const bron = Array.isArray(inz.a) ? inz.a : [];
-    const a = m.items.map((it, i) => antwoordVan(it, bron[i]));
+    /* met trek: welke vragen deze leerling kreeg rekenen we hier zelf uit. Een antwoord
+       op een andere vraag wordt niet bewaard (null) en telt nergens mee. */
+    const k = kVan(code, sid, m.items.length, m.trek), kreeg = k ? new Set(k) : null;
+    const gesteld = i => !kreeg || kreeg.has(i);
+    const a = m.items.map((it, i) => gesteld(i) ? antwoordVan(it, bron[i]) : null);
     const r = { sid, naam, klas: t(inz.klas, 8).toUpperCase().replace(/[^A-Z]/g, ""), t: Date.now(), a, h: {}, pogingen: (oud ? oud.pogingen || 1 : 0) + 1 };
+    if (k) r.k = k;
     await this.ctx.storage.put(sleutel, r);
     if (!oud){ m.n = (m.n || 0) + 1; m.gebruikt = Date.now(); await this.ctx.storage.put("m:" + code, m); }
-    const p = m.items.map((it, i) => scoor(it, a[i]));
+    const p = m.items.map((it, i) => gesteld(i) ? scoor(it, a[i]) : null);
     const terug = m.modus !== "toets" || m.terugzien !== false;
-    return json({ ok: true, p, open: p.filter(x => x === null).length,
-      juist: terug ? m.items.map(juistVan) : null, uitleg: terug ? m.items.map(it => it.uitleg || "") : null,
-      punten: m.items.map(it => it.punten || 1) });
+    /* alleen over de eigen vragen: geen goede antwoorden van vragen die de leerling niet kreeg */
+    return json({ ok: true, p, open: p.filter((x, i) => x === null && gesteld(i)).length,
+      juist: terug ? m.items.map((it, i) => gesteld(i) ? juistVan(it) : "") : null, uitleg: terug ? m.items.map((it, i) => gesteld(i) ? it.uitleg || "" : "") : null,
+      punten: m.items.map(it => it.punten || 1), k: k || null });
   }
   async uitslagen(code, inz){
     const { m, fout } = await this.vanMij(code, inz);
@@ -484,11 +519,14 @@ export class Materiaal extends DurableObject {
     if (!Array.isArray(m.items)) return json({ fout: "hier komen geen uitslagen binnen" }, 400);
     const lijst = await this.ctx.storage.list({ prefix: "r:" + code + ":" });
     /* een papieren toets heeft geen antwoorden: alleen wat de docent invoerde (h) telt */
-    const rijen = [...lijst.values()].map(r => Object.assign({ sid: r.sid, naam: r.naam, klas: r.klas, t: r.t, pogingen: r.pogingen || 1, a: r.a, h: r.h || {},
-      p: m.items.map((it, i) => r.papier ? null : scoor(it, r.a[i])) }, r.papier ? { papier: true, versie: r.versie || "A" } : {}))
-      .sort((x, y) => x.naam.localeCompare(y.naam, "nl"));
+    /* met k: alleen de vragen die de leerling kreeg; de rest heeft geen score (null) */
+    const rijen = [...lijst.values()].map(r => {
+      const k = Array.isArray(r.k) ? r.k.filter(i => i < m.items.length) : null, kreeg = k ? new Set(k) : null;
+      return Object.assign({ sid: r.sid, naam: r.naam, klas: r.klas, t: r.t, pogingen: r.pogingen || 1, a: r.a, h: r.h || {},
+        p: m.items.map((it, i) => r.papier || (kreeg && !kreeg.has(i)) ? null : scoor(it, r.a[i])) }, k ? { k } : {}, r.papier ? { papier: true, versie: r.versie || "A" } : {});
+    }).sort((x, y) => x.naam.localeCompare(y.naam, "nl"));
     return json({ ok: true, naam: m.naam, modus: m.modus, items: m.items, juist: m.items.map(juistVan), norm: schoonNorm(m.norm),
-      neutraal: Array.isArray(m.neutraal) ? m.neutraal : [], terugzien: m.terugzien !== false, rijen });
+      neutraal: Array.isArray(m.neutraal) ? m.neutraal : [], terugzien: m.terugzien !== false, trek: m.trek || 0, rijen });
   }
   async nakijk(code, inz){
     const { m, fout } = await this.vanMij(code, inz);
@@ -499,6 +537,7 @@ export class Materiaal extends DurableObject {
     if (!(i >= 0 && i < m.items.length)) return json({ fout: "geen geldige vraag" }, 400);
     const r = await this.ctx.storage.get("r:" + code + ":" + sid);
     if (!r) return json({ fout: "deze inlevering bestaat niet (meer)" }, 404);
+    if (Array.isArray(r.k) && r.k.indexOf(i) < 0) return json({ fout: "deze leerling kreeg die vraag niet" }, 400);
     r.h = r.h || {};
     if (inz.punt === null || inz.punt === undefined) delete r.h[i];
     /* vier decimalen: 2 van de 3 punten blijft dan 2 punten */
@@ -536,25 +575,31 @@ export class Materiaal extends DurableObject {
     if (!naam) return json({ fout: "vul de naam van de leerling in" }, 400);
     const klas = t(inz.klas, 8).toUpperCase().replace(/[^A-Z0-9]/g, "");
     const versie = inz.versie === "B" ? "B" : "A";
-    const h = {}, bron = inz.h && typeof inz.h === "object" && !Array.isArray(inz.h) ? inz.h : {};
-    for (const k of Object.keys(bron).slice(0, MAX_ITEMS)){
-      const i = Number(k), w = bron[k];
-      if (!(Number.isInteger(i) && i >= 0 && i < m.items.length) || w === null || w === "" || !isFinite(Number(w))) continue;
-      h[i] = Math.max(0, Math.min(1, Math.round(Number(w) * 10000) / 10000));
-    }
     let sid = String(inz.sid || "").replace(/[^a-z0-9]/g, "").slice(0, 32), oud = null;
     if (sid){
       oud = await this.ctx.storage.get("r:" + code + ":" + sid);
       if (!oud) return json({ fout: "deze inlevering bestaat niet (meer)" }, 404);
       if (!oud.papier) return json({ fout: "dit is een inlevering van de leerling zelf; die pas je aan bij Nakijken" }, 409);
-    } else {
+    }
+    /* met trek: de vragen van die versie. Een bestaande papieren toets van dezelfde versie
+       houdt de vragen die hij had, ook als het aantal intussen veranderde. */
+    const k = oud && (oud.versie || "A") === versie ? (Array.isArray(oud.k) ? oud.k : null) : kVan(code, "versie" + versie, m.items.length, m.trek);
+    const kreeg = k ? new Set(k) : null;
+    const h = {}, bron = inz.h && typeof inz.h === "object" && !Array.isArray(inz.h) ? inz.h : {};
+    for (const s of Object.keys(bron).slice(0, MAX_ITEMS)){
+      const i = Number(s), w = bron[s];
+      if (!(Number.isInteger(i) && i >= 0 && i < m.items.length) || (kreeg && !kreeg.has(i)) || w === null || w === "" || !isFinite(Number(w))) continue;
+      h[i] = Math.max(0, Math.min(1, Math.round(Number(w) * 10000) / 10000));
+    }
+    if (!oud){
       if ((m.n || 0) >= MAX_UITSLAGEN) return json({ fout: "voor deze toets zijn al " + MAX_UITSLAGEN + " inleveringen binnen" }, 400);
       do sid = "p" + willekeurig(15, "abcdefghjkmnpqrstuvwxyz23456789"); while (await this.ctx.storage.get("r:" + code + ":" + sid));
     }
     const r = { sid, naam, klas, t: oud ? oud.t : Date.now(), a: [], h, pogingen: 1, papier: true, versie };
+    if (k) r.k = k;
     await this.ctx.storage.put("r:" + code + ":" + sid, r);
     if (!oud){ m.n = (m.n || 0) + 1; m.gebruikt = Date.now(); await this.ctx.storage.put("m:" + code, m); }
-    return json({ ok: true, sid, h });
+    return json({ ok: true, sid, h, k: k || null });
   }
   /* een keer per dag: wat ruim een jaar niet geopend is, weg */
   async planOpruimen(){

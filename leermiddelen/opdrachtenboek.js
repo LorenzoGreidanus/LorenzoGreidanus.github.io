@@ -261,7 +261,8 @@ window.OPDRACHTENBOEK = (function(){
           { id:"spel-teken-trema", naam:"Het trema", niveau:"2F", doelen:["spel-teken-trema"] },
           { id:"spel-teken-tremamv", naam:"Het trema in het meervoud", niveau:"2F", doelen:["spel-teken-tremamv"] },
           { id:"spel-teken-apos", naam:"De apostrof", niveau:"2F", doelen:["spel-teken-apos"] },
-          { id:"spel-teken-afk", naam:"Afkortingen", niveau:"2F", doelen:["spel-teken-afk"] }
+          { id:"spel-teken-afk", naam:"Afkortingen", niveau:"2F", doelen:["spel-teken-afk"] },
+          { id:"spel-teken-accent", naam:"Accenttekens: één, vóór, café", niveau:"2F", doelen:["spel-teken-accent"] }
         ] },
         { naam:"Leenwoorden", paragrafen:[
           { id:"spel-leen-c", naam:"De c: als k of als s", niveau:"2F", doelen:["spel-leen-c"] },
@@ -339,6 +340,9 @@ window.OPDRACHTENBOEK = (function(){
           { id:"ws-ww", naam:"Werkwoord", niveau:"basis", doelen:["ws-ww"] },
           { id:"ws-tw", naam:"Telwoord", niveau:"basis", doelen:["ws-tw"] },
           { id:"ws-vz", naam:"Voorzetsel", niveau:"basis", doelen:["ws-vz"] },
+          { id:"ws-tsw", naam:"Tussenwerpsel", niveau:"basis", doelen:["ws-tsw"] },
+          { id:"ws-trap", naam:"Trappen van vergelijking", niveau:"basis", doelen:["ws-trap"] },
+          { id:"ws-bn-e", naam:"Bijvoeglijk naamwoord: met of zonder -e", niveau:"basis", doelen:["ws-bn-e"] },
           { id:"ws-mix", naam:"Welke woordsoort is het?", niveau:"basis", doelen:["ws-mix"], bank:[{t:"woordsoorten"}] }
         ] },
         { naam:"Voornaamwoorden", paragrafen:[
@@ -347,7 +351,11 @@ window.OPDRACHTENBOEK = (function(){
           { id:"ws-bez", naam:"Bezittelijk voornaamwoord", niveau:"1F", doelen:["ws-bez"] },
           { id:"ws-aanw", naam:"Aanwijzend voornaamwoord", niveau:"1F", doelen:["ws-aanw"] },
           { id:"ws-betr", naam:"Betrekkelijk voornaamwoord: die, dat of wat", niveau:"1F", doelen:["ws-betr"] },
-          { id:"ws-vrag", naam:"Vragend voornaamwoord", niveau:"1F", doelen:["ws-vrag"] }
+          { id:"ws-vrag", naam:"Vragend voornaamwoord", niveau:"1F", doelen:["ws-vrag"] },
+          { id:"ws-wkd", naam:"Wederkerend en wederkerig: zich of elkaar", niveau:"1F", doelen:["ws-wkd"] },
+          { id:"ws-onb", naam:"Onbepaald voornaamwoord", niveau:"1F", doelen:["ws-onb"] },
+          { id:"ws-wat", naam:"Wat: vragend, betrekkelijk of uitroepend", niveau:"1F", doelen:["ws-wat"] },
+          { id:"ws-vnw-soort", naam:"Welk soort voornaamwoord?", niveau:"1F", doelen:["ws-vnw-soort"] }
         ] },
         { naam:"Bijwoord en voegwoord", paragrafen:[
           { id:"ws-bw", naam:"Bijwoord", niveau:"1F", doelen:["ws-bw"] },
@@ -373,6 +381,7 @@ window.OPDRACHTENBOEK = (function(){
           { id:"zd-mv-vraag", naam:"Het meewerkend voorwerp", niveau:"1F", doelen:["zd-mv-vraag", "zd-mv-proef"], bank:[{t:"zinsontleding",zoek:"meewerkend voorwerp"}] },
           { id:"zd-bwb", naam:"De bijwoordelijke bepaling", niveau:"1F", doelen:["zd-bwb"], bank:[{t:"zinsontleding",zoek:"bijwoordelijke bepaling"}] },
           { id:"zd-bvb", naam:"De bijvoeglijke bepaling", niveau:"1F", doelen:["zd-bvb"] },
+          { id:"zd-bijst", naam:"De bijstelling", niveau:"1F", doelen:["zd-bijst"] },
           { id:"gram-vzv", naam:"Het voorzetselvoorwerp", niveau:"3F", doelen:["gram-vzv"], bank:[{t:"zinsontleding",zoek:"voorzetselvoorwerp"}] },
           { id:"gram-lvnd", naam:"Lijdend voorwerp of naamwoordelijk deel", niveau:"3F", doelen:["gram-lvnd"] },
           { id:"zd-ontleed", naam:"Een hele zin ontleden", niveau:"1F", doelen:["zd-ontleed"] }
@@ -380,7 +389,9 @@ window.OPDRACHTENBOEK = (function(){
         { naam:"Samengestelde zinnen", paragrafen:[
           { id:"gram-hzbz", naam:"Hoofdzin en bijzin", niveau:"2F", doelen:["gram-hzbz"] },
           { id:"gram-nevon", naam:"Nevenschikking en onderschikking", niveau:"2F", doelen:["gram-nevon"] },
-          { id:"gram-enkel", naam:"Enkelvoudig of samengesteld", niveau:"2F", doelen:["gram-enkel"] }
+          { id:"gram-enkel", naam:"Enkelvoudig of samengesteld", niveau:"2F", doelen:["gram-enkel"] },
+          { id:"gram-bz-soort", naam:"Soorten bijzinnen", niveau:"2F", doelen:["gram-bz-soort"] },
+          { id:"gram-bz-beknopt", naam:"De beknopte bijzin", niveau:"2F", doelen:["gram-bz-beknopt"] }
         ] },
         { naam:"Zinnen omzetten", paragrafen:[
           { id:"gram-actpas", naam:"Actief of passief: de door-proef", niveau:"2F", doelen:["gram-actpas"] },
@@ -436,10 +447,13 @@ window.OPDRACHTENBOEK = (function(){
         ] },
         { naam:"Synoniemen en tegenstellingen", paragrafen:[
           { id:"woord-synoniem", naam:"Synoniemen", niveau:"1F", doelen:["woord-synoniem"], bank:[{t:"synoniemen"}] },
-          { id:"woord-antoniem", naam:"Tegenstellingen", niveau:"1F", doelen:["woord-antoniem"] }
+          { id:"woord-antoniem", naam:"Tegenstellingen", niveau:"1F", doelen:["woord-antoniem"] },
+          { id:"woord-gevoel", naam:"Gevoelswaarde: positief, neutraal of negatief", niveau:"1F", doelen:["woord-gevoel"] },
+          { id:"woord-veld", naam:"Woordvelden: het overkoepelende woord", niveau:"1F", doelen:["woord-veld"] }
         ] },
         { naam:"Uitdrukkingen en schooltaal", paragrafen:[
           { id:"woord-uitdrukking", naam:"Uitdrukkingen en spreekwoorden", niveau:"2F", doelen:["woord-uitdrukking"], bank:[{t:"uitdrukkingen"}] },
+          { id:"woord-spreekwoord", naam:"Uitdrukking of spreekwoord?", niveau:"2F", doelen:["woord-spreekwoord"] },
           { id:"woord-schooltaal", naam:"Opdrachtwoorden", niveau:"2F", doelen:["woord-schooltaal"], bank:[{t:"schooltaal"}] }
         ] },
         { naam:"Woorden bouwen", paragrafen:[
@@ -447,7 +461,9 @@ window.OPDRACHTENBOEK = (function(){
           { id:"taal-bouw-familie", naam:"Woordfamilies", niveau:"2F", doelen:["taal-bouw-familie"] },
           { id:"taal-bouw-persoon", naam:"Van werkwoord naar persoon", niveau:"2F", doelen:["taal-bouw-persoon"] },
           { id:"taal-bouw-handeling", naam:"Van werkwoord naar ding of geluid", niveau:"2F", doelen:["taal-bouw-handeling"] },
-          { id:"taal-bouw-nieuw", naam:"Hoe nieuwe woorden ontstaan", niveau:"2F", doelen:["taal-bouw-nieuw"] }
+          { id:"taal-bouw-nieuw", naam:"Hoe nieuwe woorden ontstaan", niveau:"2F", doelen:["taal-bouw-nieuw"] },
+          { id:"taal-bouw-afleiding", naam:"Samenstelling of afleiding", niveau:"2F", doelen:["taal-bouw-afleiding"] },
+          { id:"taal-bouw-affix", naam:"Voor- en achtervoegsels", niveau:"2F", doelen:["taal-bouw-affix"] }
         ] },
         { naam:"Klank en betekenis", paragrafen:[
           { id:"taal-klank-nabootsing", naam:"Woorden die klinken als het geluid", niveau:"1F", doelen:["taal-klank-nabootsing"] },
@@ -477,7 +493,8 @@ window.OPDRACHTENBOEK = (function(){
           { id:"lees-doel-instrueren", naam:"Tekstdoel: instrueren", niveau:"1F", doelen:["lees-doel-instrueren"] },
           { id:"lees-doel-activeren", naam:"Tekstdoel: activeren", niveau:"1F", doelen:["lees-doel-activeren"] },
           { id:"lees-doel-mix", naam:"Tekstdoelen door elkaar", niveau:"1F", doelen:["lees-doel-mix"] },
-          { id:"lees-soort", naam:"Tekstsoorten", niveau:"1F", doelen:["lees-soort"] }
+          { id:"lees-soort", naam:"Tekstsoorten", niveau:"1F", doelen:["lees-soort"] },
+          { id:"lees-tsoort-boven", naam:"Uiteenzetting, beschouwing of betoog", niveau:"3F", doelen:["lees-tsoort-boven"] }
         ] },
         { naam:"Alinea's", paragrafen:[
           { id:"lees-kernzin", naam:"De kernzin van een alinea", niveau:"1F", doelen:["lees-kernzin"] },
@@ -509,6 +526,7 @@ window.OPDRACHTENBOEK = (function(){
           { id:"lees-struct-voornadeel", naam:"Voor- en nadelen", niveau:"2F", doelen:["lees-struct-voornadeel"] },
           { id:"lees-struct-verschijnsel", naam:"Verschijnsel en verklaring", niveau:"2F", doelen:["lees-struct-verschijnsel"] },
           { id:"lees-struct-betoog", naam:"Het betoog met weerlegging", niveau:"2F", doelen:["lees-struct-betoog"] },
+          { id:"lees-struct-meer", naam:"Vraag en antwoord, chronologisch, aspecten, vroeger en nu", niveau:"2F", doelen:["lees-struct-meer"] },
           { id:"lees-struct-welke", naam:"Welke structuur?", niveau:"2F", doelen:["lees-struct-welke"] }
         ] },
         { naam:"Feit, mening en argument", paragrafen:[
@@ -519,7 +537,8 @@ window.OPDRACHTENBOEK = (function(){
         ] },
         { naam:"Argumentatie", paragrafen:[
           { id:"lees-arg-soort", naam:"Soorten argumenten", niveau:"3F", doelen:["lees-arg-soort"] },
-          { id:"lees-arg-sterkte", naam:"De sterkte van een argument", niveau:"3F", doelen:["lees-arg-sterkte"] }
+          { id:"lees-arg-sterkte", naam:"De sterkte van een argument", niveau:"3F", doelen:["lees-arg-sterkte"] },
+          { id:"lees-arg-struct", naam:"Argumentatiestructuur", niveau:"3F", doelen:["lees-arg-struct"] }
         ] },
         { naam:"Drogredenen", paragrafen:[
           { id:"lees-drog-persoon", naam:"Op de persoon spelen", niveau:"3F", doelen:["lees-drog-persoon"] },
@@ -543,7 +562,8 @@ window.OPDRACHTENBOEK = (function(){
           { id:"taal-genre-taalgebruik", naam:"Taalgebruik van een genre", niveau:"3F", doelen:["taal-genre-taalgebruik"] },
           { id:"taal-genre-gevoel", naam:"Hoe een tekst gevoel oproept", niveau:"3F", doelen:["taal-genre-gevoel"] },
           { id:"taal-genre-context", naam:"De context van een betoog", niveau:"3F", doelen:["taal-genre-context"] },
-          { id:"taal-genre-vorm", naam:"Vorm past bij het doel", niveau:"3F", doelen:["taal-genre-vorm"] }
+          { id:"taal-genre-vorm", naam:"Vorm past bij het doel", niveau:"3F", doelen:["taal-genre-vorm"] },
+          { id:"lees-toon", naam:"De toon van de schrijver", niveau:"3F", doelen:["lees-toon"] }
         ] },
         { naam:"Informatie zoeken", paragrafen:[
           { id:"info-zoekwoord", naam:"Goede zoekwoorden kiezen", niveau:"1F", doelen:["info-zoekwoord"] },
@@ -578,7 +598,9 @@ window.OPDRACHTENBOEK = (function(){
           { id:"schrijf-zin-hunhen", naam:"Zij, hen of hun", niveau:"1F", doelen:["schrijf-zin-hunhen"] },
           { id:"schrijf-zin-haarzijn", naam:"Zijn, haar of hun", niveau:"1F", doelen:["schrijf-zin-haarzijn"] },
           { id:"gram-verwijs", naam:"Verwijzen naar een hele zin", niveau:"3F", doelen:["gram-verwijs"] },
-          { id:"gram-wiewat", naam:"Wie en wat als betrekkelijk voornaamwoord", niveau:"3F", doelen:["gram-wiewat"] }
+          { id:"gram-wiewat", naam:"Wie en wat als betrekkelijk voornaamwoord", niveau:"3F", doelen:["gram-wiewat"] },
+          { id:"schrijf-form-verwijs", naam:"Onduidelijk verwijzen", niveau:"2F", doelen:["schrijf-form-verwijs"] },
+          { id:"schrijf-form-instantie", naam:"De school en haar leerlingen: haar, geen hun", niveau:"2F", doelen:["schrijf-form-instantie"] }
         ] },
         { naam:"Formuleren: zinsbouw", paragrafen:[
           { id:"schrijf-zin-volgorde", naam:"Woordvolgorde na een voegwoord", niveau:"1F", doelen:["schrijf-zin-volgorde"] },
@@ -586,11 +608,17 @@ window.OPDRACHTENBOEK = (function(){
           { id:"schrijf-zin-splitsen", naam:"Een te lange zin opsplitsen", niveau:"1F", doelen:["schrijf-zin-splitsen"] },
           { id:"gram-cong", naam:"Congruentie: enkelvoud of meervoud", niveau:"3F", doelen:["gram-cong"] },
           { id:"schrijf-zin-vergelijken", naam:"Groter dan, even groot als", niveau:"1F", doelen:["schrijf-zin-vergelijken"] },
-          { id:"gram-alsdan", naam:"Als of dan bij vergelijken", niveau:"3F", doelen:["gram-alsdan"] }
+          { id:"gram-alsdan", naam:"Als of dan bij vergelijken", niveau:"3F", doelen:["gram-alsdan"] },
+          { id:"schrijf-form-samentrek", naam:"Foute samentrekking", niveau:"2F", doelen:["schrijf-form-samentrek"] },
+          { id:"schrijf-form-beknopt", naam:"Foute beknopte bijzin", niveau:"3F", doelen:["schrijf-form-beknopt"] },
+          { id:"schrijf-form-zinsbouw", naam:"Tangconstructie, naamwoordstijl en zinsbreuk", niveau:"3F", doelen:["schrijf-form-zinsbouw"] }
         ] },
         { naam:"Formuleren: woordkeus", paragrafen:[
           { id:"schrijf-zin-ontkenning", naam:"Geen dubbele ontkenning", niveau:"1F", doelen:["schrijf-zin-ontkenning"] },
-          { id:"schrijf-zin-contaminatie", naam:"Uitdrukkingen niet door elkaar", niveau:"1F", doelen:["schrijf-zin-contaminatie"] }
+          { id:"schrijf-zin-contaminatie", naam:"Uitdrukkingen niet door elkaar", niveau:"1F", doelen:["schrijf-zin-contaminatie"] },
+          { id:"schrijf-form-dubbelop", naam:"Dubbelop: pleonasme en tautologie", niveau:"2F", doelen:["schrijf-form-dubbelop"] },
+          { id:"schrijf-zin-woordpaar", naam:"Liggen of leggen, kennen of kunnen", niveau:"1F", doelen:["schrijf-zin-woordpaar"] },
+          { id:"schrijf-form-voorzetsel", naam:"Het vaste voorzetsel", niveau:"3F", doelen:["schrijf-form-voorzetsel"] }
         ] },
         { naam:"Een alinea", paragrafen:[
           { id:"schrijf-alinea-delen", naam:"De drie delen van een alinea", niveau:"2F", doelen:["schrijf-alinea-delen"] },
@@ -606,7 +634,9 @@ window.OPDRACHTENBOEK = (function(){
           { id:"schrijf-mail-afsluiting", naam:"De afsluiting", niveau:"2F", doelen:["schrijf-mail-afsluiting"] },
           { id:"schrijf-mail-onderwerp", naam:"De onderwerpregel", niveau:"2F", doelen:["schrijf-mail-onderwerp"] },
           { id:"schrijf-mail-opbouw", naam:"De opbouw", niveau:"2F", doelen:["schrijf-mail-opbouw"] },
-          { id:"schrijf-mail-toon", naam:"Een beleefde toon", niveau:"2F", doelen:["schrijf-mail-toon"] }
+          { id:"schrijf-mail-toon", naam:"Een beleefde toon", niveau:"2F", doelen:["schrijf-mail-toon"] },
+          { id:"schrijf-brief-delen", naam:"De zakelijke brief", niveau:"2F", doelen:["schrijf-brief-delen"] },
+          { id:"schrijf-brief-soll", naam:"De sollicitatiebrief", niveau:"2F", doelen:["schrijf-brief-soll"] }
         ] },
         { naam:"Register en publiek", paragrafen:[
           { id:"schrijf-register-woorden", naam:"Formele woorden", niveau:"2F", doelen:["schrijf-register-woorden"] },
@@ -654,6 +684,7 @@ window.OPDRACHTENBOEK = (function(){
           { id:"reflect-feedback-toptip", naam:"Tops en tips geven", niveau:"1F", doelen:["reflect-feedback-toptip"] },
           { id:"reflect-feedback-ontvang", naam:"Feedback ontvangen", niveau:"1F", doelen:["reflect-feedback-ontvang"] },
           { id:"reflect-feedback-check", naam:"Nakijken met een checklist", niveau:"1F", doelen:["reflect-feedback-check"] },
+          { id:"schrijf-form-foutenjacht", naam:"Foutenjacht in een tekst", niveau:"2F", doelen:["schrijf-form-foutenjacht"] },
           { id:"reflect-feedback-aanpak", naam:"Reflecteren op je aanpak", niveau:"1F", doelen:["reflect-feedback-aanpak"] },
           { id:"reflect-feedback-leerdoel", naam:"Een goed leerdoel", niveau:"1F", doelen:["reflect-feedback-leerdoel"] }
         ] },
@@ -680,12 +711,14 @@ window.OPDRACHTENBOEK = (function(){
           { id:"fic-verteller", naam:"De verteller", niveau:"1F", doelen:["fic-verteller"] },
           { id:"fic-perspectief", naam:"Het perspectief", niveau:"1F", doelen:["fic-perspectief"] },
           { id:"fic-personage", naam:"Personages", niveau:"1F", doelen:["fic-personage"] },
-          { id:"fic-tijd-plaats", naam:"Tijd en plaats", niveau:"1F", doelen:["fic-tijd-plaats"] }
+          { id:"fic-tijd-plaats", naam:"Tijd en plaats", niveau:"1F", doelen:["fic-tijd-plaats"] },
+          { id:"fic-opbouw", naam:"De opbouw van een verhaal", niveau:"1F", doelen:["fic-opbouw"] }
         ] },
         { naam:"Hoe een verhaal is gebouwd", paragrafen:[
           { id:"fic-flashback", naam:"Flashback en vooruitwijzing", niveau:"2F", doelen:["fic-flashback"] },
           { id:"fic-einde", naam:"Open of gesloten einde", niveau:"2F", doelen:["fic-einde"] },
-          { id:"fic-spanning", naam:"Spanning", niveau:"2F", doelen:["fic-spanning"] }
+          { id:"fic-spanning", naam:"Spanning", niveau:"2F", doelen:["fic-spanning"] },
+          { id:"fic-tijd", naam:"Tijd in een verhaal: vertragen, versnellen, tijdsprong", niveau:"2F", doelen:["fic-tijd"] }
         ] },
         { naam:"Het verhaal ontleden", paragrafen:[
           { id:"lit-verhaal-motor", naam:"De motor van het verhaal", niveau:"2F", doelen:["lit-verhaal-motor"] },
@@ -704,11 +737,13 @@ window.OPDRACHTENBOEK = (function(){
           { id:"fic-overdrijving", naam:"Overdrijving", niveau:"2F", doelen:["fic-overdrijving"] },
           { id:"fic-herhaling", naam:"Herhaling", niveau:"2F", doelen:["fic-herhaling"] },
           { id:"lit-genre-allit", naam:"Alliteratie", niveau:"1F", doelen:["lit-genre-allit"] },
+          { id:"fic-stijl-meer", naam:"Retorische vraag, ironie, eufemisme, contrast en climax", niveau:"2F", doelen:["fic-stijl-meer"] },
           { id:"fic-stijl-welk", naam:"Welk stijlmiddel?", niveau:"2F", doelen:["fic-stijl-welk"] }
         ] },
         { naam:"Gedichten", paragrafen:[
           { id:"fic-eindrijm", naam:"Eindrijm", niveau:"2F", doelen:["fic-eindrijm"] },
-          { id:"fic-rijmschema", naam:"Rijmschema", niveau:"2F", doelen:["fic-rijmschema"] }
+          { id:"fic-rijmschema", naam:"Rijmschema", niveau:"2F", doelen:["fic-rijmschema"] },
+          { id:"fic-gedicht", naam:"Strofen, regels en dichtvormen", niveau:"2F", doelen:["fic-gedicht"] }
         ] },
         { naam:"Genres", paragrafen:[
           { id:"lit-genre-vorm", naam:"Poëzie, proza of drama", niveau:"1F", doelen:["lit-genre-vorm"] },
@@ -746,6 +781,7 @@ window.OPDRACHTENBOEK = (function(){
           { id:"wob-a-mac-uit", naam:"Machten", niveau:"onderbouw", doelen:["wob-a-mac-uit", "wi-neg-macht"] },
           { id:"wob-a-mac-wortel", naam:"Wortels", niveau:"onderbouw", doelen:["wob-a-mac-wortel", "wob-a-mac-schat"] },
           { id:"wi-mac-wortel", naam:"Wortels vereenvoudigen", niveau:"havo", doelen:["wi-mac-wortel"] },
+          { id:"wi-mac-wortelregels", naam:"Rekenen met wortels", niveau:"havo", doelen:["wi-mac-wortelregels"] },
           { id:"wi-mac-regels", naam:"Rekenregels voor machten", niveau:"havo", doelen:["wi-mac-regels"] },
           { id:"wob-a-sci-tien", naam:"Machten van 10 en de wetenschappelijke notatie", niveau:"onderbouw", doelen:["wob-a-sci-tien", "wob-a-sci-groot", "wob-a-sci-klein", "wob-a-sci-terug"] },
           { id:"whb-mac-neg", naam:"Negatieve en gebroken exponenten", niveau:"havo B", doelen:["whb-mac-neg", "whb-mac-gebr"] }
@@ -754,14 +790,17 @@ window.OPDRACHTENBOEK = (function(){
           { id:"wob-a-let-keer", naam:"Korter schrijven en samennemen", niveau:"onderbouw", doelen:["wob-a-let-keer", "wob-a-let-samen", "wi-herl-keer"] },
           { id:"wob-a-let-invul", naam:"Invullen", niveau:"onderbouw", doelen:["wob-a-let-invul"] },
           { id:"wob-a-let-haak", naam:"Haakjes wegwerken", niveau:"onderbouw", doelen:["wob-a-let-haak", "wob-a-let-minhaak", "wob-a-let-haaksamen", "wi-herl-twee"] },
+          { id:"wob-a-let-haakletter", naam:"Een letter voor de haakjes", niveau:"onderbouw", doelen:["wob-a-let-haakletter"] },
           { id:"wi-merk-kwadraat", naam:"Merkwaardige producten", niveau:"havo", doelen:["wi-merk-kwadraat", "wi-merk-verschil", "wi-merk-kies"] }
         ] },
         { naam:"Ontbinden in factoren", paragrafen:[
-          { id:"wi-ont-buiten", naam:"Ontbinden in factoren", niveau:"havo", doelen:["wi-ont-buiten", "wi-ont-somprod", "wi-ont-verschil", "wi-ont-kies"] }
+          { id:"wi-ont-buiten", naam:"Ontbinden in factoren", niveau:"havo", doelen:["wi-ont-buiten", "wi-ont-somprod", "wi-ont-verschil", "wi-ont-factor", "wi-ont-kies"] }
         ] },
         { naam:"Vergelijkingen en ongelijkheden", paragrafen:[
           { id:"wob-a-vgl-plus", naam:"De omgekeerde bewerking en terugrekenen", niveau:"onderbouw", doelen:["wob-a-vgl-plus", "wob-a-vgl-keer", "wob-a-vgl-ketting", "wob-a-vgl-minx", "wi-vgl-terug"] },
           { id:"wi-vgl-balans", naam:"De balansmethode", niveau:"onderbouw", doelen:["wi-vgl-balans", "wi-vgl-haakjes", "wi-vgl-kies", "wob-a-vgl-controle"] },
+          { id:"wi-vgl-breuk", naam:"Vergelijkingen met breuken", niveau:"onderbouw", doelen:["wi-vgl-breuk"] },
+          { id:"wi-vgl-verhaal", naam:"Een vergelijking bij een verhaal", niveau:"onderbouw", doelen:["wi-vgl-verhaal"] },
           { id:"wi-kw-wortel", naam:"Kwadratische vergelijkingen", niveau:"havo", doelen:["wi-kw-wortel", "wi-kw-ontbind", "wi-kw-abc", "wi-kw-kies"] },
           { id:"wvm-a-inklem-heel", naam:"Inklemmen en de grafiek", niveau:"vmbo", doelen:["wvm-a-inklem-heel", "wvm-a-inklem-dec", "wvm-a-inklem-grafiek", "wvm-a-inklem-kies"] },
           { id:"wi-ong-los", naam:"Ongelijkheden", niveau:"havo", doelen:["wi-ong-los", "wi-ong-omklap"] },
@@ -786,35 +825,43 @@ window.OPDRACHTENBOEK = (function(){
           { id:"wob-v-gl-y", naam:"Grafieken lezen", niveau:"onderbouw", doelen:["wob-v-gl-y", "wob-v-gl-x", "wob-v-gl-stijg", "wob-v-gl-snelst"] }
         ] },
         { naam:"Formules en tabellen", paragrafen:[
-          { id:"wob-v-fo-woord", naam:"Formules en tabellen", niveau:"onderbouw", doelen:["wob-v-fo-woord", "wob-v-fo-invul", "wob-v-fo-verhaal", "wob-v-fo-terug", "wi-lin-tabel"] }
+          { id:"wob-v-fo-woord", naam:"Formules en tabellen", niveau:"onderbouw", doelen:["wob-v-fo-woord", "wob-v-fo-invul", "wob-v-fo-verhaal", "wob-v-fo-terug", "wi-lin-tabel"] },
+          { id:"wob-v-fo-patroon", naam:"Een formule bij een patroon", niveau:"onderbouw", doelen:["wob-v-fo-patroon"] }
         ] },
         { naam:"Lineaire verbanden", paragrafen:[
           { id:"wob-v-lin-is", naam:"Lineair of niet", niveau:"onderbouw", doelen:["wob-v-lin-is"] },
+          { id:"wob-v-lin-evenredig", naam:"Recht evenredig", niveau:"onderbouw", doelen:["wob-v-lin-evenredig"] },
           { id:"wob-v-lin-tabel", naam:"Startgetal en hellingsgetal", niveau:"onderbouw", doelen:["wob-v-lin-tabel", "wob-v-lin-graf", "wob-v-lin-form"] },
           { id:"wvm-a-lin-helling", naam:"Het hellingsgetal berekenen", niveau:"vmbo", doelen:["wvm-a-lin-helling"] },
           { id:"wob-v-lin-formtab", naam:"De formule opstellen", niveau:"onderbouw", doelen:["wob-v-lin-formtab", "wi-lin-twee"] },
           { id:"wvm-a-lin-tabel", naam:"De formule bij een tabel, grafiek of verhaal", niveau:"vmbo", doelen:["wvm-a-lin-tabel", "wvm-a-lin-grafiek", "wvm-a-lin-verhaal"] },
+          { id:"wvm-a-lin-teken", naam:"De grafiek tekenen bij een lineaire formule", niveau:"vmbo", doelen:["wvm-a-lin-teken"] },
           { id:"wha-fo-lin", naam:"Lineaire formules opstellen", niveau:"havo A", doelen:["wha-fo-lin"] },
           { id:"wob-v-lin-herken", naam:"De grafiek bij een formule", niveau:"onderbouw", doelen:["wob-v-lin-herken"] },
+          { id:"wob-v-lin-teken", naam:"Een lijn tekenen bij een formule", niveau:"onderbouw", doelen:["wob-v-lin-teken"] },
           { id:"wvm-a-lin-terug", naam:"Terugrekenen", niveau:"vmbo", doelen:["wvm-a-lin-terug"] },
-          { id:"wob-v-snij-graf", naam:"Snijpunten", niveau:"onderbouw", doelen:["wob-v-snij-graf", "wob-v-snij-tabel", "wob-v-snij-vgl", "wi-lin-snij"] }
+          { id:"wob-v-snij-graf", naam:"Snijpunten", niveau:"onderbouw", doelen:["wob-v-snij-graf", "wob-v-snij-tabel", "wob-v-snij-vgl", "wi-lin-snij"] },
+          { id:"wi-lin-evenwijdig", naam:"Evenwijdige lijnen en het snijpunt met de x-as", niveau:"onderbouw", doelen:["wi-lin-evenwijdig", "wi-lin-xas"] }
         ] },
         { naam:"Kwadratische verbanden", paragrafen:[
           { id:"wob-v-kw-vorm", naam:"Tabel, vorm en symmetrie", niveau:"onderbouw", doelen:["wob-v-kw-vorm", "wob-v-kw-tabel", "wob-v-kw-sym", "wob-v-kw-top", "wob-v-kw-verschil"] },
+          { id:"wob-v-kw-teken", naam:"Een parabool tekenen bij een formule", niveau:"onderbouw", doelen:["wob-v-kw-teken"] },
           { id:"wvm-a-kw-tabel", naam:"De parabool: tabel, symmetrie en top", niveau:"vmbo", doelen:["wvm-a-kw-tabel", "wvm-a-kw-soort", "wvm-a-kw-symas", "wvm-a-kw-top-tabel"] },
+          { id:"wvm-a-kw-teken", naam:"De parabool tekenen bij een formule", niveau:"vmbo", doelen:["wvm-a-kw-teken"] },
           { id:"wvm-a-kw-nul", naam:"Nulpunten en de top", niveau:"vmbo", doelen:["wvm-a-kw-nul", "wvm-a-kw-top-nul"] },
           { id:"whb-top-vorm", naam:"De top van een parabool", niveau:"havo B", doelen:["whb-top-vorm", "whb-top-abc", "whb-top-sym", "whb-top-kies"] },
-          { id:"whb-fun-waarde", naam:"Functiewaarde, domein en bereik", niveau:"havo B", doelen:["whb-fun-waarde", "whb-fun-domein", "whb-fun-bereikw", "whb-fun-bereikp"] }
+          { id:"whb-fun-waarde", naam:"Functiewaarde, domein, bereik en asymptoten", niveau:"havo B", doelen:["whb-fun-waarde", "whb-fun-domein", "whb-fun-bereikw", "whb-fun-bereikp", "whb-fun-asym"] }
         ] },
         { naam:"Omgekeerd evenredig", paragrafen:[
           { id:"wob-v-oe-herken", naam:"Omgekeerd evenredig", niveau:"onderbouw", doelen:["wob-v-oe-herken", "wob-v-oe-ontbreek", "wob-v-oe-formule"] }
         ] },
         { naam:"Exponentiële groei en machtsformules", paragrafen:[
-          { id:"wi-exp-factor", naam:"Groeifactor en procent", niveau:"vmbo", doelen:["wi-exp-factor", "wi-exp-procent", "wi-exp-formule", "wi-exp-tabel"] },
+          { id:"wi-exp-factor", naam:"Groeifactor en procent", niveau:"vmbo", doelen:["wi-exp-factor", "wi-exp-procent", "wi-exp-formule", "wi-exp-tabel", "wi-exp-grafiek"] },
           { id:"wvm-a-exp-perioden", naam:"Meer perioden en terugrekenen", niveau:"vmbo", doelen:["wvm-a-exp-perioden", "wvm-a-exp-afname", "wvm-a-exp-terug", "wvm-a-exp-grens"] },
           { id:"wha-fo-soort", naam:"Groeifactor, verdubbelen en halveren", niveau:"havo A", doelen:["wha-fo-soort", "wha-fo-exp", "wha-fo-langer", "wha-fo-korter", "wha-fo-verdub"] },
           { id:"wva-exp-eenheid", naam:"Groeifactor per tijdseenheid, halveren en verdubbelen", niveau:"vwo A", doelen:["wva-exp-eenheid", "wva-exp-half", "wva-exp-verdub", "wva-exp-terug"] },
-          { id:"wha-fo-macht", naam:"Machtsformules", niveau:"havo A", doelen:["wha-fo-macht", "wha-fo-machtterug"] }
+          { id:"wha-fo-macht", naam:"Machtsformules", niveau:"havo A", doelen:["wha-fo-macht", "wha-fo-machtterug"] },
+          { id:"wi-verband-soort", naam:"Welk verband is het?", niveau:"vmbo", doelen:["wi-verband-soort"] }
         ] },
         { naam:"Veranderingen", paragrafen:[
           { id:"wvm-a-graf-toename", naam:"Toename en afname in een grafiek", niveau:"vmbo", doelen:["wvm-a-graf-toename", "wvm-a-graf-lezen", "wvm-a-graf-grootste", "wvm-a-graf-gem", "wvm-a-graf-stijgen"] },
@@ -826,58 +873,79 @@ window.OPDRACHTENBOEK = (function(){
         ] },
         { naam:"Differentiëren", paragrafen:[
           { id:"whb-afg-macht", naam:"De afgeleide", niveau:"havo B", doelen:["whb-afg-macht", "whb-afg-veel", "whb-afg-herleid"] },
+          { id:"whb-afg-ketting", naam:"Kettingregel, productregel en quotiëntregel", niveau:"havo B", doelen:["whb-afg-ketting", "whb-afg-prodquot"] },
           { id:"whb-afgg-helling", naam:"De afgeleide gebruiken", niveau:"havo B", doelen:["whb-afgg-helling", "whb-afgg-raak", "whb-afgg-stijg", "whb-afgg-top"] },
           { id:"wva-dif-macht", naam:"Differentiëren en de helling", niveau:"vwo A", doelen:["wva-dif-macht", "wva-dif-veelterm", "wva-dif-helling", "wva-dif-raaklijn", "wva-dif-top"] },
+          { id:"wva-dif-product", naam:"Productregel, kettingregel en de afgeleide van eˣ, gˣ en ln x", niveau:"vwo A", doelen:["wva-dif-product", "wva-dif-ketting", "wva-dif-exp"] },
           { id:"wvb-dif-ex", naam:"Afgeleiden van standaardfuncties", niveau:"vwo B", doelen:["wvb-dif-ex", "wvb-dif-ln", "wvb-dif-gx", "wvb-dif-sin"] },
           { id:"wvb-dif-product", naam:"Product-, quotiënt- en kettingregel", niveau:"vwo B", doelen:["wvb-dif-product", "wvb-dif-quot", "wvb-dif-ketting", "wvb-dif-kies"] },
           { id:"wvb-raaklijn", naam:"Raaklijnen, extremen en buigpunten", niveau:"vwo B", doelen:["wvb-raaklijn", "wvb-extreem", "wvb-extreem-tweede", "wvb-buigpunt"] }
         ] },
         { naam:"Integreren", paragrafen:[
-          { id:"wvb-prim-macht", naam:"Integreren", niveau:"vwo B", doelen:["wvb-prim-macht", "wvb-prim-std", "wvb-integraal"] }
+          { id:"wvb-prim-macht", naam:"Integreren", niveau:"vwo B", doelen:["wvb-prim-macht", "wvb-prim-std", "wvb-integraal"] },
+          { id:"wvb-int-ketting", naam:"Primitiveren met de kettingregel", niveau:"vwo B", doelen:["wvb-int-ketting"] },
+          { id:"wvb-int-tussen", naam:"Oppervlakte tussen grafieken en omwentelingslichamen", niveau:"vwo B", doelen:["wvb-int-tussen", "wvb-int-omw"] }
         ] },
         { naam:"Periodieke functies", paragrafen:[
           { id:"whb-per-ea", naam:"Periodieke functies", niveau:"havo B", doelen:["whb-per-ea", "whb-per-per", "whb-per-formule", "whb-per-opstel"] },
-          { id:"wvb-radialen", naam:"Radialen, exacte waarden en sinusoïden", niveau:"vwo B", doelen:["wvb-radialen", "wvb-exact", "wvb-gvgl", "wvb-gvgl-2x", "wvb-sinusoide"] }
+          { id:"whb-per-rad", naam:"Radialen, exacte waarden en sin x = c", niveau:"havo B", doelen:["whb-per-rad", "whb-per-exact", "whb-per-gvgl"] },
+          { id:"wvb-radialen", naam:"Radialen, exacte waarden en sinusoïden", niveau:"vwo B", doelen:["wvb-radialen", "wvb-exact", "wvb-gvgl", "wvb-gvgl-2x", "wvb-sinusoide"] },
+          { id:"wvb-gonio-dubbel", naam:"sin² + cos² = 1 en de verdubbelingsformules", niveau:"vwo B", doelen:["wvb-gonio-dubbel"] }
         ] }
       ] },
       { naam:"Meetkunde", hoofdstukken:[
         { naam:"Hoeken", paragrafen:[
           { id:"wob-m-hoek-soort", naam:"Soorten hoeken en de notatie", niveau:"onderbouw", doelen:["wob-m-hoek-soort", "wob-m-hoek-naam"] },
+          { id:"wob-m-hoek-meten", naam:"Hoeken meten en hoeken rond een punt", niveau:"onderbouw", doelen:["wob-m-hoek-meten", "wob-m-hoek-rond"] },
           { id:"wob-m-hoek-neven", naam:"Nevenhoeken en overstaande hoeken", niveau:"onderbouw", doelen:["wob-m-hoek-neven", "wob-m-hoek-overstaand"] },
           { id:"wob-m-ev-f", naam:"Hoeken bij evenwijdige lijnen", niveau:"onderbouw", doelen:["wob-m-ev-f", "wob-m-ev-z", "wob-m-ev-regel"] },
           { id:"wob-m-ev-driehoek", naam:"De hoekensom", niveau:"onderbouw", doelen:["wob-m-ev-driehoek", "wob-m-ev-gelijkbenig", "wi-hoek-veelhoek"] },
+          { id:"wob-m-ev-vierhoek", naam:"Hoeken in vierhoeken", niveau:"onderbouw", doelen:["wob-m-ev-vierhoek"] },
+          { id:"wob-m-ev-buiten", naam:"De buitenhoek van een driehoek", niveau:"onderbouw", doelen:["wob-m-ev-buiten"] },
+          { id:"wob-m-ev-soort", naam:"Soorten vierhoeken", niveau:"onderbouw", doelen:["wob-m-ev-soort"] },
           { id:"wi-hoek-x", naam:"Hoeken met een vergelijking", niveau:"onderbouw", doelen:["wi-hoek-x"] }
         ] },
         { naam:"Omtrek en oppervlakte", paragrafen:[
           { id:"wob-m-opp-cm2", naam:"Wat oppervlakte is, en de eenheden", niveau:"onderbouw", doelen:["wob-m-opp-cm2", "wob-m-opp-eenheid", "wob-m-opp-om"] },
           { id:"wob-m-opp-rh", naam:"Rechthoek en vierkant", niveau:"onderbouw", doelen:["wob-m-opp-rh", "wob-m-opp-vierkant", "wob-m-opp-rechthoek"] },
+          { id:"wob-m-opp-omtrek", naam:"Omtrek van veelhoeken", niveau:"onderbouw", doelen:["wob-m-opp-omtrek", "wob-m-opp-omtrek-sam"] },
           { id:"wob-m-opp-driehoek", naam:"Driehoek", niveau:"onderbouw", doelen:["wob-m-opp-driehoek", "wob-m-opp-buiten"] },
           { id:"wob-m-opp-para", naam:"Parallellogram en trapezium", niveau:"onderbouw", doelen:["wob-m-opp-para", "wob-m-opp-trapezium"] },
           { id:"wob-m-opp-ruit", naam:"Ruit en vlieger", niveau:"onderbouw", doelen:["wob-m-opp-ruit"] },
-          { id:"wob-m-cir-omtrek", naam:"De cirkel", niveau:"onderbouw", doelen:["wob-m-cir-omtrek", "wob-m-cir-opp"] },
+          { id:"wob-m-opp-rooster", naam:"Oppervlakte op roosterpapier", niveau:"onderbouw", doelen:["wob-m-opp-rooster"] },
+          { id:"wob-m-opp-terug", naam:"Hoogte of basis terugrekenen", niveau:"onderbouw", doelen:["wob-m-opp-terug"] },
+          { id:"wob-m-cir-omtrek", naam:"De cirkel", niveau:"onderbouw", doelen:["wob-m-cir-omtrek", "wob-m-cir-opp", "wob-m-cir-terug"] },
           { id:"wvm-m-cirk-deel-opp", naam:"Halve en kwart cirkels", niveau:"vmbo", doelen:["wvm-m-cirk-deel-opp", "wvm-m-cirk-deel-omtrek"] },
           { id:"wob-m-sam-erbij", naam:"Samengestelde figuren", niveau:"onderbouw", doelen:["wob-m-sam-erbij", "wob-m-sam-eraf", "wob-m-sam-kies"] },
           { id:"wvm-m-cirk-erbij", naam:"Samengestelde figuren met cirkeldelen", niveau:"vmbo", doelen:["wvm-m-cirk-erbij", "wvm-m-cirk-eraf", "wvm-m-cirk-omtrek"] }
+        ] },
+        { naam:"Ruimtefiguren", paragrafen:[
+          { id:"wob-m-ruimte-naam", naam:"Ruimtefiguren herkennen en benoemen", niveau:"onderbouw", doelen:["wob-m-ruimte-naam", "wob-m-ruimte-ribben"] },
+          { id:"wob-m-ruimte-uitslag", naam:"Uitslagen van de kubus", niveau:"onderbouw", doelen:["wob-m-ruimte-uitslag"] },
+          { id:"wob-m-ruimte-aanzicht", naam:"Aanzichten van blokkenbouwsels", niveau:"onderbouw", doelen:["wob-m-ruimte-aanzicht"] },
+          { id:"wvm-m-werktek", naam:"Aanzichten en werktekeningen", niveau:"vmbo", doelen:["wvm-m-werktek", "wvm-m-aanzicht-maat"] }
         ] },
         { naam:"Inhoud van ruimtefiguren", paragrafen:[
           { id:"wob-m-inh-om", naam:"Inhoudsmaten en liters", niveau:"onderbouw", doelen:["wob-m-inh-om", "wob-m-inh-liter"] },
           { id:"wvm-m-liter-cm", naam:"Liters, cm³ en dm³", niveau:"vmbo", doelen:["wvm-m-liter-cm", "wvm-m-liter-dm", "wvm-m-liter-kies"] },
           { id:"wob-m-inh-balk", naam:"Kubus en balk", niveau:"onderbouw", doelen:["wob-m-inh-balk"] },
           { id:"wob-m-inh-prisma", naam:"Prisma en cilinder", niveau:"onderbouw", doelen:["wob-m-inh-prisma", "wob-m-inh-cilinder"] },
-          { id:"wi-inh-piramide", naam:"Piramide en kegel", niveau:"vmbo", doelen:["wi-inh-piramide", "wi-inh-kies"] },
+          { id:"wi-inh-piramide", naam:"Piramide en kegel", niveau:"onderbouw/vmbo", doelen:["wob-m-inh-piramide", "wi-inh-piramide", "wi-inh-kies"] },
           { id:"wvm-m-inh-bol", naam:"Bol, samengestelde figuren en terugrekenen", niveau:"vmbo", doelen:["wvm-m-inh-bol", "wvm-m-inh-samen", "wvm-m-inh-gat", "wvm-m-inh-terug"] }
         ] },
         { naam:"Oppervlakte van ruimtefiguren", paragrafen:[
           { id:"wob-m-uit-balk", naam:"Uitslag en oppervlakte", niveau:"onderbouw", doelen:["wob-m-uit-balk", "wob-m-uit-prisma", "wob-m-uit-cilinder"] },
-          { id:"wvm-m-opp-prisma", naam:"Oppervlakte van prisma en cilinder", niveau:"vmbo", doelen:["wvm-m-opp-prisma", "wvm-m-opp-cil"] }
+          { id:"wvm-m-opp-prisma", naam:"Oppervlakte van prisma en cilinder", niveau:"vmbo", doelen:["wvm-m-opp-prisma", "wvm-m-opp-cil"] },
+          { id:"wvm-m-opp-pir", naam:"Oppervlakte van piramide, kegel en bol", niveau:"vmbo", doelen:["wvm-m-opp-pir", "wvm-m-opp-kegel", "wvm-m-opp-bol"] }
         ] },
         { naam:"Pythagoras", paragrafen:[
-          { id:"wob-m-pyt-schuin", naam:"In de vlakke figuur", niveau:"onderbouw", doelen:["wob-m-pyt-schuin", "wob-m-pyt-rhz", "wob-m-pyt-kies", "wob-m-pyt-check", "wob-m-pyt-toepas"] },
+          { id:"wob-m-pyt-schuin", naam:"In de vlakke figuur", niveau:"onderbouw", doelen:["wob-m-pyt-schuin", "wob-m-pyt-rhz", "wob-m-pyt-kies", "wob-m-pyt-check", "wob-m-pyt-toepas", "wob-m-pyt-omtrek"] },
           { id:"wi-pyt-assen", naam:"In het assenstelsel en de gelijkbenige driehoek", niveau:"vmbo", doelen:["wi-pyt-assen", "wi-pyt-hoogte"] },
           { id:"wi-pyt-ruimte", naam:"In de ruimte", niveau:"vmbo", doelen:["wi-pyt-ruimte", "wvm-m-rp-midden", "wvm-m-rp-pir-hoogte", "wvm-m-rp-pir-ribbe", "wvm-m-rp-pir-zijvlak"] }
         ] },
         { naam:"Gelijkvormigheid, vergroten en schaal", paragrafen:[
           { id:"wob-m-gel-paren", naam:"Gelijkvormige driehoeken", niveau:"onderbouw", doelen:["wob-m-gel-paren", "wob-m-gel-factor", "wob-m-gel-zijde", "wob-m-gel-tabel", "wob-m-gel-kies"] },
+          { id:"wob-m-gel-hh", naam:"Gelijkvormig aantonen met hoeken", niveau:"onderbouw", doelen:["wob-m-gel-hh"] },
           { id:"wvm-m-gv-snavel", naam:"Snavel, zandloper en schaduw", niveau:"vmbo", doelen:["wvm-m-gv-snavel", "wvm-m-gv-zandloper", "wvm-m-gv-stuk", "wvm-m-gv-schaduw"] },
           { id:"wi-verg-factor", naam:"Vergroten van lengte, oppervlakte en inhoud", niveau:"vmbo", doelen:["wi-verg-factor"] },
           { id:"wvm-m-schaal-werk", naam:"Schaal", niveau:"vmbo", doelen:["wvm-m-schaal-werk", "wvm-m-schaal-teken", "wvm-m-schaal-verg"] },
@@ -886,38 +954,46 @@ window.OPDRACHTENBOEK = (function(){
         { naam:"Goniometrie", paragrafen:[
           { id:"wi-gon-kies", naam:"Sinus, cosinus en tangens", niveau:"vmbo", doelen:["wi-gon-kies", "wi-gon-zijde", "wi-gon-hoek"] },
           { id:"wvm-m-hel-proc", naam:"Hellingshoek en hellingspercentage", niveau:"vmbo", doelen:["wvm-m-hel-proc", "wvm-m-hel-hoogte", "wvm-m-hel-hoek", "wvm-m-hel-perc", "wvm-m-hel-weg"] },
-          { id:"wvm-m-gon-oog", naam:"Toepassingen", niveau:"vmbo", doelen:["wvm-m-gon-oog", "wvm-m-gon-boot", "wvm-m-gon-drieh", "wvm-m-gon-gelijkbenig"] },
+          { id:"wvm-m-gon-oog", naam:"Toepassingen", niveau:"vmbo", doelen:["wvm-m-gon-oog", "wvm-m-gon-boot", "wvm-m-gon-drieh", "wvm-m-gon-gelijkbenig", "wvm-m-gon-ruimte"] },
           { id:"whb-sc-szijde", naam:"Sinusregel en cosinusregel", niveau:"havo B", doelen:["whb-sc-szijde", "whb-sc-shoek", "whb-sc-czijde", "whb-sc-choek", "whb-sc-kies"] }
         ] },
-        { naam:"Transformaties in het assenstelsel", paragrafen:[
-          { id:"wob-m-tr-spiegel", naam:"Spiegelen, verschuiven en draaien", niveau:"onderbouw", doelen:["wob-m-tr-spiegel", "wob-m-tr-verschuif", "wob-m-tr-halve", "wob-m-tr-kwart"] }
+        { naam:"Symmetrie en transformaties", paragrafen:[
+          { id:"wob-m-tr-symas", naam:"Symmetrie: lijn, draaiing en punt", niveau:"onderbouw", doelen:["wob-m-tr-symas", "wob-m-tr-draai"] },
+          { id:"wob-m-tr-spiegel", naam:"Spiegelen, verschuiven en draaien", niveau:"onderbouw", doelen:["wob-m-tr-spiegel", "wob-m-tr-verschuif", "wob-m-tr-halve", "wob-m-tr-kwart"] },
+          { id:"wob-m-tr-lijn", naam:"Spiegelen in een lijn", niveau:"onderbouw", doelen:["wob-m-tr-lijn"] }
         ] },
         { naam:"Cirkels en vectoren", paragrafen:[
           { id:"whb-cir-hoek", naam:"Hoeken en raaklijnen bij cirkels", niveau:"havo B", doelen:["whb-cir-hoek", "whb-cir-raak", "whb-cir-coord"] },
           { id:"wvb-cirkel-op", naam:"De vergelijking van een cirkel", niveau:"vwo B", doelen:["wvb-cirkel-op", "wvb-cirkel-af", "wvb-cirkel-afsplits"] },
           { id:"wvb-vec-som", naam:"Vectoren", niveau:"vwo B", doelen:["wvb-vec-som", "wvb-inproduct", "wvb-vec-hoek", "wvb-vec-lijn", "wvb-vec-vgl", "wvb-afstand"] }
+        ] },
+        { naam:"Parametervoorstellingen", paragrafen:[
+          { id:"wvb-param-as", naam:"Baan, snelheid en raaklijn", niveau:"vwo B", doelen:["wvb-param-as", "wvb-param-snel", "wvb-param-raak"] }
         ] }
       ] },
       { naam:"Statistiek en kans", hoofdstukken:[
         { naam:"Gegevens verwerken", paragrafen:[
-          { id:"wst-turven", naam:"Turven, frequentie en klassen", niveau:"onderbouw", doelen:["wst-turven", "wst-relfreq", "wst-klassen"] },
+          { id:"wst-turven", naam:"Turven, frequentie en klassen", niveau:"onderbouw", doelen:["wst-turven", "wst-freq-maak", "wst-relfreq", "wst-klassen"] },
           { id:"wst-cumfreq", naam:"Cumulatieve frequentie", niveau:"vmbo", doelen:["wst-cumfreq"] }
         ] },
-        { naam:"Diagrammen aflezen", paragrafen:[
+        { naam:"Diagrammen aflezen en tekenen", paragrafen:[
           { id:"wst-staaf", naam:"Staaf-, lijn- en cirkeldiagram", niveau:"onderbouw", doelen:["wst-staaf", "wst-lijn", "wst-cirkel-proc", "wst-cirkel-graden", "wst-cirkel-terug"] },
+          { id:"wst-teken", naam:"Een staaf- of lijndiagram tekenen", niveau:"onderbouw", doelen:["wst-teken"] },
           { id:"wst-somfreq", naam:"Somfrequentie, steelblad en histogram", niveau:"vmbo", doelen:["wst-somfreq", "wst-steelblad", "wst-histogram"] },
           { id:"wha-st-poly", naam:"Frequentiepolygoon en cumulatief", niveau:"havo A", doelen:["wha-st-poly", "wha-st-cum"] }
         ] },
         { naam:"Centrum- en spreidingsmaten", paragrafen:[
           { id:"wst-gem", naam:"Gemiddelde, mediaan en modus", niveau:"onderbouw", doelen:["wst-gem", "wst-med-oneven", "wst-med-even", "wst-modus", "wst-centrum-kies"] },
+          { id:"wst-gem-terug", naam:"Het gemiddelde terugrekenen", niveau:"onderbouw", doelen:["wst-gem-terug"] },
           { id:"wst-gem-freq", naam:"Uit een frequentietabel", niveau:"onderbouw", doelen:["wst-gem-freq", "wst-med-freq"] },
           { id:"wi-st-klassen", naam:"Gemiddelde bij klassen", niveau:"vmbo", doelen:["wi-st-klassen"] },
           { id:"wst-spreiding", naam:"Spreiding", niveau:"onderbouw", doelen:["wst-spreiding"] },
-          { id:"wi-st-kwartiel", naam:"Kwartielen en de boxplot", niveau:"vmbo", doelen:["wi-st-kwartiel", "wi-st-boxplot"] },
+          { id:"wi-st-kwartiel", naam:"Kwartielen en de boxplot", niveau:"vmbo", doelen:["wi-st-kwartiel", "wi-st-boxplot", "wi-st-boxplot-vergelijk"] },
           { id:"wha-st-sd", naam:"De standaardafwijking", niveau:"havo A", doelen:["wha-st-sd"] }
         ] },
         { naam:"Kansen", paragrafen:[
           { id:"wst-kans-breuk", naam:"Kansen", niveau:"onderbouw", doelen:["wst-kans-breuk", "wst-kans-proc", "wst-kans-dobbel", "wst-kans-rooster"] },
+          { id:"wst-kans-empirisch", naam:"Kans uit een experiment", niveau:"onderbouw", doelen:["wst-kans-empirisch"] },
           { id:"wst-kruistabel", naam:"Kruistabel, niet en minstens", niveau:"vmbo", doelen:["wst-kruistabel", "wst-niet", "wst-minstens", "wst-verwacht"] },
           { id:"wi-kans-paden", naam:"Kansbomen", niveau:"havo", doelen:["wi-kans-paden", "wi-kans-zonder", "wi-kans-drie"] }
         ] },
@@ -928,11 +1004,18 @@ window.OPDRACHTENBOEK = (function(){
         ] },
         { naam:"Kansregels en kansverdelingen", paragrafen:[
           { id:"wha-kans-som", naam:"Kansregels en de binomiale verdeling", niveau:"havo A", doelen:["wha-kans-som", "wha-kans-prod", "wha-kans-compl", "wha-kans-metzonder", "wha-kans-vaas", "wha-kans-kies", "wha-bin-formule", "wha-bin-minstens", "wha-verw"] },
-          { id:"wva-kans-som", naam:"Kansregels en kansverdelingen", niveau:"vwo A", doelen:["wva-kans-som", "wva-kans-prod", "wva-kans-compl", "wva-kans-kies", "wva-kans-kruis", "wva-verd-ev", "wva-verd-sd", "wva-bin-formule", "wva-bin-hoogstens", "wva-bin-ev"] }
+          { id:"wha-bin-gr", naam:"Binomiale kansen met de GR", niveau:"havo A", doelen:["wha-bin-gr"] },
+          { id:"wva-kans-som", naam:"Kansregels en kansverdelingen", niveau:"vwo A", doelen:["wva-kans-som", "wva-kans-prod", "wva-kans-compl", "wva-kans-kies", "wva-kans-kruis", "wva-verd-ev", "wva-verd-sd", "wva-bin-formule", "wva-bin-hoogstens", "wva-bin-ev"] },
+          { id:"wva-bin-gr", naam:"Binomiale kansen met de GR", niveau:"vwo A", doelen:["wva-bin-gr"] }
         ] },
         { naam:"Normale verdeling", paragrafen:[
           { id:"wha-st-vuist", naam:"De vuistregels", niveau:"havo A", doelen:["wha-st-vuist", "wha-st-grens"] },
-          { id:"wva-norm-z", naam:"Z-waarden en vuistregels", niveau:"vwo A", doelen:["wva-norm-z", "wva-norm-vuist", "wva-norm-grens", "wva-norm-terug"] }
+          { id:"wha-norm-cdf", naam:"Met de GR: normalcdf, invNorm en μ of σ terugrekenen", niveau:"havo A", doelen:["wha-norm-cdf", "wha-norm-inv", "wha-norm-terug"] },
+          { id:"wva-norm-z", naam:"Z-waarden en vuistregels", niveau:"vwo A", doelen:["wva-norm-z", "wva-norm-vuist", "wva-norm-grens", "wva-norm-terug"] },
+          { id:"wva-norm-cdf", naam:"Met de GR: normalcdf, invNorm en μ of σ onbekend", niveau:"vwo A", doelen:["wva-norm-cdf", "wva-norm-inv", "wva-norm-onbekend"] }
+        ] },
+        { naam:"Verschillen beschrijven", paragrafen:[
+          { id:"wha-eff-box", naam:"Gering, middelmatig of groot: boxplots, phi, max Vcp en effectgrootte", niveau:"havo A/vwo A", doelen:["wha-eff-box", "wha-eff-phi", "wha-eff-vcp", "wha-eff-e"] }
         ] },
         { naam:"Steekproeven en toetsen", paragrafen:[
           { id:"wha-st-aselect", naam:"Steekproeven", niveau:"havo A", doelen:["wha-st-aselect", "wha-st-steekproef"] },

@@ -1,10 +1,11 @@
 /* De leerroute wiskunde, vwo B. Logaritmen en e en ln, exponentiële en
    logaritmische vergelijkingen, de afgeleide van eˣ, ln x, gˣ, sin x en cos x,
    de productregel, de quotiëntregel en de kettingregel, de raaklijn, extremen en
-   buigpunten, primitiveren en de oppervlakte met een integraal, radialen en de
-   eenheidscirkel, goniometrische vergelijkingen en de sinusoïde, vectoren
-   (lengte, inproduct, hoek, vectorvoorstelling, afstand punt tot lijn) en de
-   vergelijking van een cirkel. Elke methode een eigen doel.
+   buigpunten, primitiveren (ook met de kettingregel), de oppervlakte met een integraal,
+   tussen twee grafieken en de inhoud van een omwentelingslichaam, radialen en de
+   eenheidscirkel, goniometrische vergelijkingen, de sinusoïde en de verdubbelingsformules,
+   vectoren (lengte, inproduct, hoek, vectorvoorstelling, afstand punt tot lijn), de
+   vergelijking van een cirkel en parametervoorstellingen. Elke methode een eigen doel.
    De machtsregel en de afgeleide van een veelterm staan bij havo.
    Antwoorden met formules controleert leesE: die rekent de getypte formule uit
    op een paar punten en vergelijkt met het goede antwoord, dus elke gelijkwaardige
@@ -472,6 +473,37 @@
         F(fp, bp.replace(/u/g, '(' + u + ')'), 'Vergeet niet keer de afgeleide van de binnenste functie, ' + paren(a) + '.')) ] };
   }
 
+  /* ================= parametervoorstellingen ================= */
+  /* een t in een formule wordt x, zodat fC er mee kan rekenen (sqrt, tan en cot blijven heel) */
+  function tNaarX(v){ return String(v).replace(/(^|[^a-z])t(?![a-z])/gi, '$1x'); }
+  function tC(verwacht){ var c = fC(tNaarX(verwacht)); return function(v){ return c(tNaarX(v)); }; }
+  function pTt(c){ return pT(c).replace(/x/g, 't'); }
+  /* hint bij a · t + b = 0 */
+  function losHintT(a, b, t){ return (b ? (b > 0 ? 'Trek ' + T(b) + ' af' : 'Tel ' + T(-b) + ' op') + ': ' + E([[a, 't']]) + ' = ' + T(-b) + '. ' : '') + (a !== 1 ? 'Deel door ' + T(a) + ': ' : '') + 't = ' + T(t) + '.'; }
+  /* een getal: exact (ook √13 of 9/2) of afgerond op d decimalen */
+  function afC(w, d){ var c = getalC(w); return function(v){ if (c(v)) return true; var a = getalVan(v); return isFinite(a) && Math.abs(a - rnd(w, d)) < 1e-9; }; }
+  /* de baan van een punt: x(t) en y(t) als veeltermen, met de assen en een paar punten */
+  function baanFig(cx, cy, t0, t1, pts){
+    var W = 440, H = 320, L = 40, Rr = 16, Tp = 14, B = 28, P = [], j;
+    for (j = 0; j <= 240; j++){ var t = t0 + (t1 - t0) * j / 240; P.push([pV(cx, t), pV(cy, t)]); }
+    var xs = P.map(function(p){ return p[0]; }).concat([0]), ys = P.map(function(p){ return p[1]; }).concat([0]);
+    var x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs), y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys), dx = (x1 - x0) * 0.08 || 1, dy = (y1 - y0) * 0.08 || 1;
+    x0 -= dx; x1 += dx; y0 -= dy; y1 += dy;
+    function px(x){ return L + (x - x0) / (x1 - x0) * (W - L - Rr); }
+    function py(y){ return Tp + (y1 - y) / (y1 - y0) * (H - Tp - B); }
+    var s = '', xt = ticks(x0, x1, stapje(x1 - x0)), yt = ticks(y0, y1, stapje(y1 - y0));
+    xt.forEach(function(t){ s += ln(px(t.x), py(y0), px(t.x), py(y1), { k:'var(--muted)', w:1, op:0.3 }); if (t.x) s += tx(px(t.x), py(0) + 18, t.t, { m:'klein' }); });
+    yt.forEach(function(t){ s += ln(px(x0), py(t.x), px(x1), py(t.x), { k:'var(--muted)', w:1, op:0.3 }); if (t.x) s += tx(px(0) - 6, py(t.x) + 5, t.t, { m:'klein', a:'end' }); });
+    s += ln(px(x0), py(0), px(x1), py(0), { w:1.8 }) + ln(px(0), py(y0), px(0), py(y1), { w:1.8 });
+    s += tx(px(x1) - 4, py(0) - 7, 'x', { m:'klein', a:'end' }) + tx(px(0) + 8, py(y1) + 12, 'y', { m:'klein', a:'start' });
+    s += '<path d="' + P.map(function(p, i){ return (i ? 'L' : 'M') + n1(px(p[0])) + ' ' + n1(py(p[1])); }).join(' ') + '" style="fill:none;stroke:' + KL[0] + ';stroke-width:2.8;stroke-linejoin:round"/>';
+    (pts || []).forEach(function(p){ s += stip(px(p.x), py(p.y), p.k) + (p.t ? tx(px(p.x) + 8, py(p.y) - 9, p.t, { m:'klein', a:'start', vet:true, k:p.k || KL[1] }) : ''); });
+    return svg(W, H, s, 'de baan van het punt', 520);
+  }
+  /* een coëfficiënt als breuk voor een term: −1/3x³, 2x², x */
+  function bt(n, d, v){ if (!n) return ''; var b = breuk(n, d), neg = b.charAt(0) === MIN, a = neg ? b.slice(1) : b; return { neg:neg, s:(a === '1' && v ? '' : a) + v }; }
+  function bSom(l){ var s = ''; l.forEach(function(x){ var t = bt(x[0], x[1], x[2]); if (!t) return; s += s ? (t.neg ? ' ' + MIN + ' ' : ' + ') + t.s : (t.neg ? MIN : '') + t.s; }); return s || '0'; }
+
   /* ================= de inhoud ================= */
   LEERROUTE.voeg('wiskunde', [
     /* ================= logaritmen ================= */
@@ -863,6 +895,73 @@
             ctx = soort === 'para' ? 'Bereken exact de oppervlakte van het vlakdeel dat de grafiek van f en de x-as insluiten.' : 'Bereken exact de oppervlakte van het vlakdeel tussen de grafiek van f, de x-as en de lijnen x = ' + aT + ' en x = ' + bT + '.';
             beeld = plot({ x:xr, y:yr, fns:[{ f:f }], vlak:{ f:f, a:a, b:b }, xt:xt, aria:'grafiek van f met het vlakdeel gekleurd' });
             return { vraag:'f(x) = ' + fT, context:ctx, beeld:beeld, zelfBeeld:beeld, stappen:st };
+          } },
+        { id:'wvb-int-ketting', naam:'Primitiveren met de kettingregel', kort:'Bij (ax + b)ⁿ, e^(ax + b), sin(ax) en cos(ax): primitiveer alsof er u staat en deel door a',
+          uit:'<p>Staat er in plaats van x een lineaire vorm u = ax + b, primitiveer dan alsof er gewoon u staat, en <b>deel door a</b>. Bij differentiëren komt die a er met de kettingregel weer bij.</p>' +
+            '<p>Voorbeelden: (3x + 1)⁴ heeft als primitieve 1/3 · 1/5 · (3x + 1)⁵ = 1/15(3x + 1)⁵. e^(2x) heeft als primitieve ½e^(2x). cos(4x) heeft als primitieve ¼ sin(4x).</p>' +
+            '<p>Controleer altijd door te differentiëren: dan moet f(x) terugkomen.</p>',
+          wanneer:'je een functie van ax + b moet primitiveren.',
+          maak:function(R){
+            var soort = R.kies(['macht', 'macht', 'e', 'sin', 'cos']), a = R.kies([2, 3, 4, 5]), b = soort === 'sin' || soort === 'cos' ? 0 : soort === 'macht' ? nz(R, -4, 4) : R.kies([0, nz(R, -4, 4)]), u = E([[a, 'x'], [b, '']]), n, c, f, bu, bp, Fp, zonder;
+            if (soort === 'macht'){
+              n = R.kies([2, 3, 4]); c = R.kies([1, a, a * (n + 1), 2 * a * (n + 1)]);
+              f = (c === 1 ? '' : c) + '(' + u + ')' + sup(n); bu = (c === 1 ? '' : c) + 'u' + sup(n); bp = bSom([[c, n + 1, 'u' + sup(n + 1)]]);
+              Fp = bSom([[c, a * (n + 1), '(' + u + ')' + sup(n + 1)]]); zonder = bSom([[c, n + 1, '(' + u + ')' + sup(n + 1)]]);
+            } else if (soort === 'e'){
+              c = R.kies([1, a, 2 * a]); f = (c === 1 ? '' : c) + 'e' + sup(u); bu = (c === 1 ? '' : c) + 'eᵘ'; bp = bu; Fp = bSom([[c, a, 'e' + sup(u)]]); zonder = f;
+            } else if (soort === 'sin'){
+              c = R.kies([1, a, 2 * a]); f = (c === 1 ? '' : c + ' ') + 'sin(' + u + ')'; bu = (c === 1 ? '' : c + ' ') + 'sin u'; bp = bSom([[-c, 1, 'cos u']]); Fp = bSom([[-c, a, 'cos(' + u + ')']]); zonder = bSom([[-c, 1, 'cos(' + u + ')']]);
+            } else {
+              c = R.kies([1, a, 2 * a]); f = (c === 1 ? '' : c + ' ') + 'cos(' + u + ')'; bu = (c === 1 ? '' : c + ' ') + 'cos u'; bp = bSom([[c, 1, 'sin u']]); Fp = bSom([[c, a, 'sin(' + u + ')']]); zonder = bSom([[c, 1, 'sin(' + u + ')']]);
+            }
+            var bpF = { macht:[bSom([[c * n, 1, 'u' + sup(n - 1)]]), bSom([[c, 1, 'u' + sup(n + 1)]])], e:[bSom([[c, 1, 'u · eᵘ']]), bSom([[c, 1, 'e' + sup('u+1')]])], sin:[bSom([[c, 1, 'cos u']]), bSom([[-c, 1, 'sin u']])], cos:[bSom([[-c, 1, 'sin u']]), bSom([[c, 1, 'cos u']])] }[soort];
+            var hb = { macht:'Exponent 1 hoger, en delen door de nieuwe exponent ' + (n + 1) + '.', e:'eᵘ blijft eᵘ.', sin:'Bij sin u hoort ' + MIN + 'cos u.', cos:'Bij cos u hoort sin u.' }[soort];
+            return { vraag:'f(x) = ' + f, context:'Bereken een primitieve F(x). Typ bijvoorbeeld 1/15(3x+1)^5 + c of 1/2e^(2x) + c.', antwoord:Fp + ' + c', controle:primC(Fp), invoer:'tekst', stappen:[
+              S('De binnenste functie is u = ' + u + '. Het getal voor de x is a =', a, 'Bij ' + u + ' is dat ' + a + '.'),
+              K(R, 'Doe alsof er u staat. Een primitieve van ' + bu + ' (naar u) is', bp, bpF, hb),
+              SC('Zet u = ' + u + ' terug en deel door a = ' + a + ': F(x) =', Fp + ' + c', primC(Fp), 'Delen door ' + a + ' omdat de kettingregel bij differentiëren weer keer ' + a + ' geeft. Typ bijvoorbeeld ' + Fp.replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻ˣ]+/g, function(m){ var g = m.split('').map(function(ch){ return SUPM[ch]; }).join(''); return g.length > 1 ? '^(' + g + ')' : '^' + g; }).replace(/\s+/g, '') + ' + c.',
+                F(Fp + ' + c', zonder + ' + c', 'Vergeet niet te delen door a = ' + a + '.', zonder, 'Vergeet niet te delen door a = ' + a + '.')) ] };
+          } },
+        { id:'wvb-int-tussen', naam:'De oppervlakte tussen twee grafieken', kort:'Bereken de snijpunten; de oppervlakte is de integraal van (bovenste − onderste) tussen die snijpunten',
+          uit:'<p>Twee grafieken sluiten een vlakdeel in tussen hun snijpunten a en b. Ligt f daar <b>boven</b> g, dan is de oppervlakte <b>∫<sub>a</sub><sup>b</sup> (f(x) ' + MIN + ' g(x)) dx</b>.</p>' +
+            '<p>Het stappenplan: los f(x) = g(x) op voor de grenzen, neem het verschil bovenste min onderste, primitiveer dat en reken F(b) ' + MIN + ' F(a) uit.</p>' +
+            '<p>Voorbeeld: f(x) = 4 ' + MIN + ' x² en g(x) = x + 2 snijden bij x = ' + MIN + '2 en x = 1. f ' + MIN + ' g = ' + MIN + 'x² ' + MIN + ' x + 2, met primitieve ' + MIN + '1/3x³ ' + MIN + ' ½x² + 2x. Dat geeft 7/6 ' + MIN + ' ' + MIN + '10/3 = 4½.</p>',
+          wanneer:'je de oppervlakte zoekt van een vlakdeel dat door twee grafieken wordt ingesloten.',
+          maak:function(R){
+            var a, b, k, m, c;
+            do { a = R.heel(-3, 2); b = R.heel(a + 1, 4); k = R.kies([1, 1, 2, 3]); m = R.heel(-3, 3); c = R.heel(-4, 4); } while (b - a > 5 || b - a < 2);
+            var dc = [-k * a * b, k * (a + b), -k], gc = [c, m], fc = [c - k * a * b, m + k * (a + b), -k];
+            var fv = function(x){ return pV(fc, x); }, gv = function(x){ return pV(gc, x); };
+            var Dt = bSom([[-k, 3, 'x³'], [k * (a + b), 2, 'x²'], [-k * a * b, 1, 'x']]), Dv = function(x){ return -k / 3 * x * x * x + k * (a + b) / 2 * x * x - k * a * b * x; };
+            var opp = k * Math.pow(b - a, 3) / 6, oT = breuk(k * Math.pow(b - a, 3), 6), Fb = Dv(b), Fa = Dv(a);
+            var yr = bereik([fv, gv], a - 1, b + 1);
+            var st = [
+              SC('Los f(x) = g(x) op. De snijpunten: x =', lijstT([a, b], T), lijstC([a, b]), 'Breng alles naar één kant: ' + pT(dc) + ' = 0. ' + (k > 1 ? 'Deel door ' + MIN + k + ' en ontbind.' : 'Vermenigvuldig met ' + MIN + '1 en ontbind.') + ' Typ bijvoorbeeld x = ' + T(a) + ' of x = ' + T(b) + '.'),
+              SC('Tussen de snijpunten ligt f boven g. f(x) ' + MIN + ' g(x) =', pT(dc), fC(pT(dc)), '(' + pT(fc) + ') ' + MIN + ' (' + pT(gc) + ').'),
+              SC('Een primitieve van f(x) ' + MIN + ' g(x): F(x) =', Dt, primC(Dt), 'Exponent 1 hoger en delen door de nieuwe exponent.'),
+              SC('De oppervlakte: F(' + T(b) + ') ' + MIN + ' F(' + T(a) + ') =', oT, getalC(opp), 'F(' + T(b) + ') = ' + breuk(Math.round(Fb * 6), 6) + ' en F(' + T(a) + ') = ' + breuk(Math.round(Fa * 6), 6) + '. Trek af. Typ bijvoorbeeld ' + oT.replace(MIN, '-') + '.', F(oT, breuk(-k * Math.pow(b - a, 3), 6), 'Je deed F(a) min F(b). Het is F(b) min F(a).')) ];
+            return { vraag:'f(x) = ' + pT(fc) + ' en g(x) = ' + pT(gc), context:'De grafieken van f en g sluiten een vlakdeel in. Bereken exact de oppervlakte daarvan.', stappen:st, antwoord:oT, controle:getalC(opp), invoer:'tekst',
+              beeld:function(n){ return n >= 1 ? plot({ x:[a - 1, b + 1], y:yr, fns:[{ f:fv }, { f:gv, k:KL[2] }], punten:[{ x:a, y:gv(a) }, { x:b, y:gv(b) }], aria:'de grafieken van f en g' }) : ''; } };
+          } },
+        { id:'wvb-int-omw', naam:'De inhoud van een omwentelingslichaam', kort:'Wentel de grafiek om de x-as: inhoud = π · ∫ van a tot b van f(x)² dx',
+          uit:'<p>Wentel je het vlakdeel onder de grafiek van f (tussen x = a en x = b) om de <b>x-as</b>, dan ontstaat een omwentelingslichaam. Elke doorsnede is een cirkel met straal f(x) en oppervlakte π · f(x)².</p>' +
+            '<p>Daarom: <b>inhoud = π · ∫<sub>a</sub><sup>b</sup> f(x)² dx</b>.</p>' +
+            '<p>Voorbeeld: f(x) = √(2x) op [0, 3]. f(x)² = 2x, met primitieve x². Dat geeft 9 ' + MIN + ' 0 = 9, dus de inhoud is <b>9π</b>.</p>' +
+            '<p>Let op: eerst kwadrateren, dan primitiveren. Niet eerst primitiveren en dan kwadrateren.</p>',
+          wanneer:'een vlakdeel om de x-as wentelt en je de inhoud van het lichaam zoekt.',
+          maak:function(R){
+            var soort = R.kies(['wortel', 'lin', 'kw']), b, fT, f, kc, Ft, w;
+            if (soort === 'wortel'){ var k = R.kies([1, 2, 3, 4, 6, 8]); b = R.heel(2, 6); fT = k === 1 ? '√x' : '√(' + k + 'x)'; f = function(x){ return Math.sqrt(k * x); }; kc = [0, k]; Ft = bSom([[k, 2, 'x²']]); w = [k * b * b, 2]; }
+            else if (soort === 'lin'){ var p = R.kies([1, 2, 3]), q = R.heel(1, 4); b = R.heel(1, 3); fT = pT([q, p]); f = function(x){ return p * x + q; }; kc = [q * q, 2 * p * q, p * p]; Ft = bSom([[p * p, 3, 'x³'], [2 * p * q, 2, 'x²'], [q * q, 1, 'x']]); w = [p * p * b * b * b + 3 * p * q * b * b + 3 * q * q * b, 3]; }
+            else { b = R.heel(1, 3); fT = 'x²'; f = function(x){ return x * x; }; kc = [0, 0, 0, 0, 1]; Ft = bSom([[1, 5, 'x⁵']]); w = [Math.pow(b, 5), 5]; }
+            var kT = pT(kc), val = w[0] / w[1], vT = breuk(w[0], w[1]), ant = piT(w[0], w[1]);
+            var beeld = plot({ x:[-0.3, b + 0.6], y:[-0.4, f(b) * 1.2 + 0.4], fns:[{ f:function(x){ return x >= 0 ? f(x) : NaN; } }], vlak:{ f:f, a:0, b:b }, aria:'de grafiek van f met het vlakdeel dat om de x-as wentelt' });
+            return { vraag:'f(x) = ' + fT + ' op [0, ' + b + ']', context:'Het vlakdeel tussen de grafiek van f, de x-as en de lijn x = ' + b + ' wentelt om de x-as. Bereken exact de inhoud van het omwentelingslichaam. Typ π als pi.',
+              beeld:beeld, zelfBeeld:beeld, antwoord:ant, controle:getalC(PI * val), invoer:'tekst', stappen:[
+                SC('Kwadrateer eerst: f(x)² =', kT, fC(kT), soort === 'wortel' ? 'Een wortel in het kwadraat: wat eronder staat.' : soort === 'lin' ? '(a + b)² = a² + 2ab + b².' : '(x²)² = x⁴.', soort === 'lin' ? F(kT, pT([q * q, 0, p * p]), 'Vergeet de dubbele term 2 · ' + p + 'x · ' + q + ' niet.') : null),
+                SC('Een primitieve van f(x)²: F(x) =', Ft, primC(Ft), 'Exponent 1 hoger en delen door de nieuwe exponent.'),
+                SC('F(' + b + ') ' + MIN + ' F(0) =', vT, getalC(val), 'Vul ' + b + ' in; F(0) = 0.'),
+                SC('De inhoud: π · ' + vT + ' =', ant, getalC(PI * val), 'Vergeet de π niet. Typ bijvoorbeeld ' + ant.replace('π', 'pi') + '.', F(ant, vT, 'Vergeet de π niet: elke doorsnede is een cirkel.')) ] };
           } }
       ] },
 
@@ -885,7 +984,9 @@
               [S('π rad = 180°. Dus 1/' + den + 'π = 180° : ' + den + ' =', 180 / den, '180 : ' + den + ' = ' + (180 / den) + '.'),
                S(rad + ' = ' + n + ' · ' + (180 / den) + '° =', d, n + ' · ' + (180 / den) + ' = ' + d + '.', F(d, 180 / den, 'Dat is 1/' + den + 'π. Je hebt ' + n + ' keer zoveel.'))];
             st[st.length - 1].eenheid = '°';
-            return { vraag:rad + ' rad = ?°', context:'Reken om naar graden.', beeld:beeld, stappen:st, eenheid:'°' };
+            /* bij de vraag staat de hoek in radialen in de cirkel; de graden pas als je ze hebt uitgerekend */
+            return { vraag:rad + ' rad = ?°', context:'Reken om naar graden.', stappen:st, eenheid:'°',
+              beeld:function(k){ return k >= st.length ? beeld : eenheid({ hoek:h, label:rad, aria:'eenheidscirkel met een hoek van ' + rad + ' radialen' }); } };
           } },
         { id:'wvb-exact', naam:'Exacte waarden op de eenheidscirkel', kort:'Zoek de hoek met de x-as en bepaal het teken met het kwadrant: sin is de y, cos is de x',
           uit:'<p>Op de <b>eenheidscirkel</b> (straal 1) hoort bij een hoek een punt. De <b>x-coördinaat</b> is de <b>cosinus</b>, de <b>y-coördinaat</b> is de <b>sinus</b>.</p><p>Ken de waarden bij 1/6π, 1/4π en 1/3π: sin is ½, ½√2 en ½√3, cos is ½√3, ½√2 en ½.</p><p>Bij een andere hoek: zoek de hoek met de <b>x-as</b> (dat is er een van die drie) en bepaal het <b>teken</b> met het kwadrant. sin(5/6π) = ½, want de hoek met de x-as is 1/6π en het punt ligt boven de x-as.</p>',
@@ -964,6 +1065,25 @@
                 SC('c = 2π : periode = 2π : ' + P + ' =', ct, getalC(2 * PI / P), '2/' + P + ' vereenvoudigd, keer π: ' + ct + '.'),
                 S('Een maximum ligt een kwart periode na het beginpunt. Een kwart periode is ' + (P / 4) + '. Dus d = ' + xm + ' ' + MIN + ' ' + (P / 4) + ' =', d, 'Het beginpunt ligt ' + (P / 4) + ' vóór het maximum.'),
                 SC('De formule:', form, fC(form.replace(/^y = /, '')), 'Vul a, b, c en d in: ' + form + '.') ] };
+          } },
+        { id:'wvb-gonio-dubbel', naam:'sin² + cos² = 1 en de verdubbelingsformules', kort:'cos A volgt uit sin²A + cos²A = 1; sin 2A = 2 sin A cos A en cos 2A = cos²A − sin²A',
+          uit:'<p>Voor elke hoek A geldt <b>sin²A + cos²A = 1</b>. Ken je sin A, dan vind je cos A, op het teken na. Het teken haal je uit het kwadrant: tussen ½π en π is cos A negatief.</p>' +
+            '<p>De <b>verdubbelingsformules</b>: <b>sin 2A = 2 sin A cos A</b> en <b>cos 2A = cos²A ' + MIN + ' sin²A</b> (= 1 ' + MIN + ' 2sin²A = 2cos²A ' + MIN + ' 1).</p>' +
+            '<p>Voorbeeld: sin A = 3/5 met 0 &lt; A &lt; ½π. Dan cos²A = 1 ' + MIN + ' 9/25 = 16/25, dus cos A = 4/5. sin 2A = 2 · 3/5 · 4/5 = 24/25 en cos 2A = 16/25 ' + MIN + ' 9/25 = 7/25.</p>',
+          wanneer:'je bij een gegeven sin A of cos A exact sin 2A of cos 2A moet berekenen.',
+          maak:function(R){
+            var tr = R.kies([[3, 4, 5], [4, 3, 5], [5, 12, 13], [12, 5, 13], [8, 15, 17], [15, 8, 17], [7, 24, 25]]), p = tr[0], q = tr[1], r = tr[2], tweede = R.heel(0, 1) === 1, metSin = R.heel(0, 2) > 0, vraagSin = R.heel(0, 1) === 1;
+            /* sin A = p/r; cos A = ±q/r (negatief in het tweede kwadrant). Of gegeven cos A, dan omgekeerd */
+            var s = metSin ? p : (tweede ? q : q), c = metSin ? (tweede ? -q : q) : (tweede ? -p : p);
+            if (!metSin){ s = q; c = tweede ? -p : p; }
+            var gT = metSin ? 'sin A = ' + breuk(s, r) : 'cos A = ' + breuk(c, r), zoekT = metSin ? 'cos A' : 'sin A', zoek = metSin ? c : s;
+            var s2 = 2 * s * c, c2 = c * c - s * s, uit = vraagSin ? s2 : c2, uitT = breuk(uit, r * r);
+            var kw = tweede ? '½π &lt; A &lt; π' : '0 &lt; A &lt; ½π';
+            return { vraag:gT + ' en ' + kw.replace(/&lt;/g, '<'), vraagHtml:gT + ' en ' + kw, context:'Bereken exact ' + (vraagSin ? 'sin 2A' : 'cos 2A') + '. Geef een breuk.', antwoord:uitT, controle:getalC(uit / (r * r)), invoer:'tekst', stappen:[
+              SC(zoekT.replace(/ A$/, '²A') + ' = 1 ' + MIN + ' ' + (metSin ? 'sin' : 'cos') + '²A =', breuk(zoek * zoek, r * r), getalC(zoek * zoek / (r * r)), '1 ' + MIN + ' ' + breuk((metSin ? s : c) * (metSin ? s : c), r * r) + ' = ' + breuk(zoek * zoek, r * r) + '.'),
+              SC(zoekT + ' =', breuk(zoek, r), getalC(zoek / r), 'De wortel van ' + breuk(zoek * zoek, r * r) + ' is ' + breuk(Math.abs(zoek), r) + '. ' + (metSin ? (tweede ? 'Tussen ½π en π is cos A negatief.' : 'Tussen 0 en ½π is cos A positief.') : 'Tussen 0 en π is sin A positief.'), F(breuk(zoek, r), breuk(-zoek, r), 'Let op het teken: kijk in welk kwadrant A ligt.')),
+              vraagSin ? SC('sin 2A = 2 · sin A · cos A = 2 · ' + breuk(s, r) + ' · ' + (c < 0 ? '(' + breuk(c, r) + ')' : breuk(c, r)) + ' =', uitT, getalC(uit / (r * r)), '2 · ' + s + ' · ' + paren(c) + ' = ' + s2 + ', en de noemer is ' + (r * r) + '.', F(uitT, breuk(s * c, r * r), 'Vergeet de factor 2 niet.'))
+                : SC('cos 2A = cos²A ' + MIN + ' sin²A = ' + breuk(c * c, r * r) + ' ' + MIN + ' ' + breuk(s * s, r * r) + ' =', uitT, getalC(uit / (r * r)), (c * c) + ' ' + MIN + ' ' + (s * s) + ' = ' + c2 + ', en de noemer is ' + (r * r) + '.', F(uitT, breuk(-c2, r * r), 'Andersom: cos² min sin².')) ] };
           } }
       ] },
 
@@ -1116,6 +1236,78 @@
               SC('Splits af bij y: ' + E([[1, 'y²'], [-2 * b, 'y']]) + ' =', ys, afsplitsC('y', -b, -b * b), 'De helft van ' + T(-2 * b) + ' is ' + T(-b) + ': ' + xd('y', b) + ', en trek ' + T(-b) + '² = ' + (b * b) + ' eraf.'),
               S('Nu staat er ' + xs + ' + ' + ys + (Fc ? (Fc > 0 ? ' + ' + Fc : ' ' + MIN + ' ' + (-Fc)) : '') + ' = 0. Breng de losse getallen naar rechts: r² =', r2, (a * a) + ' + ' + (b * b) + (Fc ? (Fc > 0 ? ' ' + MIN + ' ' + Fc : ' + ' + (-Fc)) : '') + '.', F(r2, a * a + b * b + Fc, 'Let op de tekens: wat links min is, wordt rechts plus.')),
               K(R, 'Het middelpunt en de straal:', goed, op, 'Lees af uit ' + xd('x', a) + ' + ' + xd('y', b) + ' = ' + r2 + '. Het teken draait om, en r = √' + r2 + '.', { orde:op }) ] };
+          } }
+      ] },
+
+    /* ================= parametervoorstellingen en bewegingen ================= */
+    { groep:{ id:'wvb-param', niveau:'vwo', domein:'meetkunde', naam:'Parametervoorstellingen en bewegingen',
+        uit:'Een punt beweegt in het vlak: x en y hangen allebei af van de tijd t. Je berekent waar de baan de assen snijdt, hoe snel het punt gaat en in welke richting de raaklijn loopt.' },
+      doelen:[
+        { id:'wvb-param-as', naam:'Snijpunten van de baan met de assen', kort:'Op de x-as is y(t) = 0, op de y-as is x(t) = 0: los t op en vul die t in bij de andere coördinaat',
+          uit:'<p>Bij een <b>parametervoorstelling</b> x(t) = ..., y(t) = ... hoort bij elke t een punt (x(t), y(t)). Samen vormen die punten de <b>baan</b>.</p>' +
+            '<p>Op de <b>x-as</b> is y = 0. Los dus <b>y(t) = 0</b> op en vul die t in bij x(t). Op de <b>y-as</b> is x = 0: los <b>x(t) = 0</b> op en vul in bij y(t).</p>' +
+            '<p>Voorbeeld: x(t) = t² ' + MIN + ' 3, y(t) = 2t ' + MIN + ' 4. y(t) = 0 geeft t = 2, en x(2) = 1. De baan snijdt de x-as in (1, 0).</p>',
+          wanneer:'je wilt weten waar een bewegend punt een van de assen passeert.',
+          maak:function(R){
+            var opY = R.heel(0, 1) === 1, a, b, t0, q, w;
+            do { a = nz(R, -3, 3); t0 = R.heel(-3, 3); b = -a * t0; q = [R.heel(-6, 6), R.heel(-4, 4), R.kies([1, -1, 2])]; w = pV(q, t0); } while (!w || Math.abs(w) > 30 || (!b && R.heel(0, 1)));
+            var lin = [b, a], xc = opY ? lin : q, yc = opY ? q : lin, X0 = opY ? 0 : w, Y0 = opY ? w : 0, as = opY ? 'y-as' : 'x-as', nul = opY ? 'x' : 'y', ander = opY ? 'y' : 'x';
+            return { vraag:'x(t) = ' + pTt(xc) + ', y(t) = ' + pTt(yc), context:'Een punt beweegt volgens deze parametervoorstelling. Bereken de coördinaten van het snijpunt van de baan met de ' + as + '. Typ bijvoorbeeld (3, 0).',
+              antwoord:pt(X0, Y0), controle:coordC(X0, Y0), invoer:'tekst',
+              beeld:function(n){ return n >= 4 ? baanFig(xc, yc, -4, 4, [{ x:X0, y:Y0, t:pt(X0, Y0) }]) : ''; }, stappen:[
+                K(R, 'Op de ' + as + ' geldt', nul + ' = 0', [ander + ' = 0', 't = 0'], 'Een punt op de ' + as + ' heeft ' + nul + '-coördinaat 0.', { orde:['x = 0', 'y = 0', 't = 0'] }),
+                SC('Los ' + nul + '(t) = 0 op: ' + pTt(lin) + ' = 0, dus t =', ['t = ' + T(t0), T(t0)], getalC(t0), losHintT(a, b, t0)),
+                S(ander + '(' + T(t0) + ') =', w, 'Vul t = ' + T(t0) + ' in bij ' + ander + '(t) = ' + pTt(q) + '.', F(w, 0, 'Dat is de coördinaat die 0 moet zijn. Vul t in bij de andere.')),
+                SC('Het snijpunt met de ' + as + ':', pt(X0, Y0), coordC(X0, Y0), 'x eerst, dan y: ' + pt(X0, Y0) + '.', F(pt(X0, Y0), pt(Y0, X0), 'Andersom: eerst de x-coördinaat, dan de y-coördinaat.')) ] };
+          } },
+        { id:'wvb-param-snel', naam:'De snelheid van een bewegend punt', kort:'Snelheid v(t) = √(x′(t)² + y′(t)²): de lengte van de snelheidsvector (x′(t), y′(t))',
+          uit:'<p>Beweegt een punt volgens x(t) en y(t), dan geeft <b>x′(t)</b> hoe snel het naar rechts gaat en <b>y′(t)</b> hoe snel omhoog. Samen vormen ze de <b>snelheidsvector</b>.</p>' +
+            '<p>De <b>snelheid</b> is de lengte van die vector: <b>v(t) = √(x′(t)² + y′(t)²)</b>, met Pythagoras.</p>' +
+            '<p>Voorbeeld: x(t) = t² en y(t) = 3t. Dan x′(t) = 2t en y′(t) = 3. Op t = 2 is x′ = 4 en y′ = 3, dus v = √(16 + 9) = <b>5</b>.</p>',
+          wanneer:'je de snelheid zoekt van een punt dat over een baan beweegt.',
+          maak:function(R){
+            var xc, yc, t0, vx, vy, v;
+            do {
+              xc = R.heel(0, 1) ? [R.heel(-5, 5), R.heel(-4, 4), nz(R, -2, 2)] : [R.heel(-5, 5), R.heel(-6, 6), 0, R.kies([1, -1])];
+              yc = [R.heel(-5, 5), nz(R, -5, 5), R.heel(-2, 2)]; t0 = R.heel(1, 3);
+              vx = pV(pD(xc), t0); vy = pV(pD(yc), t0); v = Math.sqrt(vx * vx + vy * vy);
+            } while (!vx || !vy || v > 40 || (Math.abs(v - Math.round(v)) > 1e-9 && Math.abs((v * 100) % 1 - 0.5) < 0.03));
+            var heel = Math.abs(v - Math.round(v)) < 1e-9, vT = heel ? T(Math.round(v)) : T(rnd(v, 2), { dec:2, vast:true });
+            return { vraag:'x(t) = ' + pTt(xc) + ', y(t) = ' + pTt(yc), context:'Een punt beweegt volgens deze parametervoorstelling. Bereken de snelheid op t = ' + t0 + '.' + (heel ? '' : ' Rond af op 2 decimalen.') + ' Typ t² als t^2.',
+              antwoord:vT, controle:afC(v, 2), invoer:'tekst', stappen:[
+                SC('x′(t) =', pTt(pD(xc)), tC(pTt(pD(xc))), 'Differentieer x(t) naar t.'),
+                SC('y′(t) =', pTt(pD(yc)), tC(pTt(pD(yc))), 'Differentieer y(t) naar t.'),
+                S('x′(' + t0 + ') =', vx, 'Vul t = ' + t0 + ' in bij x′(t).', F(vx, pV(xc, t0), 'Dat is x(' + t0 + '). Vul in bij de afgeleide.')),
+                S('y′(' + t0 + ') =', vy, 'Vul t = ' + t0 + ' in bij y′(t).', F(vy, pV(yc, t0), 'Dat is y(' + t0 + '). Vul in bij de afgeleide.')),
+                SC('v = √(' + paren(vx) + '² + ' + paren(vy) + '²) = √' + (vx * vx + vy * vy) + (heel ? ' =' : ' ≈ (2 decimalen)'), vT, afC(v, 2), heel ? '√' + (vx * vx + vy * vy) + ' = ' + vT + '.' : 'Neem de wortel en rond af.', F(vT, T(vx * vx + vy * vy), 'Vergeet de wortel niet.')) ] };
+          } },
+        { id:'wvb-param-raak', naam:'De richting van de raaklijn', kort:'De richtingscoëfficiënt van de raaklijn is y′(t) / x′(t); horizontaal als y′(t) = 0 en x′(t) ≠ 0',
+          uit:'<p>De raaklijn aan de baan heeft de richting van de snelheidsvector (x′(t), y′(t)). Haar <b>richtingscoëfficiënt</b> is dus <b>y′(t) / x′(t)</b>.</p>' +
+            '<p>De raaklijn is <b>horizontaal</b> als <b>y′(t) = 0</b> (en x′(t) ≠ 0), en <b>verticaal</b> als x′(t) = 0 (en y′(t) ≠ 0).</p>' +
+            '<p>Voorbeeld: x(t) = t² + 1, y(t) = t³ ' + MIN + ' 3t. Op t = 2: x′ = 4 en y′ = 9, dus rc = 9/4.</p>',
+          wanneer:'je de helling van de baan in een punt zoekt, of het punt waar de baan horizontaal loopt.',
+          maak:function(R){
+            if (R.heel(0, 1)){
+              var xc, yc, t0, vx, vy;
+              do { xc = [R.heel(-5, 5), R.heel(-4, 4), nz(R, -2, 2)]; yc = R.heel(0, 1) ? [R.heel(-5, 5), R.heel(-6, 6), 0, R.kies([1, -1])] : [R.heel(-5, 5), nz(R, -5, 5), nz(R, -2, 2)]; t0 = R.heel(-2, 3); vx = pV(pD(xc), t0); vy = pV(pD(yc), t0); } while (!vx || !vy || Math.abs(vx) > 12);
+              var rcT = breuk(vy, vx);
+              return { vraag:'x(t) = ' + pTt(xc) + ', y(t) = ' + pTt(yc), context:'Bereken de richtingscoëfficiënt van de raaklijn aan de baan in het punt met t = ' + T(t0) + '. Geef een exact antwoord, als breuk of geheel getal.',
+                antwoord:rcT, controle:getalC(vy / vx), invoer:'tekst', stappen:[
+                  S('x′(' + T(t0) + ') =', vx, 'Differentieer x(t) en vul t = ' + T(t0) + ' in: x′(t) = ' + pTt(pD(xc)) + '.'),
+                  S('y′(' + T(t0) + ') =', vy, 'Differentieer y(t) en vul t = ' + T(t0) + ' in: y′(t) = ' + pTt(pD(yc)) + '.'),
+                  SC('rc = y′ / x′ = ' + T(vy) + ' / ' + paren(vx) + ' =', rcT, getalC(vy / vx), 'Deel y′ door x′ en vereenvoudig.', F(rcT, breuk(vx, vy), 'Andersom: y′ gedeeld door x′.')) ] };
+            }
+            var a, th, c, xc2, yc2, X0, Y0;
+            do { a = R.kies([1, -1, 2]); th = R.heel(-3, 3); c = R.heel(-5, 5); yc2 = [c, -2 * a * th, a]; xc2 = R.heel(0, 1) ? [R.heel(-4, 4), nz(R, -3, 3)] : [R.heel(-4, 4), R.heel(-3, 3), 0, R.kies([1, -1])]; } while (!pV(pD(xc2), th));
+            X0 = pV(xc2, th); Y0 = pV(yc2, th);
+            return { vraag:'x(t) = ' + pTt(xc2) + ', y(t) = ' + pTt(yc2), context:'In één punt van de baan is de raaklijn horizontaal. Bereken de coördinaten van dat punt. Typ bijvoorbeeld (3, ' + MIN + '1).',
+              antwoord:pt(X0, Y0), controle:coordC(X0, Y0), invoer:'tekst', beeld:function(n){ return n >= 5 ? baanFig(xc2, yc2, th - 3, th + 3, [{ x:X0, y:Y0, t:pt(X0, Y0) }]) : ''; }, stappen:[
+                K(R, 'De raaklijn is horizontaal als', 'y′(t) = 0', ['x′(t) = 0', 'y(t) = 0'], 'Horizontaal: de baan gaat even niet omhoog of omlaag, dus y′(t) = 0.', { orde:['x′(t) = 0', 'y′(t) = 0', 'y(t) = 0'] }),
+                SC('y′(t) =', pTt(pD(yc2)), tC(pTt(pD(yc2))), 'Differentieer y(t) naar t.'),
+                SC('y′(t) = 0 geeft t =', ['t = ' + T(th), T(th)], getalC(th), 'Los ' + pTt(pD(yc2)) + ' = 0 op.'),
+                S('x(' + T(th) + ') =', X0, 'Vul t = ' + T(th) + ' in bij x(t). Controleer ook dat x′(' + T(th) + ') niet 0 is.'),
+                S('y(' + T(th) + ') =', Y0, 'Vul t = ' + T(th) + ' in bij y(t).'),
+                SC('Het punt:', pt(X0, Y0), coordC(X0, Y0), 'x eerst, dan y.') ] };
           } }
       ] }
   ]);

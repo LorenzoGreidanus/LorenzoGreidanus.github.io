@@ -1,7 +1,8 @@
 /* De leerroute wiskunde: statistiek en kans voor de onderbouw en het vmbo.
-   Onderbouw: gemiddelde, mediaan, modus en spreidingsbreedte (en welke centrummaat past),
-   turven, relatieve frequentie, frequentietabellen en klassen, staaf-, lijn- en
-   cirkeldiagrammen, kansen met een dobbelsteen en een rooster, en aantallen tellen met
+   Onderbouw: gemiddelde (ook terugrekenen), mediaan, modus en spreidingsbreedte (en welke
+   centrummaat past), turven, een frequentietabel maken, relatieve frequentie, klassen, staaf-,
+   lijn- en cirkeldiagrammen aflezen en zelf tekenen, kansen met een dobbelsteen en een rooster,
+   kans uit een experiment, en aantallen tellen met
    een wegendiagram, een boomdiagram of de vermenigvuldigingsregel.
    Vmbo: cumulatieve frequentie, de somfrequentiepolygoon, het steelbladdiagram, het
    histogram, kansen uit een kruistabel, de complementregel en de verwachting.
@@ -300,6 +301,36 @@
               S('Tel ze op: ' + l.map(T).join(' + ') + ' =', s, 'Tel ze een voor een op: ' + lopend(l) + '.', F(s, n, 'Dat is het aantal getallen. Tel nu de getallen zelf op.')),
               S('Het gemiddelde: ' + T(s) + ' : ' + n + ' ≈ (rond af op 1 decimaal)', d1(g), T(s) + ' : ' + n + ' = ' + metPunt(deel(s, n)) + ' Rond af op 1 decimaal.', F(d1(g), rnd(s / (n - 1), 1), 'Deel door ' + n + ': zoveel getallen zijn het.', rnd(s / (n + 1), 1), 'Deel door ' + n + ': zoveel getallen zijn het.'), { e:it.eh }) ] };
           } },
+        { id:'wst-gem-terug', naam:'Het gemiddelde terugrekenen', kort:'Gemiddelde keer het aantal is de som die je nodig hebt; trek af wat je al hebt',
+          uit:'<p>Wil je weten welk getal je nog nodig hebt voor een bepaald <b>gemiddelde</b>, dan reken je <b>terug</b>.</p><p>1. Reken uit hoeveel je <b>in totaal</b> nodig hebt: het gemiddelde <b>keer</b> het aantal getallen.<br>2. Tel op wat je <b>al hebt</b>.<br>3. Het <b>verschil</b> is wat je nog nodig hebt.</p><p>Voorbeeld: je hebt een 5,8 en een 6,4. Je wilt na drie toetsen gemiddeld een 6,5. Nodig: 3 ' + X + ' 6,5 = 19,5. Je hebt 5,8 + 6,4 = 12,2. Je hebt dus nog 19,5 ' + MIN + ' 12,2 = <b>7,3</b> nodig.</p><p>Telt de laatste toets <b>twee keer</b>, dan telt hij als twee cijfers mee. Het verschil deel je aan het eind nog door 2.</p>',
+          wanneer:'je wilt weten welk cijfer of welke score je nog moet halen voor een gemiddelde.',
+          maak:function(R){
+            var soort = R.kies(['cijfer', 'cijfer', 'dubbel', 'score']), w = soort === 'dubbel' ? 2 : 1, al, x, W, tot, sAl, D, i, wie = R.kies(['Noor', 'Daan', 'Sem', 'Lotte', 'Yara', 'Milan']);
+            /* alles in tienden (cijfers) of in hele punten (score), zodat er niets afgerond hoeft te worden */
+            var f = soort === 'score' ? 1 : 10;
+            for (;;){
+              var nAl = soort === 'score' ? R.heel(3, 5) : R.heel(2, 4);
+              al = []; for (i = 0; i < nAl; i++) al.push(soort === 'score' ? R.heel(8, 24) : R.heel(45, 86));
+              x = soort === 'score' ? R.heel(6, 28) : R.heel(40, 95);
+              W = nAl + w; sAl = som(al); tot = sAl + w * x;
+              if (tot % W) continue;
+              D = tot / W;
+              if (soort === 'score' ? D % 1 === 0 && D >= 10 : D >= 55 && D <= 75 && D % 5 === 0) break;
+            }
+            function g(v){ return T(v / f); }
+            var ctx, eh = soort === 'score' ? 'punten' : '';
+            if (soort === 'score') ctx = wie + ' speelt ' + W + ' rondes van een spel. In de eerste ' + al.length + ' rondes haalde ' + wie + ' ' + al.map(g).join(', ').replace(/, ([^,]*)$/, ' en $1') + ' punten. Hoeveel punten moet ' + wie + ' in de laatste ronde halen om gemiddeld precies ' + g(D) + ' punten per ronde te hebben?';
+            else ctx = wie + ' heeft voor wiskunde de cijfers ' + al.map(g).join('; ') + '. Er komt nog één toets' + (w === 2 ? ', en die telt twee keer' : '') + '. ' + wie + ' wil gemiddeld precies een ' + g(D) + ' staan. Welk cijfer is daarvoor nodig?';
+            var st = [];
+            if (w === 2) st.push(S('De laatste toets telt twee keer. Voor hoeveel cijfers telt het geheel dan mee? ' + al.length + ' + 2 =', W, 'De ' + al.length + ' cijfers die er al zijn, en de laatste toets twee keer.', F(W, al.length + 1, 'De laatste toets telt twee keer: tel er 2 bij op, niet 1.')));
+            st.push(S('Hoeveel ' + (soort === 'score' ? 'punten' : 'punten (alle cijfers samen)') + ' zijn er in totaal nodig? ' + W + ' ' + X + ' ' + g(D) + ' =', tot / f, 'Het gemiddelde keer het aantal' + (soort === 'score' ? ' rondes' : ' cijfers') + ': ' + W + ' ' + X + ' ' + g(D) + ' = ' + g(tot) + '.', F(tot / f, (W - 1) * D / f, 'Tel ' + (soort === 'score' ? 'de laatste ronde' : 'de laatste toets') + ' ook mee: het zijn er ' + W + '.'), { e:eh }));
+            st.push(S('Wat is er al? ' + al.map(g).join(' + ') + ' =', sAl / f, 'Tel ze een voor een op: ' + g(sAl) + '.', null, { e:eh }));
+            if (w === 2){
+              st.push(S('Wat moet de laatste toets samen opleveren? ' + g(tot) + ' ' + MIN + ' ' + g(sAl) + ' =', 2 * x / f, 'Het totaal min wat er al is.'));
+              st.push(S('Die toets telt twee keer, dus het cijfer is ' + g(2 * x) + ' : 2 =', x / f, 'Deel door 2: het cijfer telt twee keer mee.', F(x / f, 2 * x / f, 'De toets telt twee keer: deel nog door 2.', D / f, 'Dat is het gemiddelde dat ' + wie + ' wil. Reken terug.')));
+            } else st.push(S('Wat is er nog nodig? ' + g(tot) + ' ' + MIN + ' ' + g(sAl) + ' =', x / f, 'Het totaal min wat er al is. Controle: ' + (al.map(g).join(' + ') + ' + ' + g(x)) + ' = ' + g(tot) + ', en ' + g(tot) + ' : ' + W + ' = ' + g(D) + '.', F(x / f, D / f, 'Dat is het gemiddelde dat ' + wie + ' wil. Reken terug.'), { e:eh }));
+            return { vraag:soort === 'score' ? 'Hoeveel punten in de laatste ronde?' : 'Welk cijfer is nodig?', context:ctx, eenheid:eh, antwoord:T(x / f), stappen:st };
+          } },
         { id:'wst-med-oneven', naam:'De mediaan bij een oneven aantal', kort:'Zet de getallen op volgorde; de mediaan is het getal precies in het midden',
           uit:'<p>De <b>mediaan</b> is het <b>middelste getal</b>. Zet de getallen eerst <b>op volgorde</b>, van klein naar groot.</p><p>Bij een oneven aantal is er precies één getal in het midden. Bij 7 getallen is dat nummer 4: (7 + 1) : 2 = 4. Er staan dan 3 getallen voor en 3 na.</p><p>Voorbeeld: 8, 3, 5, 9, 4. Op volgorde: 3, 4, <b>5</b>, 8, 9. De mediaan is 5.</p>',
           wanneer:'je het middelste getal zoekt en het aantal getallen oneven is.',
@@ -415,6 +446,35 @@
               S('Hoeveel losse streepjes staan er nog achter?', l, 'Tel de streepjes die niet in een bosje zitten.' + (l ? '' : ' Zijn er geen, dan is het 0.')),
               S('De frequentie: ' + b + ' ' + X + ' 5 + ' + l + ' =', f, (b === 1 ? 'Eén bosje van vijf is 5 streepjes.' : b + ' bosjes van vijf zijn ' + (b * 5) + ' streepjes.') + (l ? ' Tel de losse streepjes erbij: ' + l + '.' : ' Er zijn geen losse streepjes.'), F(f, b + l, 'Een bosje telt voor vijf, niet voor één.')) ] };
           } },
+        { id:'wst-freq-maak', naam:'Een frequentietabel maken', kort:'Zet elke waarde één keer in de tabel, turf hoe vaak hij voorkomt en controleer het totaal',
+          uit:'<p>Van een lange rij gegevens maak je een <b>frequentietabel</b>. Dan zie je in één keer hoe vaak elke waarde voorkomt.</p><p>1. Zoek de <b>kleinste</b> en de <b>grootste</b> waarde. Zet alle waarden daartussen onder elkaar in de eerste kolom.</p><p>2. Loop de rij <b>één keer</b> langs en zet bij elk getal een turfstreepje. Streep het getal in de rij door, dan sla je niets over en tel je niets dubbel.</p><p>3. Schrijf de <b>frequenties</b> erachter en tel ze op. Het <b>totaal</b> moet gelijk zijn aan het aantal gegevens. Klopt dat niet, dan heb je iets gemist of dubbel geteld.</p>',
+          wanneer:'je een lange rij losse gegevens overzichtelijk wilt maken.',
+          maak:function(R){
+            var it = R.kies([
+              { zin:'Leerlingen van klas 1C schreven op hoeveel broers en zussen ze hebben.', kop:'broers en zussen', lo:0, hi:4 },
+              { zin:'Dit zijn de cijfers van een klas voor een toets.', kop:'cijfer', lo:4, hi:9 },
+              { zin:'Een voetbalteam schreef op hoeveel doelpunten het maakte in elke wedstrijd.', kop:'doelpunten', lo:0, hi:5 },
+              { zin:'Leerlingen schreven op hoeveel uur ze vannacht sliepen.', kop:'uren slaap', lo:6, hi:10 },
+              { zin:'Een groep leerlingen gooide ieder één keer met een dobbelsteen.', kop:'ogen', lo:1, hi:6 } ]);
+            var n = R.heel(18, 25), l, v = [], f, i, j, k;
+            for (i = it.lo; i <= it.hi; i++) v.push(i);
+            do { l = []; for (i = 0; i < n; i++) l.push(R.heel(it.lo, it.hi)); f = v.map(function(x){ return l.filter(function(y){ return y === x; }).length; }); }
+            while (f[0] === 0 || f[f.length - 1] === 0 || f.filter(function(x){ return x >= 2; }).length < 2);
+            do { j = R.heel(0, v.length - 1); k = R.heel(0, v.length - 1); } while (j === k || f[j] < 2);
+            function bl(s){
+              var data = R0.teken.tabel(rijen(l.map(T), 6), { nadruk:s >= 5 ? plekken(l, 6, function(x){ return x === v[j]; }) : s >= 4 ? plekken(l, 6, function(x){ return x === v[k]; }) : [] });
+              if (s < 3) return data;
+              var tab = R0.teken.tabel([[it.kop, 'frequentie']].concat(v.map(function(x, i2){ return [T(x), s >= 6 || (s >= 4 && i2 === k) || (s >= 5 && i2 === j) ? String(f[i2]) : '']; })).concat(s >= 6 ? [['totaal', String(n)]] : []), { kop:true });
+              return stapel(data, tab);
+            }
+            return { vraag:'Frequentie van ' + T(v[j]) + '?', context:it.zin + ' Maak er een frequentietabel van. Wat is de frequentie van ' + T(v[j]) + '?', antwoord:String(f[j]), beeld:bl, zelfBeeld:bl(0), stappen:[
+              S('Wat is de kleinste waarde in de rij?', it.lo, 'Loop de rij langs en onthoud steeds het kleinste getal.'),
+              S('En de grootste waarde?', it.hi, 'Loop de rij langs en onthoud steeds het grootste getal.'),
+              S('Je zet alle waarden van ' + T(it.lo) + ' tot en met ' + T(it.hi) + ' onder elkaar. Hoeveel rijen krijgt de tabel?', v.length, 'Tel ze: ' + v.map(T).join(', ') + '. Dat zijn er ' + v.length + '.', F(v.length, it.hi - it.lo, 'Tot en met: tel de ' + T(it.hi) + ' ook mee.')),
+              S('Turf de rij. Hoe vaak komt ' + T(v[k]) + ' voor?', f[k], 'Zoek elke ' + T(v[k]) + ' in de rij en tel ze.'),
+              S('En hoe vaak komt ' + T(v[j]) + ' voor?', f[j], 'Zoek elke ' + T(v[j]) + ' in de rij en tel ze.', F(f[j], f[k], 'Dat was de frequentie van ' + T(v[k]) + '.')),
+              S('Tel alle frequenties op: ' + f.join(' + ') + ' =', n, 'Het totaal moet gelijk zijn aan het aantal gegevens in de rij: ' + n + '. Dan klopt je tabel.') ] };
+          } },
         { id:'wst-relfreq', naam:'Relatieve frequentie in procenten', kort:'Deel de frequentie door het totaal en doe keer 100',
           uit:'<p>De <b>frequentie</b> zegt hoe vaak iets voorkomt. De <b>relatieve frequentie</b> zegt welk <b>deel van het totaal</b> dat is, meestal in procenten.</p><p>Zo reken je hem uit: <b>frequentie : totaal · 100</b>.</p><p>Voorbeeld: 6 van de 24 leerlingen komen met de bus. 6 : 24 = 0,25. Keer 100 is <b>25%</b>.</p><p>Met procenten kun je groepen van een andere grootte eerlijk vergelijken.</p>',
           wanneer:'je wilt weten welk deel van de groep iets heeft gekozen.',
@@ -490,8 +550,8 @@
       ] },
 
     /* ================= diagrammen (onderbouw) ================= */
-    { groep:{ id:'wst-diagram', niveau:'onderbouw', domein:'statistiek', naam:'Diagrammen aflezen',
-        uit:'Een staafdiagram, een lijndiagram en een cirkeldiagram aflezen, en een cirkeldiagram uitrekenen met procenten en graden.' },
+    { groep:{ id:'wst-diagram', niveau:'onderbouw', domein:'statistiek', naam:'Diagrammen aflezen en tekenen',
+        uit:'Een staafdiagram, een lijndiagram en een cirkeldiagram aflezen, zelf een staaf- of lijndiagram tekenen, en een cirkeldiagram uitrekenen met procenten en graden.' },
       doelen:[
         { id:'wst-staaf', naam:'Een staafdiagram aflezen', kort:'Kijk eerst hoeveel één hokje op de as is, en lees dan af waar de staaf ophoudt',
           uit:'<p>In een <b>staafdiagram</b> is elke staaf even breed. De <b>hoogte</b> zegt hoeveel het is.</p><p>Kijk eerst naar de <b>verticale as</b>: welke getallen staan erbij en hoeveel is <b>één hokje</b>? Staat er 0, 10, 20 met een lijn ertussen, dan is één hokje 5.</p><p>Ga dan vanaf de bovenkant van de staaf <b>recht naar links</b> naar de as en lees het getal af.</p>',
@@ -502,7 +562,7 @@
               { wat:'het aantal verkochte ijsjes per dag', yas:'ijsjes', eh:'ijsjes', cats:['ma', 'di', 'wo', 'do', 'vr'], st:5 },
               { wat:'het aantal bezoekers van de bibliotheek per maand', yas:'bezoekers', eh:'bezoekers', cats:['jan', 'feb', 'mrt', 'apr', 'mei'], st:20 },
               { wat:'het aantal gelezen boeken per klas', yas:'boeken', eh:'boeken', cats:['1A', '1B', '1C', '1D'], st:2 },
-              { wat:'het aantal flessen dat elke klas inzamelde', yas:'flessen', eh:'flessen', cats:['1A', '1B', '1C', '1D', '1E'], st:10 } ]);
+              { wat:'het aantal flessen dat elke klas inzamelde', kop:'klas', yas:'flessen', eh:'flessen', cats:['1A', '1B', '1C', '1D', '1E'], st:10 } ]);
             var n = it.cats.length, max = it.st * 10, vals, a, b, soort = R.kies(['verschil', 'verschil', 'samen']), drie;
             do { vals = it.cats.map(function(){ return it.st * R.heel(1, 10); }); a = R.heel(0, n - 1); b = R.heel(0, n - 1); } while (a === b || vals[a] <= vals[b] || vals[a] % (2 * it.st) === 0 && vals[b] % (2 * it.st) === 0);
             drie = R.hussel(it.cats.map(function(c, i){ return i; })).slice(0, 3).sort();
@@ -548,6 +608,47 @@
             }
             var bl = function(k){ return lijnD(it.xs, vals, { max:max, stap:it.st, elk:max / it.st > 10 ? 2 : 1, yas:it.yas, lees:lees.slice(0, Math.min(k, 2)), aria:'lijndiagram van ' + it.wat }); };
             return { vraag:vraag, context:'Het lijndiagram laat zien: ' + it.wat + '.', eenheid:it.eh, beeld:bl, zelfBeeld:bl(0), stappen:st, antwoord:T(ant) };
+          } },
+        { id:'wst-teken', naam:'Een staaf- of lijndiagram tekenen', kort:'Kies de kleinste handige stap per hokje waarmee de grootste waarde past, en reken elke waarde om naar hokjes',
+          uit:'<p>Zelf een diagram tekenen gaat in drie stappen.</p><p>1. Zoek de <b>grootste waarde</b> in de tabel.</p><p>2. Kies wat <b>één hokje</b> op de verticale as waard is. Neem een handig getal, zoals 1, 2, 5, 10, 20, 25 of 50, en kies het <b>kleinste</b> waarbij de grootste waarde nog past. Heb je 10 hokjes en is de grootste waarde 64, dan is 5 per hokje te klein (10 ' + X + ' 5 = 50). Met 10 per hokje kom je tot 100: dat past.</p><p>3. Reken elke waarde om naar <b>hokjes</b>: waarde : stap. Bij 10 per hokje wordt 40 vier hokjes hoog.</p><p>Zet de getallen bij de as. Teken dan de staven, even breed en met ruimte ertussen, of zet de stippen en verbind ze met rechte lijntjes. Zet erbij wat er op de as staat.</p>',
+          wanneer:'je bij een tabel zelf een staafdiagram of een lijndiagram moet tekenen.',
+          maak:function(R){
+            var NICE = [1, 2, 5, 10, 20, 25, 50, 100, 200], H = 10, lijn = R.heel(0, 2) === 0, i;
+            var it = lijn ? R.kies([
+              { wat:'de temperatuur om 12 uur op zes dagen in mei', kop:'dag', yas:'°C', eh:'°C', cats:['ma', 'di', 'wo', 'do', 'vr', 'za'], s:[2] },
+              { wat:'het aantal bezoekers van het zwembad per maand', kop:'maand', yas:'bezoekers', eh:'bezoekers', cats:['apr', 'mei', 'jun', 'jul', 'aug'], s:[50, 100] },
+              { wat:'de lengte van een zonnebloem, elke week gemeten', kop:'week', yas:'cm', eh:'cm', cats:['week 1', 'week 2', 'week 3', 'week 4', 'week 5'], s:[10, 20, 25], groei:true } ]) : R.kies([
+              { wat:'de lievelingssport van de leerlingen van een klas', kop:'sport', yas:'leerlingen', eh:'leerlingen', cats:['voetbal', 'hockey', 'tennis', 'dansen', 'zwemmen'], s:[1, 2] },
+              { wat:'het aantal verkochte ijsjes per dag', kop:'dag', yas:'ijsjes', eh:'ijsjes', cats:['ma', 'di', 'wo', 'do', 'vr'], s:[5, 10, 20, 25] },
+              { wat:'het aantal bezoekers van de bibliotheek per dag', kop:'dag', yas:'bezoekers', eh:'bezoekers', cats:['ma', 'di', 'wo', 'do', 'vr'], s:[20, 25, 50] },
+              { wat:'het aantal flessen dat elke klas inzamelde', yas:'flessen', eh:'flessen', cats:['1A', '1B', '1C', '1D'], s:[10, 20, 25, 50] } ]);
+            var s = R.kies(it.s), idx = NICE.indexOf(s), prev = idx > 0 ? NICE[idx - 1] : null, next = NICE[idx + 1], n = it.cats.length;
+            var mMin = prev ? Math.floor(H * prev / s) + 1 : 6, m = R.heel(Math.max(mMin, 6), H), vals, a;
+            do {
+              vals = [];
+              if (it.groei){ var h = R.heel(1, 3); for (i = 0; i < n; i++){ vals.push(h * s); h += R.heel(1, 3); } vals[n - 1] = m * s; }
+              else { for (i = 0; i < n; i++) vals.push(s * R.heel(2, m)); vals[R.heel(0, n - 1)] = m * s; }
+              a = R.heel(0, n - 1);
+            } while (Math.max.apply(null, vals) !== m * s || vals[a] === m * s || vals.filter(function(v){ return v === m * s; }).length > 1 || (it.groei && vals.some(function(v, k){ return k && v <= vals[k - 1]; })));
+            var M = m * s, ha = vals[a] / s, wie = (lijn ? 'de stip bij ' : 'de staaf van ') + it.cats[a];
+            function leeg(nummers){
+              var t = '', bw = AS.PW / n, k;
+              for (k = 0; k <= H; k++){ var y = AS.T + AS.PH - k / H * AS.PH; t += ln(AS.L, y, AS.L + AS.PW, y, { w:1, op:k ? 0.2 : 1 }) + ln(AS.L - 6, y, AS.L, y, { w:2 }); if (nummers) t += tx(AS.L - 10, y + 5, T(k * s), { fs:13, a:'end' }); }
+              t += ln(AS.L, AS.T - 8, AS.L, AS.T + AS.PH, { w:2 }) + tx(6, 14, it.yas, { fs:12, a:'start' });
+              it.cats.forEach(function(c, k2){ var x = lijn ? AS.L + 24 + k2 * (AS.PW - 48) / (n - 1) : AS.L + k2 * bw + bw / 2; t += tx(x, AS.T + AS.PH + 22, c, { fs:13 }); });
+              return svg(AS.L + AS.PW + 20, AS.T + AS.PH + 40, t, nummers ? 'een leeg diagram met de getallen bij de as' : 'een leeg rooster met assen', 600);
+            }
+            function bl(k){
+              var tab = R0.teken.tabel([[it.kop || ''].concat(it.cats), [it.yas].concat(vals.map(T))], { zijkop:true, nadruk:[[0, a + 1], [1, a + 1]] });
+              if (k >= 4) return stapel(tab, lijn ? lijnD(it.cats, vals, { max:M > H * s ? M : H * s, stap:s, elk:1, yas:it.yas, lees:[a], aria:'lijndiagram van ' + it.wat }) : staaf(it.cats, vals, { max:H * s, stap:s, elk:1, yas:it.yas, nad:[a], lees:[a], aria:'staafdiagram van ' + it.wat }));
+              return stapel(tab, leeg(k >= 3));
+            }
+            var opt = [prev, s, next].filter(function(x){ return x != null; }), optT = opt.map(function(x){ return T(x) + ' per hokje'; });
+            return { vraag:'Hoeveel hokjes hoog wordt ' + wie + '?', context:'Je tekent een ' + (lijn ? 'lijndiagram' : 'staafdiagram') + ' bij de tabel: ' + it.wat + '. Op de verticale as heb je ' + H + ' hokjes. Kies een handige stap per hokje.', eenheid:'hokjes', antwoord:T(ha), beeld:bl, zelfBeeld:bl(0), stappen:[
+              S('Wat is de grootste waarde in de tabel?', M, 'Kijk welk getal in de tabel het grootst is.', null, { e:it.eh }),
+              K(R, 'Je hebt ' + H + ' hokjes. Hoeveel neem je per hokje?', optT[opt.indexOf(s)], [], (prev ? 'Met ' + T(prev) + ' per hokje kom je tot ' + H + ' ' + X + ' ' + T(prev) + ' = ' + T(H * prev) + ': dan past ' + T(M) + ' niet. ' : '') + 'Met ' + T(s) + ' per hokje kom je tot ' + T(H * s) + ': dat past. ' + T(next) + ' per hokje past ook, maar dan wordt het diagram onnodig laag.', { orde:optT }),
+              S('Welk getal zet je bij het bovenste streepje, na ' + H + ' hokjes?', H * s, H + ' hokjes van ' + T(s) + ': ' + H + ' ' + X + ' ' + T(s) + ' = ' + T(H * s) + '.', F(H * s, H, 'Dat is het aantal hokjes. Elk hokje is ' + T(s) + ' waard.')),
+              S('Hoeveel hokjes hoog wordt ' + wie + '? ' + T(vals[a]) + ' : ' + T(s) + ' =', ha, T(vals[a]) + ' gedeeld door ' + T(s) + ' per hokje.', F(ha, vals[a], 'Dat is de waarde. Reken hem om naar hokjes: deel door ' + T(s) + '.'), { e:'hokjes' }) ] };
           } },
         { id:'wst-cirkel-proc', naam:'Een cirkeldiagram met procenten', kort:'Het hele cirkeldiagram is 100%; reken een procent om naar een aantal via 1%',
           uit:'<p>In een <b>cirkeldiagram</b> is de hele cirkel de hele groep: <b>100%</b>. Elk stuk is een deel ervan.</p><p>Wil je weten <b>hoeveel</b> mensen bij een stuk horen, dan reken je via <b>1%</b>: deel het totaal door 100 en doe dat keer het procent.</p><p>Voorbeeld: 35% van 400 leerlingen. 1% is 400 : 100 = 4. 35% is 35 · 4 = <b>140</b>.</p>',
@@ -657,6 +758,31 @@
               S('Hoeveel vakjes heeft het rooster?', 36, '6 rijen en 6 kolommen: 6 ' + X + ' 6.', F(36, 12, 'Het zijn 6 rijen van 6 vakjes: vermenigvuldig.')),
               S('Hoeveel vakjes zijn gunstig voor ' + wat + '?', g, uitleg + ' Het zijn er ' + g + '.'),
               kansStap('De kans:', g, 36, 'Gunstig boven de streep, 36 eronder: ' + br(g, 36) + '.', F(brAnt(g, 36), br(g, 12), 'Er zijn 36 uitkomsten, niet 12.', br(g, 11), 'Er zijn 36 uitkomsten.')) ] }, g, 36);
+          } },
+        { id:'wst-kans-empirisch', naam:'Kans uit een experiment', kort:'Empirische kans = relatieve frequentie bij een experiment; hoe vaker je het doet, hoe beter de schatting',
+          uit:'<p>Een <b>theoretische kans</b> reken je uit zonder iets te doen: gunstig : totaal. Dat kan alleen als alle uitkomsten <b>even waarschijnlijk</b> zijn, zoals bij een dobbelsteen of een munt.</p><p>Een <b>empirische kans</b> haal je uit een <b>experiment</b>: je probeert het vaak en rekent de relatieve frequentie uit. Een punaise valt 30 van de 50 keer met de punt omhoog: 30 : 50 = 0,6 = <b>60%</b>.</p><p>Bij een punaise kun je de kans niet uitrekenen, want "punt omhoog" en "op zijn kant" zijn niet even waarschijnlijk. Dan gebruik je de empirische kans om te <b>voorspellen</b>: bij 400 keer gooien verwacht je 60% van 400 = 240 keer punt omhoog.</p><p>Hoe <b>vaker</b> je het experiment doet, hoe dichter de relatieve frequentie bij de echte kans komt. Bij 20 worpen kan het nog flink afwijken.</p>',
+          wanneer:'je een kans schat uit een proef of telling, of een experiment vergelijkt met de theoretische kans.',
+          maak:function(R){
+            var wie = R.kies(['Sanne', 'Bram', 'Ilse', 'Mohammed', 'Femke', 'Jesse']);
+            if (R.heel(0, 1)){
+              var E = R.kies([{ doe:'gooit {N} keer met een dobbelsteen', wat:'een zes', t:1, n:6, ww:'gooien' }, { doe:'gooit {N} keer een munt op', wat:'kop', t:1, n:2, ww:'gooien' }, { doe:'gooit {N} keer met een dobbelsteen', wat:'een één of een twee', t:2, n:6, ww:'gooien' }, { doe:'draait {N} keer aan een rad met 4 even grote vakken, waarvan 1 rood,', wat:'rood', t:1, n:4, ww:'draaien' }]);
+              var N = R.kies([20, 25, 40, 50]), verw = N * E.t / E.n, k;
+              do { k = Math.round(verw) + R.kies([-4, -3, -2, 2, 3, 4]); } while (k < 1 || k >= N || Math.abs(k - verw) < 1.5);
+              var p = rnd(k / N * 100, 4), th = rnd(E.t / E.n * 100, 1), thT = T(th) + '%';
+              var OPT = ['steeds dichter bij ' + thT, 'precies ' + T(p) + '%', 'steeds verder van ' + thT];
+              return eindKeuze({ vraag:'Wat gebeurt er bij heel vaak ' + E.ww + '?', context:wie + ' ' + E.doe.replace('{N}', N) + ' en krijgt ' + k + ' keer ' + E.wat + '. Daarna gaat ' + wie + ' door tot 10.000 keer. Wat gebeurt er met de relatieve frequentie van ' + E.wat + '?', stappen:[
+                S('De relatieve frequentie van ' + E.wat + ' na ' + N + ' keer: ' + k + ' : ' + N + ' ' + X + ' 100 =', gAnt(p, '%'), k + ' : ' + N + ' = ' + T(k / N) + '. Keer 100 is ' + T(p) + '%. Dat is de empirische kans.', F(gAnt(p, '%'), k, 'Dat is de frequentie. Deel door ' + N + ' en doe keer 100.'), { e:'%' }),
+                kansStap('De theoretische kans op ' + E.wat + ', als breuk:', E.t, E.n, 'Gunstig : totaal. ' + (E.n === 6 ? 'Een dobbelsteen heeft 6 uitkomsten.' : E.n === 2 ? 'Een munt heeft 2 kanten.' : 'Het rad heeft 4 even grote vakken.') + ' Dat is ongeveer ' + thT + '.'),
+                K(R, 'Na ' + N + ' keer was het ' + T(p) + '%, de theoretische kans is ' + thT + '. Wat gebeurt er met de relatieve frequentie als ' + wie + ' doorgaat tot 10.000 keer?', OPT[0], OPT.slice(1), 'Bij weinig keer kan het flink afwijken. Hoe vaker je het doet, hoe dichter de relatieve frequentie bij de theoretische kans komt.') ] });
+            }
+            var D = R.kies([{ ding:'een punaise', wat:'met de punt omhoog', hij:'hij', die:'Die' }, { ding:'een flessendop', wat:'op zijn bovenkant', hij:'hij', die:'Die' }, { ding:'een plastic bekertje', wat:'op zijn kant', hij:'het', die:'Dat' }, { ding:'een wasknijper', wat:'op zijn zijkant', hij:'hij', die:'Die' }, { ding:'een bouwsteentje', wat:'met de noppen omhoog', hij:'het', die:'Dat' }]);
+            var N2 = R.kies([20, 40, 50, 80, 100, 200]), pp, M = R.kies([200, 300, 500, 1000]);
+            do { pp = R.kies([25, 30, 40, 60, 70, 75, 35, 45, 55, 65]); } while ((pp * N2) % 100 || (pp * M) % 100);
+            var k2 = pp * N2 / 100, ex = pp * M / 100, OPT2 = ['nee, de uitkomsten zijn niet even waarschijnlijk', 'ja, het is 1/2: er zijn twee kanten'];
+            return { vraag:'Hoe vaak valt ' + D.hij + ' ' + D.wat + '?', context:wie + ' gooit ' + N2 + ' keer met ' + D.ding + '. ' + D.die + ' valt ' + k2 + ' keer ' + D.wat + '. Hoe vaak verwacht je dat ' + D.hij + ' ' + D.wat + ' valt als je ' + T(M) + ' keer gooit?', antwoord:T(ex), stappen:[
+              S('De relatieve frequentie: ' + k2 + ' : ' + N2 + ' ' + X + ' 100 =', gAnt(pp, '%'), k2 + ' : ' + N2 + ' = ' + T(pp / 100) + '. Keer 100 is ' + pp + '%.', F(gAnt(pp, '%'), k2, 'Dat is de frequentie. Deel door ' + N2 + ' en doe keer 100.'), { e:'%' }),
+              K(R, 'Kun je deze kans uitrekenen zonder te gooien, zoals bij een dobbelsteen?', OPT2[0], OPT2.slice(1), 'Bij ' + D.ding + ' zijn de manieren van vallen niet even waarschijnlijk. Gunstig : totaal werkt dan niet. Je gebruikt de empirische kans, ' + pp + '%.'),
+              S('Bij ' + T(M) + ' keer verwacht je ' + pp + '% van ' + T(M) + ' =', ex, '1% van ' + T(M) + ' is ' + T(M / 100) + '. Keer ' + pp + ' is ' + T(ex) + '.', F(ex, k2, 'Dat was bij ' + N2 + ' keer. Reken het uit voor ' + T(M) + ' keer.')) ] };
           } }
       ] },
 

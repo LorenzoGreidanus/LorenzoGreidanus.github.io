@@ -1,5 +1,5 @@
 /* De leerroute wiskunde: statistiek en kans. Het gemiddelde bij klassen, kwartielen
-   en de kwartielafstand, een boxplot aflezen, en kansbomen: meer takken optellen,
+   en de kwartielafstand, een boxplot aflezen, twee boxplots vergelijken, en kansbomen: meer takken optellen,
    pakken zonder terugleggen en precies zoveel keer bij drie pogingen.
    Gemiddelde, mediaan, modus, frequentietabel, kans als breuk en de eerste kansregels
    staan in de leerroute rekenen (rekenen-meten.js, rekenen-data.js).
@@ -53,6 +53,7 @@
   }
   function kansStap(tekst, t, n, hint, fout){ return S(tekst, brAnt(t, n), hint, fout, { controle:kansC(t, n) }); }
   function rij(l){ return l.map(T).join('   '); }
+  function eindKeuze(op){ var l = op.stappen[op.stappen.length - 1]; op.opties = l.opties; op.goed = l.goed; return op; }
 
   /* ================= tekenen ================= */
   function n1(x){ return Math.round(x * 10) / 10; }
@@ -113,7 +114,7 @@
   LEERROUTE.voeg('wiskunde', [
     /* ================= klassen, kwartielen en de boxplot (vmbo) ================= */
     { groep:{ id:'wi-stat', niveau:'vmbo', domein:'statistiek', naam:'Klassen, kwartielen en de boxplot',
-        uit:'Het gemiddelde als de gegevens in klassen staan, de kwartielen en de kwartielafstand, en een boxplot aflezen. Gemiddelde, mediaan en modus van een gewone rij staan in de leerroute rekenen.' },
+        uit:'Het gemiddelde als de gegevens in klassen staan, de kwartielen en de kwartielafstand, en een boxplot aflezen en twee boxplots vergelijken. Gemiddelde, mediaan en modus van een gewone rij staan in de leerroute rekenen.' },
       doelen:[
         { id:'wi-st-klassen', naam:'Het gemiddelde bij klassen', kort:'Neem per klasse het klassenmidden, doe keer de frequentie, tel op en deel door het totaal',
           uit:'<p>Staan de gegevens in <b>klassen</b>, zoals 10 tot 20 minuten, dan weet je de precieze getallen niet meer. Je rekent dan met het <b>klassenmidden</b>: het getal precies in het midden, hier 15.</p><p>Doe per klasse het klassenmidden <b>keer de frequentie</b>. Tel alles op en deel door het <b>totaal aantal</b>.</p><p>Het antwoord is een <b>schatting</b>: je doet alsof iedereen in een klasse precies in het midden zit.</p>',
@@ -190,6 +191,33 @@
               S('Hoeveel kwarten van de waarnemingen liggen ' + (boven ? 'rechts' : 'links') + ' van ' + namen[pi] + '?', boven ? 4 - pi : pi, 'Tussen twee strepen zit steeds een kwart. Tel de stukken ' + (boven ? 'rechts' : 'links') + ' van de streep.'),
               S('Dat is in procenten:', [T(pr), T(pr) + '%'], 'Een kwart is 25%.', F(pr, 100 - pr, 'Dat is de andere kant. Je zoekt wat ' + (boven ? 'erboven' : 'eronder') + ' ligt.'), { e:'%' }) ]; ant = pr; }
             return { vraag:vraag, context:'De boxplot laat ' + it.wat + ' zien, in ' + it.eh + '. Elk streepje op de as is 1.', antwoord:soort === 'proc' ? [T(ant), T(ant) + '%'] : T(ant), eenheid:soort === 'proc' ? '%' : eh, beeld:bl, zelfBeeld:bl(0), stappen:st };
+          } },
+        { id:'wi-st-boxplot-vergelijk', naam:'Twee boxplots vergelijken', kort:'Vergelijk de medianen voor wat hoger ligt, en de kwartielafstanden (de lengte van de doos) voor de spreiding',
+          uit:'<p>Met twee <b>boxplots</b> boven elkaar kun je twee groepen vergelijken. Kijk naar twee dingen.</p><p><b>Wat ligt hoger?</b> Vergelijk de <b>medianen</b>, de strepen in de dozen. Ligt de mediaan van de ene groep verder naar rechts, dan zijn de waarden in die groep in het algemeen hoger.</p><p><b>Welke groep heeft meer spreiding?</b> Vergelijk de <b>kwartielafstanden</b>: Q3 ' + MIN + ' Q1, de lengte van de doos. Een langere doos betekent dat de middelste helft verder uit elkaar ligt.</p><p>Let op: kijk niet alleen naar de snorharen. Eén heel grote of kleine waarde maakt een snorhaar lang, maar zegt weinig over de hele groep.</p>',
+          wanneer:'je twee groepen vergelijkt met boxplots.',
+          maak:function(R){
+            var it = R.kies([
+              { wat:'de reistijden naar school van twee klassen', eh:'minuten', nm:['klas 2A', 'klas 2B'] },
+              { wat:'het aantal klanten per uur in twee winkels', eh:'klanten', nm:['winkel A', 'winkel B'] },
+              { wat:'de lengte van twee soorten tomatenplanten na een maand', eh:'cm', nm:['soort A', 'soort B'] },
+              { wat:'de scores van twee teams bij een quiz', eh:'punten', nm:['team rood', 'team blauw'] } ]);
+            var van = R.kies([0, 10, 20]), a, b;
+            function vijf(){ var v; do { v = [0, 1, 2, 3, 4].map(function(){ return van + R.heel(1, 29); }).sort(function(x, y){ return x - y; }); } while (v[1] - v[0] < 2 || v[2] - v[1] < 2 || v[3] - v[2] < 2 || v[4] - v[3] < 2); return v; }
+            do { a = vijf(); b = vijf(); } while (Math.abs(a[2] - b[2]) < 3 || Math.abs((a[3] - a[1]) - (b[3] - b[1])) < 3 || ((a[3] - a[1]) - (b[3] - b[1])) * ((a[4] - a[0]) - (b[4] - b[0])) < 0);
+            var kaA = a[3] - a[1], kaB = b[3] - b[1], soort = R.kies(['hoger', 'spreiding']), eh = it.eh;
+            var goed = soort === 'hoger' ? (a[2] > b[2] ? 0 : 1) : (kaA > kaB ? 0 : 1);
+            function bl(n){
+              var nad = n >= 4 ? [1, 3] : n >= 2 ? [2] : [];
+              return '<div style="display:flex;flex-direction:column;align-items:stretch;gap:2px;width:100%;max-width:620px;margin:0 auto">' +
+                [[a, 0], [b, 1]].map(function(p){ return '<div style="font-weight:700;margin-left:8px">' + Sch(it.nm[p[1]]) + '</div>' + boxplot(p[0], { van:van, tot:van + 30, raster:true, nad:nad, aria:'boxplot van ' + it.nm[p[1]] }); }).join('') + '</div>';
+            }
+            var vr = soort === 'hoger' ? 'In welke groep zijn de waarden in het algemeen hoger?' : 'Welke groep heeft de grootste spreiding?';
+            return eindKeuze({ vraag:vr, context:'De boxplots laten ' + it.wat + ' zien, in ' + it.eh + '. Elk streepje op de as is 1.', beeld:bl, zelfBeeld:bl(0), stappen:[
+              S('Lees af: de mediaan van ' + it.nm[0] + ' (de streep in de doos):', a[2], 'Kijk waar de dikke streep in de bovenste doos staat. Elk streepje op de as is 1.', null, { e:eh }),
+              S('En de mediaan van ' + it.nm[1] + ':', b[2], 'Kijk waar de dikke streep in de onderste doos staat.', null, { e:eh }),
+              S('De kwartielafstand van ' + it.nm[0] + ': Q3 ' + MIN + ' Q1 = ' + a[3] + ' ' + MIN + ' ' + a[1] + ' =', kaA, 'De lengte van de bovenste doos: het eind min het begin.', F(kaA, a[4] - a[0], 'Dat is de spreidingsbreedte. Neem alleen de doos.'), { e:eh }),
+              S('De kwartielafstand van ' + it.nm[1] + ': ' + b[3] + ' ' + MIN + ' ' + b[1] + ' =', kaB, 'De lengte van de onderste doos.', F(kaB, b[4] - b[0], 'Dat is de spreidingsbreedte. Neem alleen de doos.'), { e:eh }),
+              K(R, vr, it.nm[goed], [it.nm[1 - goed]], soort === 'hoger' ? 'Vergelijk de medianen: ' + a[2] + ' en ' + b[2] + '. De mediaan van ' + it.nm[goed] + ' ligt hoger.' : 'Vergelijk de kwartielafstanden: ' + kaA + ' en ' + kaB + '. De doos van ' + it.nm[goed] + ' is langer, dus daar is de spreiding groter.', { orde:it.nm }) ] });
           } }
       ] },
 

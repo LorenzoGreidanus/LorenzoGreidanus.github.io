@@ -4,8 +4,10 @@
    kansverdelingen (verwachtingswaarde, standaardafwijking), de binomiale verdeling,
    de normale verdeling met de vuistregels, toetsen en het betrouwbaarheidsinterval,
    exponentiële groei met logaritmen, en differentiëren.
-   Alles zonder grafische rekenmachine: getallen die met een gewone rekenmachine kunnen,
-   en overschrijdingskansen staan in de opgave.
+   Bijna alles zonder grafische rekenmachine: getallen die met een gewone rekenmachine kunnen,
+   en overschrijdingskansen staan in de opgave. Alleen de doelen "met de GR" (normalcdf,
+   invNorm, binompdf, binomcdf) vragen een GR; die uitkomsten rekent dit bestand zelf precies na.
+   Ook de productregel, de kettingregel en de afgeleide van eˣ, gˣ en ln x.
    Kansbomen, boxplot en de groeifactor staan in wiskunde-statistiek.js en wiskunde-verbanden.js.
    Zie leerroute.js voor het formaat. */
 (function(){
@@ -285,7 +287,8 @@
     if (o.P) s += stip(Xr(o.P[0]), Yr(o.P[1]), KL[3], 7) + tx(Xr(o.P[0]) + 14, Yr(o.P[1]) - 10, 'P', { fs:18, vet:true, k:KL[3] });
     return svg(W, H, s, o.aria || 'rooster van ' + m + ' bij ' + h + ' hokjes', Math.min(520, W * 1.25));
   }
-  /* de normale kromme: streepjes bij μ + kσ met de waarden; o.vul [za, zb] kleurt een stuk; o.proc de vuistregels; o.streep een waarde */
+  /* de normale kromme: streepjes bij μ + kσ met de waarden; o.vul [za, zb] kleurt een stuk; o.proc de vuistregels; o.streep een waarde;
+     o.kaal: alleen de waarde van μ, zodat de grenzen bij de vraag niet al uitgerekend klaarstaan */
   function normaal(mu, sig, o){
     o = o || {};
     var L = 16, Rr = 604, B = 150, Hh = 118, s = '', i, k;
@@ -294,7 +297,7 @@
     if (o.vul){ var a = Math.max(o.vul[0], -3.7), b = Math.min(o.vul[1], 3.7), pts = [[Xn(a), B]]; for (i = 0; i <= 60; i++){ var z = a + (b - a) * i / 60; pts.push([Xn(z), Yn(z)]); } pts.push([Xn(b), B]); s += '<path d="' + pad(pts) + ' Z" style="fill:' + KL[0] + ';fill-opacity:0.32;stroke:none"/>'; }
     for (k = -3; k <= 3; k++){
       s += ln(Xn(k), B, Xn(k), Yn(k), { w:1.2, op:0.45, dash:'4 3' }) + ln(Xn(k), B, Xn(k), B + 6, { w:1.6 });
-      s += tx(Xn(k), B + 22, T(rnd(mu + k * sig, 4)), { fs:13, vet:k === 0 });
+      if (!o.kaal || k === 0) s += tx(Xn(k), B + 22, T(rnd(mu + k * sig, 4)), { fs:13, vet:k === 0 });
       s += tx(Xn(k), B + 40, k === 0 ? 'μ' : 'μ ' + (k < 0 ? MIN : '+') + ' ' + (Math.abs(k) === 1 ? '' : Math.abs(k)) + 'σ', { fs:11, k:'var(--muted)' });
     }
     var cur = []; for (i = 0; i <= 140; i++){ var z2 = -3.7 + 7.4 * i / 140; cur.push([Xn(z2), Yn(z2)]); }
@@ -349,6 +352,19 @@
   function sigTekst(k){ return k === 0 ? 'μ' : 'μ ' + (k < 0 ? MIN : '+') + ' ' + (Math.abs(k) === 1 ? '' : Math.abs(k)) + 'σ'; }
   /* boven μ + kσ ligt dit percentage */
   var BOVEN = { '-3':99.85, '-2':97.5, '-1':84, '0':50, '1':16, '2':2.5, '3':0.15 };
+  /* de normale verdeling met de GR: Φ(z) als reeks met alleen positieve termen (heel precies), normalcdf en invNorm */
+  function Phi(z){
+    if (z < -9) return 0; if (z > 9) return 1;
+    var s = z, t = z, z2 = z * z;
+    for (var i = 3; i < 800; i += 2){ t = t * z2 / i; s += t; if (Math.abs(t) < 1e-17 * Math.abs(s)) break; }
+    return 0.5 + s * Math.exp(-z2 / 2 - 0.9189385332046727);
+  }
+  function ncdf(a, b, mu, sg){ return (b == null ? 1 : Phi((b - mu) / sg)) - (a == null ? 0 : Phi((a - mu) / sg)); }
+  function inorm(p, mu, sg){ var lo = -12, hi = 12; for (var i = 0; i < 200; i++){ var m = (lo + hi) / 2; if (Phi(m) < p) lo = m; else hi = m; } return mu + sg * (lo + hi) / 2; }
+  /* een getal zoals je het op de GR intikt, met een punt */
+  function gT(x){ return String(rnd(x, 6)); }
+  /* een percentage, afgerond op d decimalen, met of zonder % */
+  function pctC(w, d){ var c = getC(w, d); return function(v){ return c(String(v).replace(/\s*%\s*$/, '')); }; }
 
   /* toetsen: verhalen met een hypothese */
   var HYP = [
@@ -843,12 +859,43 @@
               S('E(X) = ' + n + ' ' + X + ' ' + T(p) + ' =', Ex, 'n keer p.'),
               S('n ' + X + ' p ' + X + ' (1 ' + MIN + ' p) = ' + n + ' ' + X + ' ' + T(p) + ' ' + X + ' ' + T(rnd(1 - p, 4)) + ' =', v, '1 ' + MIN + ' ' + T(p) + ' = ' + T(rnd(1 - p, 4)) + '.', F(v, rnd(n * p * p, 6), 'De laatste factor is 1 min p.')),
               SA('σ(X) = √' + T(v) + ' ≈ (2 decimalen)', sd, 2, 'Neem de wortel.', F(rnd(sd, 2), v, 'Dat is de variantie. Neem nog de wortel.', rnd(Math.sqrt(Ex), 2), 'Je nam de wortel van n · p. Neem ook (1 ' + MIN + ' p) mee.')) ] });
+          } },
+        { id:'wva-bin-gr', naam:'Binomiale kansen met de GR', kort:'P(X = k): binompdf(n, p, k). P(X ≤ k): binomcdf(n, p, k). P(X ≥ k) = 1 − binomcdf(n, p, k − 1)',
+          uit:'<p>Bij grote n laat je de <b>grafische rekenmachine</b> rekenen (TI: binompdf en binomcdf, Casio: BinomialPD en BinomialCD).</p>' +
+            '<p><b>binompdf(n, p, k)</b> = P(X = k). <b>binomcdf(n, p, k)</b> = P(X ≤ k): alles van 0 tot en met k.</p>' +
+            '<p>Schrijf de andere kansen om naar "hoogstens": P(X &lt; 8) = P(X ≤ 7), P(X ≥ 8) = 1 ' + MIN + ' P(X ≤ 7), P(X &gt; 8) = 1 ' + MIN + ' P(X ≤ 8), en P(5 ≤ X ≤ 9) = P(X ≤ 9) ' + MIN + ' P(X ≤ 4).</p>',
+          wanneer:'je bij een binomiaal kansexperiment met veel herhalingen een kans zoekt.',
+          maak:function(R){
+            var sc = R.kies([
+              { zin:function(p, n){ return 'Een machine maakt met kans ' + T(p) + ' een fout product. Je controleert ' + n + ' producten. X is het aantal foute producten.'; }, p:[0.03, 0.05, 0.08, 0.1], n:[40, 50, 60, 80] },
+              { zin:function(p, n){ return 'Een basketballer scoort een vrije worp met kans ' + T(p) + '. Hij neemt ' + n + ' vrije worpen. X is het aantal treffers.'; }, p:[0.65, 0.7, 0.75, 0.8], n:[20, 25, 30, 40] },
+              { zin:function(p, n){ return 'Van alle kiezers stemt ' + T(p * 100) + '% op een partij. Je ondervraagt aselect ' + n + ' kiezers. X is het aantal dat op de partij stemt.'; }, p:[0.15, 0.2, 0.3, 0.35], n:[50, 60, 80, 100] },
+              { zin:function(p, n){ return 'Een zaadje komt op met kans ' + T(p) + '. Je zaait ' + n + ' zaadjes. X is het aantal zaadjes dat opkomt.'; }, p:[0.8, 0.85, 0.9], n:[30, 40, 50] } ]);
+            var soort, n, p, k, k2, P, pm;
+            function cdf(m){ var s = 0; for (var i = 0; i <= Math.min(m, n); i++) s += pm[i]; return Math.min(1, s); }
+            do { soort = R.kies(['precies', 'hoogstens', 'minder', 'minstens', 'meer', 'tussen']); n = R.kies(sc.n); p = R.kies(sc.p); pm = pmf(n, p);
+              var mu = n * p, sd = Math.sqrt(n * p * (1 - p)); k = Math.round(mu + R.heel(-4, 3) * sd / 2); k2 = k + R.heel(2, 5);
+              P = soort === 'precies' ? pm[k] : soort === 'hoogstens' ? cdf(k) : soort === 'minder' ? cdf(k - 1) : soort === 'minstens' ? 1 - cdf(k - 1) : soort === 'meer' ? 1 - cdf(k) : cdf(k2) - cdf(k - 1);
+            } while (k < 2 || k2 > n - 2 || P < 0.01 || P > 0.99 || grens(P, 4));
+            var A = 'binompdf(' + n + ', ' + gT(p) + ', ', C = 'binomcdf(' + n + ', ' + gT(p) + ', ';
+            var V = {
+              precies:['X = ' + k, 'P(X = ' + k + ')', A + k + ')', [C + k + ')', '1 ' + MIN + ' ' + A + k + ')'], 'Precies één waarde: binompdf.'],
+              hoogstens:['X ≤ ' + k, 'P(X ≤ ' + k + ')', C + k + ')', [A + k + ')', C + (k - 1) + ')'], 'Hoogstens ' + k + ': binomcdf telt 0 tot en met ' + k + '.'],
+              minder:['X &lt; ' + k, 'P(X ≤ ' + (k - 1) + ')', C + (k - 1) + ')', [C + k + ')', A + (k - 1) + ')'], 'Kleiner dan ' + k + ' is hoogstens ' + (k - 1) + '.'],
+              minstens:['X ≥ ' + k, '1 ' + MIN + ' P(X ≤ ' + (k - 1) + ')', '1 ' + MIN + ' ' + C + (k - 1) + ')', ['1 ' + MIN + ' ' + C + k + ')', C + (k - 1) + ')'], 'Minstens ' + k + ' is alles behalve 0 tot en met ' + (k - 1) + '.'],
+              meer:['X &gt; ' + k, '1 ' + MIN + ' P(X ≤ ' + k + ')', '1 ' + MIN + ' ' + C + k + ')', ['1 ' + MIN + ' ' + C + (k - 1) + ')', C + k + ')'], 'Groter dan ' + k + ' is alles behalve 0 tot en met ' + k + '.'],
+              tussen:[k + ' ≤ X ≤ ' + k2, 'P(X ≤ ' + k2 + ') ' + MIN + ' P(X ≤ ' + (k - 1) + ')', C + k2 + ') ' + MIN + ' ' + C + (k - 1) + ')', [C + k2 + ') ' + MIN + ' ' + C + k + ')', C + k2 + ')'], 'Van ' + k + ' tot en met ' + k2 + ': alles tot en met ' + k2 + ', min alles tot en met ' + (k - 1) + '.'] }[soort];
+            var omF = { precies:['P(X ≤ ' + k + ')', 'P(X ≥ ' + k + ')'], hoogstens:['P(X ≤ ' + (k - 1) + ')', '1 ' + MIN + ' P(X ≤ ' + k + ')'], minder:['P(X ≤ ' + k + ')', '1 ' + MIN + ' P(X ≤ ' + (k - 1) + ')'], minstens:['1 ' + MIN + ' P(X ≤ ' + k + ')', 'P(X ≤ ' + (k - 1) + ')'], meer:['1 ' + MIN + ' P(X ≤ ' + (k - 1) + ')', 'P(X ≤ ' + k + ')'], tussen:['P(X ≤ ' + k2 + ') ' + MIN + ' P(X ≤ ' + k + ')', 'P(X ≤ ' + k2 + ')'] }[soort];
+            return af({ vraag:'P(' + V[0].replace(/&lt;/g, '<').replace(/&gt;/g, '>') + ')?', vraagHtml:'P(' + V[0] + ') = ?', context:sc.zin(p, n) + ' Bereken P(' + V[0] + ') met de GR. Rond af op 4 decimalen.', stappen:[
+              K(R, 'Schrijf P(' + V[0] + ') met kansen van de vorm P(X = k) of P(X ≤ k):', V[1], omF, V[4]),
+              K(R, 'Wat tik je in op de GR?', V[2], V[3], 'binompdf voor precies, binomcdf voor tot en met.'),
+              SA(V[2] + ' ≈ (4 decimalen)', P, 4, 'De GR geeft ' + N(rnd(P, 6)) + '.') ] });
           } }
       ] },
 
     /* ================= de normale verdeling ================= */
     { groep:{ id:'wva-norm', niveau:'vwo', domein:'statistiek', naam:'De normale verdeling',
-        uit:'De z-waarde, percentages met de vuistregels (68%, 95% en 99,7%), een grens bij een gegeven percentage, en μ en σ terugvinden. Zonder grafische rekenmachine.' },
+        uit:'De z-waarde, percentages met de vuistregels (68%, 95% en 99,7%), een grens bij een gegeven percentage en μ en σ terugvinden; daarna hetzelfde met de grafische rekenmachine: normalcdf, invNorm en μ of σ onbekend.' },
       doelen:[
         { id:'wva-norm-z', naam:'De z-waarde', kort:'z = (x − μ) : σ: hoeveel standaardafwijkingen x van het gemiddelde ligt',
           uit:'<p>Bij een <b>normale verdeling</b> hoort een klokvorm met in het midden het gemiddelde <b>μ</b>. De standaardafwijking <b>σ</b> zegt hoe breed de klok is.</p><p>De <b>z-waarde</b> zegt hoeveel standaardafwijkingen een waarde x van μ af ligt: <b>z = (x − μ) : σ</b>.</p><p>Voorbeeld: μ = 180 cm, σ = 8 cm. Voor x = 194 is z = 14 : 8 = 1,75. Ligt x onder μ, dan is z negatief.</p>',
@@ -880,7 +927,7 @@
             if (aant) st.push(S('Van de ' + T(Nn) + ' ' + c.wie + ': ' + T(pr) + '% van ' + T(Nn) + ' =', rnd(pr / 100 * Nn, 4), T(pr) + ' : 100 ' + X + ' ' + T(Nn) + '.'));
             return af({ vraag:aant ? 'Hoeveel van de ' + T(Nn) + ' ' + c.wie + '?' : vraag, context:c.wat + ' is normaal verdeeld met μ = ' + o.mu + ' ' + c.eh + ' en σ = ' + o.sig + ' ' + c.eh + '. Gebruik de vuistregels.' + (aant ? ' ' + vraag.replace(/^Hoeveel procent/, 'Hoeveel van ' + T(Nn) + ' ' + c.wie) : ''),
               antwoord:aant ? undefined : [T(pr), T(pr) + '%'], eenheid:aant ? null : '%',
-              beeld:function(n){ return normaal(o.mu, o.sig, { proc:true, vul:n >= nk ? [za, zb] : null }); }, stappen:st });
+              beeld:function(n){ return normaal(o.mu, o.sig, { proc:true, kaal:n < nk, vul:n >= nk ? [za, zb] : null }); }, stappen:st });
           } },
         { id:'wva-norm-grens', naam:'Een grens bij een gegeven percentage', kort:'Zoek bij het percentage het stuk van de vuistregels; de grens is dan μ + k · σ',
           uit:'<p>Nu ken je het percentage en zoek je de grens. Bijvoorbeeld: de zwaarste 2,5% weegt meer dan hoeveel gram?</p><p>Boven <b>μ + σ</b> ligt 16% (13,5 + 2,35 + 0,15). Boven <b>μ + 2σ</b> ligt 2,5%. Boven <b>μ + 3σ</b> ligt 0,15%. Boven μ ligt 50%. Onder de grenzen links is het net zo.</p><p>Weet je welke grens het is, reken dan uit: <b>grens = μ + k · σ</b>, met k negatief als de grens links ligt.</p>',
@@ -891,7 +938,7 @@
             var opt = uniek([k, -k, k - 1, k + 1].filter(function(v){ return v >= -3 && v <= 3; }).sort(function(a, b){ return a - b; }).map(sigTekst));
             var hint = boven ? 'Boven μ + σ ligt 16%, boven μ + 2σ 2,5% en boven μ + 3σ 0,15%. Boven μ ligt 50%. Bij meer dan 50% ligt de grens links van μ.' : 'Onder μ ' + MIN + ' σ ligt 16%, onder μ ' + MIN + ' 2σ 2,5% en onder μ ' + MIN + ' 3σ 0,15%. Onder μ ligt 50%. Bij meer dan 50% ligt de grens rechts van μ.';
             return af({ vraag:'De grens?', context:c.wat + ' is normaal verdeeld met μ = ' + o.mu + ' ' + c.eh + ' en σ = ' + o.sig + ' ' + c.eh + '. ' + T(pr) + '% van de ' + c.wie + ' ' + (boven ? c.meer : c.minder) + ' een bepaalde grens. Bereken die grens met de vuistregels.', eenheid:c.eh,
-              beeld:function(n){ return normaal(o.mu, o.sig, { proc:true, vul:n >= 1 ? (boven ? [k, 4] : [-4, k]) : null }); }, stappen:[
+              beeld:function(n){ return normaal(o.mu, o.sig, { proc:true, kaal:n < 2, vul:n >= 1 ? (boven ? [k, 4] : [-4, k]) : null }); }, stappen:[
                 K(R, 'Waar ligt de grens met ' + T(pr) + '% ' + (boven ? 'erboven' : 'eronder') + '?', sigTekst(k), opt, hint, { orde:opt }),
                 S('De grens: ' + o.mu + (k === 0 ? '' : ' ' + (k < 0 ? MIN : '+') + ' ' + Math.abs(k) + ' ' + X + ' ' + o.sig) + ' =', g, k === 0 ? 'Het is het gemiddelde zelf.' : 'μ ' + (k < 0 ? 'min' : 'plus') + ' ' + Math.abs(k) + ' keer σ.', F(g, o.mu - k * o.sig, 'Andere kant op: kijk of de grens links of rechts van μ ligt.'), { e:c.eh }) ] });
           } },
@@ -913,6 +960,71 @@
               S('μ =', mu, 'Bij de helft erboven en de helft eronder hoort het gemiddelde.', null, { e:c.eh }),
               K(R, 'Bij ' + pr2 + '% ' + (boven ? 'erboven' : 'eronder') + ' hoort de grens:', sigTekst(boven ? kk : -kk), opt, 'Boven μ + σ ligt 16%, boven μ + 2σ 2,5%, boven μ + 3σ 0,15%. Links is het net zo.', { orde:opt }),
               S('Dus ' + (kk === 1 ? 'σ' : kk + 'σ') + ' = ' + Math.abs(x - mu) + ' en σ =', sig, kk === 1 ? 'De afstand van ' + mu + ' tot ' + x + ' is precies één σ.' : 'Deel ' + Math.abs(x - mu) + ' door ' + kk + '.', F(sig, Math.abs(x - mu), 'Dat is ' + kk + ' keer σ. Deel nog door ' + kk + '.'), { e:c.eh }) ] });
+          } },
+        { id:'wva-norm-cdf', naam:'Percentages met normalcdf', kort:'normalcdf(linkergrens, rechtergrens, μ, σ); bij meer dan is de rechtergrens 10^99, bij minder dan de linkergrens −10^99',
+          uit:'<p>Valt een grens niet op μ + k · σ met een heel getal k, dan helpen de vuistregels niet. Dan rekent de <b>grafische rekenmachine</b> de oppervlakte uit.</p>' +
+            '<p><b>normalcdf(L, R, μ, σ)</b> geeft de kans dat een waarde tussen L en R ligt (op de Casio: NormCD). Bij <b>meer dan</b> 190 neem je als rechtergrens 10^99, bij <b>minder dan</b> 190 als linkergrens ' + MIN + '10^99.</p>' +
+            '<p>Voorbeeld: μ = 180 cm, σ = 8 cm. normalcdf(190, 10^99, 180, 8) ≈ 0,1056, dus ongeveer <b>10,6%</b> is langer dan 190 cm. Van 2000 mannen zijn dat er ongeveer 0,1056 · 2000 ≈ 211.</p>',
+          wanneer:'je bij een normale verdeling een percentage of een aantal zoekt bij een willekeurige grens.',
+          maak:function(R){
+            var o, c, mu, sg, soort = R.kies(['meer', 'minder', 'tus']), aant = R.heel(0, 2) === 0, Nn, a, b, P;
+            function gq(){ return Math.round(mu + R.heel(-24, 24) / 10 * sg); }
+            do {
+              o = normKies(R); c = o.c; mu = o.mu; sg = o.sig; Nn = R.kies([500, 1000, 2000, 5000]);
+              a = gq(); b = soort === 'tus' ? gq() : null;
+              if (b != null && a > b){ var t = a; a = b; b = t; }
+              P = soort === 'meer' ? ncdf(a, null, mu, sg) : soort === 'minder' ? ncdf(null, a, mu, sg) : ncdf(a, b, mu, sg);
+            } while ((soort === 'tus' && b - a < 2) || a === mu || b === mu || ((a - mu) % sg === 0 && (b == null || (b - mu) % sg === 0)) || P < 0.01 || P > 0.99 || grens(P * 100, 1) ||
+              (aant && (grens(P * Nn, 0) || Math.round(P * Nn) !== Math.round(rnd(P, 4) * Nn))));
+            var m = ', ' + mu + ', ' + sg + ')', H = '10^99';
+            var cmd = soort === 'meer' ? 'normalcdf(' + a + ', ' + H + m : soort === 'minder' ? 'normalcdf(' + MIN + H + ', ' + a + m : 'normalcdf(' + a + ', ' + b + m;
+            var cmdF = soort === 'meer' ? ['normalcdf(' + MIN + H + ', ' + a + m, 'normalcdf(' + a + ', ' + H + ', ' + sg + ', ' + mu + ')'] :
+              soort === 'minder' ? ['normalcdf(' + a + ', ' + H + m, 'normalcdf(' + MIN + H + ', ' + a + ', ' + sg + ', ' + mu + ')'] :
+              ['normalcdf(' + MIN + H + ', ' + b + m, 'normalcdf(' + a + ', ' + b + ', ' + sg + ', ' + mu + ')'];
+            var hint = soort === 'meer' ? 'Meer dan ' + a + ': rechts van ' + a + ' tot heel ver, dus rechtergrens 10^99. Dan μ en σ.' : soort === 'minder' ? 'Minder dan ' + a + ': van heel ver links tot ' + a + ', dus linkergrens ' + MIN + '10^99. Dan μ en σ.' : 'Eerst de linkergrens ' + a + ', dan de rechtergrens ' + b + ', dan μ en σ.';
+            var vr = soort === 'meer' ? c.meer + ' ' + a + ' ' + c.eh : soort === 'minder' ? c.minder + ' ' + a + ' ' + c.eh : c.tus(a, b);
+            var pc1 = rnd(P * 100, 1), st = [
+              K(R, 'Wat tik je in op de GR?', cmd, cmdF, hint),
+              SA(cmd + ' ≈ (4 decimalen)', P, 4, 'De GR geeft ' + N(rnd(P, 6)) + '.', soort !== 'tus' ? F(rnd(P, 4), rnd(1 - P, 4), 'Dat is de andere kant van de grens.') : null) ];
+            if (aant) st.push(S(N(rnd(P, 4)) + ' ' + X + ' ' + T(Nn) + ' ≈ (een heel aantal)', Math.round(P * Nn), 'De kans keer het totaal, afgerond op een heel aantal.', F(Math.round(P * Nn), pc1, 'Dat is het percentage. Reken het aantal uit van de ' + T(Nn) + '.')));
+            else st.push(S('In procenten, afgerond op 1 decimaal:', [N(pc1), N(pc1) + '%'], 'Keer 100: ' + N(rnd(P * 100, 3)) + '%.', null, { e:'%', controle:pctC(P * 100, 1) }));
+            return af({ vraag:aant ? 'Hoeveel van de ' + T(Nn) + ' ' + c.wie + '?' : 'Hoeveel procent?', context:c.wat + ' is normaal verdeeld met μ = ' + mu + ' ' + c.eh + ' en σ = ' + sg + ' ' + c.eh + '. ' +
+              (aant ? 'Hoeveel van ' + T(Nn) + ' ' + c.wie + ' ' + vr.replace(/^\S+/, function(w){ return { is:'zijn', weegt:'wegen', scoort:'scoren', reageert:'reageren', bevat:'bevatten', heeft:'hebben' }[w] || w; }) + '? Gebruik de GR en rond af op een heel aantal.' : 'Hoeveel procent van de ' + c.wie + ' ' + vr + '? Gebruik de GR en rond af op 1 decimaal.'),
+              eenheid:aant ? c.wie : '%', stappen:st });
+          } },
+        { id:'wva-norm-inv', naam:'Een grens met invNorm', kort:'invNorm(oppervlakte links, μ, σ): bij een percentage erboven is de oppervlakte links 1 min dat percentage',
+          uit:'<p>Ken je het percentage en zoek je de grens, dan gebruik je <b>invNorm</b> (op de Casio: InvNormCD). invNorm werkt altijd met de oppervlakte <b>links</b> van de grens.</p>' +
+            '<p>De zwaarste 5% weegt meer dan g: links van g ligt 95%, dus <b>g = invNorm(0.95, μ, σ)</b>. De lichtste 5% weegt minder dan g: g = invNorm(0.05, μ, σ).</p>',
+          wanneer:'je bij een normale verdeling de grens zoekt bij een gegeven percentage.',
+          maak:function(R){
+            var o, c, pr, boven, L, g;
+            do { o = normKies(R); c = o.c; pr = R.kies([1, 2, 3, 5, 10, 15, 20, 25, 30, 40]); boven = R.heel(0, 1) === 1; L = boven ? (100 - pr) / 100 : pr / 100; g = inorm(L, o.mu, o.sig); } while (grens(g, 1));
+            var rest = ', ' + o.mu + ', ' + o.sig + ')', gf = inorm(1 - L, o.mu, o.sig);
+            return af({ vraag:'De grens g?', context:c.wat + ' is normaal verdeeld met μ = ' + o.mu + ' ' + c.eh + ' en σ = ' + o.sig + ' ' + c.eh + '. ' + pr + '% van de ' + c.wie + ' ' + (boven ? c.meer : c.minder) + ' een grens g. Bereken g met de GR. Rond af op 1 decimaal.', eenheid:c.eh, stappen:[
+              K(R, 'Hoe groot is de oppervlakte links van g?', N(L), [N(rnd(1 - L, 2))], boven ? 'Boven g ligt ' + pr + '%, dus links ' + (100 - pr) + '%.' : 'De ' + pr + '% onder g ligt links van g.', { orde:boven ? [N(rnd(1 - L, 2)), N(L)] : [N(L), N(rnd(1 - L, 2))] }),
+              K(R, 'Wat tik je in op de GR?', 'invNorm(' + gT(L) + rest, ['invNorm(' + gT(1 - L) + rest, 'invNorm(' + gT(L) + ', ' + o.sig + ', ' + o.mu + ')'], 'invNorm met de oppervlakte links, dan μ, dan σ.'),
+              SA('g ≈ (1 decimaal)', g, 1, 'De GR geeft ' + N(rnd(g, 4)) + '.', F(rnd(g, 1), rnd(gf, 1), 'Dat is de grens aan de andere kant: gebruik de oppervlakte links van g.'), { e:c.eh }) ] });
+          } },
+        { id:'wva-norm-onbekend', naam:'μ of σ onbekend', kort:'Bereken z = invNorm(oppervlakte links, 0, 1); los dan g = μ + z · σ op voor μ of σ',
+          uit:'<p>Is μ of σ onbekend, gebruik dan de <b>z-waarde</b> van de grens: z = invNorm(oppervlakte links, 0, 1). Daarna geldt <b>g = μ + z · σ</b>.</p>' +
+            '<p>Voorbeeld: μ = 1000 gram en 2% van de pakken weegt minder dan 990 gram. z = invNorm(0.02, 0, 1) ≈ ' + MIN + '2,054. Dan 990 = 1000 ' + MIN + ' 2,054 · σ, dus σ = 10 : 2,054 ≈ <b>4,87 gram</b>.</p>' +
+            '<p>Het kan ook met de GR door te proberen: Y1 = normalcdf(' + MIN + '10^99, 990, 1000, X), Y2 = 0.02, en het snijpunt zoeken.</p>',
+          wanneer:'je μ of σ zoekt terwijl je een grens en een percentage kent.',
+          maak:function(R){
+            var zoekMu = R.heel(0, 1) === 1, o, c, pr, boven, L, g, z, uit, uitR;
+            do {
+              o = normKies(R); c = o.c; pr = R.kies([1, 2, 5, 10, 15, 20, 25, 30]); boven = R.heel(0, 1) === 1; L = boven ? (100 - pr) / 100 : pr / 100;
+              g = Math.round(inorm(L, o.mu, o.sig)); z = inorm(L, 0, 1);
+              uit = zoekMu ? g - z * o.sig : (g - o.mu) / z; uitR = zoekMu ? g - rnd(z, 3) * o.sig : (g - o.mu) / rnd(z, 3);
+            } while (g === o.mu || grens(uit, 2) || rnd(uit, 2) !== rnd(uitR, 2) || uit <= 0);
+            var zr = rnd(z, 3), rel = (boven ? c.meer : c.minder) + ' ' + g + ' ' + c.eh;
+            var ctx = c.wat + ' is normaal verdeeld' + (zoekMu ? ' met σ = ' + o.sig + ' ' + c.eh + '. Het gemiddelde μ is onbekend. ' : ' met μ = ' + o.mu + ' ' + c.eh + '. De standaardafwijking σ is onbekend. ') + pr + '% van de ' + c.wie + ' ' + rel + '. Bereken ' + (zoekMu ? 'μ' : 'σ') + '. Rond af op 2 decimalen.';
+            var laatste = zoekMu ? SA(g + ' = μ + ' + paren(zr) + ' ' + X + ' ' + o.sig + ', dus μ ≈ (2 decimalen)', uit, 2, 'μ = ' + g + ' ' + MIN + ' ' + paren(zr) + ' ' + X + ' ' + o.sig + '.', F(rnd(uit, 2), rnd(g + z * o.sig, 2), 'Let op het teken: μ = g min z · σ.'), { e:c.eh })
+              : SA(g + ' = ' + o.mu + ' + ' + paren(zr) + ' ' + X + ' σ, dus σ ≈ (2 decimalen)', uit, 2, 'σ = (' + g + ' ' + MIN + ' ' + o.mu + ') : ' + paren(zr) + '.', F(rnd(uit, 2), rnd(Math.abs((g - o.mu) * z), 2), 'Delen door z, niet vermenigvuldigen.'), { e:c.eh });
+            return af({ vraag:(zoekMu ? 'μ' : 'σ') + ' = ?', context:ctx, eenheid:c.eh, stappen:[
+              K(R, 'Hoe groot is de oppervlakte links van ' + g + '?', N(L), [N(rnd(1 - L, 2))], boven ? 'Boven ' + g + ' ligt ' + pr + '%, dus links ' + (100 - pr) + '%.' : 'De ' + pr + '% onder ' + g + ' ligt links.', { orde:boven ? [N(rnd(1 - L, 2)), N(L)] : [N(L), N(rnd(1 - L, 2))] }),
+              SA('z = invNorm(' + gT(L) + ', 0, 1) ≈ (3 decimalen)', z, 3, 'Met μ = 0 en σ = 1 geeft invNorm de z-waarde. ' + (z < 0 ? 'De grens ligt links van μ: z is negatief.' : 'De grens ligt rechts van μ: z is positief.'), F(zr, -zr, 'Let op het teken van z.')),
+              laatste ] });
           } }
       ] },
 
@@ -1215,6 +1327,75 @@
                 S('f\'(x) =', dS2, 'Differentieer term voor term.', null, { controle:exprC(dS2) }),
                 S('Deel f\'(x) = 0 door ' + T(3 * sg) + ':', kw + ' = 0', 'Deel elke term van ' + dS2 + ' door ' + T(3 * sg) + '.' + (sg < 0 ? ' Let op de tekens: delen door een negatief getal draait ze om.' : ''), null, { controle:function(v){ return exprC(kw)(String(v).replace(/=\s*0\s*$/, '')); } }),
                 S('Ontbind en los op: x =', ['x = ' + T(s) + ' of x = ' + T(t)], 'Zoek twee getallen met som ' + T(s + t) + ' en product ' + T(s * t) + '.', null, { controle:oplC([s, t]) }) ] });
+          } },
+        { id:'wva-dif-product', naam:'De productregel', kort:'f(x) = u · v geeft f\'(x) = u\' · v + u · v\'',
+          uit:'<p>Bij een <b>product</b> van twee functies u en v gebruik je de <b>productregel</b>: <b>(u · v)\' = u\' · v + u · v\'</b>.</p>' +
+            '<p>Voorbeeld: f(x) = (2x + 1)(x² ' + MIN + ' 3). Dan u = 2x + 1 met u\' = 2, en v = x² ' + MIN + ' 3 met v\' = 2x. Dus f\'(x) = 2(x² ' + MIN + ' 3) + (2x + 1) · 2x.</p>' +
+            '<p>Let op: f\'(x) is <b>niet</b> u\' · v\'. Dat zou hier 2 · 2x = 4x geven, en dat is fout.</p>',
+          wanneer:'de formule een product van twee functies van x is.',
+          maak:function(R){
+            function nz(lo, hi){ var v; do { v = R.heel(lo, hi); } while (!v); return v; }
+            var a = R.kies([1, 2, 3, -1, -2]), b = nz(-5, 5), c = R.kies([1, 1, 2, -1]), e = R.kies([2, 3]), d = nz(-6, 6);
+            var u = E([[a, 'x'], [b, '']]), v = E([[c, xm(e)], [d, '']]), vd = polyS([[c * e, e - 1]]);
+            /* f' = a(cx^e + d) + (ax + b) · c·e·x^(e−1) */
+            var fd = [[a * c + a * c * e, e], [b * c * e, e - 1], [a * d, 0]], fdS = polyS(fd), vorm = (a === 1 ? '' : a === -1 ? MIN : T(a)) + '(' + v + ') + (' + u + ')(' + vd + ')';
+            if (R.heel(0, 2) === 0){
+              var p = R.heel(-2, 2), h = waarde(fd, p);
+              return af({ vraag:'f(x) = (' + u + ')(' + v + ')', context:'Bereken met de productregel de helling van de grafiek van f in het punt met x = ' + T(p) + '.', stappen:[
+                S('u = ' + u + ', dus u\' =', a, 'Het getal voor de x.'),
+                S('v = ' + v + ', dus v\' =', vd, 'Machtsregel; het losse getal valt weg.', null, { controle:exprC(vd) }),
+                S('f\'(x) = u\' · v + u · v\'. Vul x = ' + T(p) + ' in: f\'(' + T(p) + ') =', h, 'u\'(' + T(p) + ') · v(' + T(p) + ') + u(' + T(p) + ') · v\'(' + T(p) + ') = ' + T(a) + ' · ' + paren(waarde([[c, e], [d, 0]], p)) + ' + ' + paren(waarde([[a, 1], [b, 0]], p)) + ' · ' + paren(waarde([[c * e, e - 1]], p)) + '.',
+                  F(h, rnd(a * waarde([[c * e, e - 1]], p), 6), 'Dat is u\' · v\'. De productregel is u\' · v + u · v\'.')) ] });
+            }
+            return af({ vraag:'f(x) = (' + u + ')(' + v + ')', context:'Bepaal f\'(x) met de productregel. Je mag de haakjes laten staan. Typ x² als x^2.', stappen:[
+              S('u = ' + u + ', dus u\' =', a, 'Het getal voor de x.'),
+              S('v = ' + v + ', dus v\' =', vd, 'Machtsregel; het losse getal valt weg.', null, { controle:exprC(vd) }),
+              S('f\'(x) = u\' · v + u · v\' =', [vorm, fdS], 'Vul in: ' + vorm + '. Uitgewerkt is dat ' + fdS + '.', F(vorm, polyS([[a * c * e, e - 1]]), 'Dat is u\' · v\'. De productregel is u\' · v + u · v\'.'), { controle:exprC(fdS) }) ] });
+          } },
+        { id:'wva-dif-ketting', naam:'De kettingregel', kort:'f(x) = (ax + b)ⁿ geeft f\'(x) = n · (ax + b)ⁿ⁻¹ · a: buiten differentiëren, keer de afgeleide van binnen',
+          uit:'<p>Bij f(x) = (3x ' + MIN + ' 1)⁴ staat een functie in een functie. De <b>binnenste</b> is u = 3x ' + MIN + ' 1, de <b>buitenste</b> is u⁴.</p>' +
+            '<p>De <b>kettingregel</b>: differentieer de buitenste functie alsof u een gewone variabele is, en vermenigvuldig met de afgeleide van de binnenste: f\'(x) = 4(3x ' + MIN + ' 1)³ · 3 = <b>12(3x ' + MIN + ' 1)³</b>.</p>' +
+            '<p>Vergeet die laatste factor niet: dat is de fout die het meest gemaakt wordt.</p>',
+          wanneer:'er een macht staat van iets anders dan alleen x.',
+          maak:function(R){
+            function nz(lo, hi){ var v; do { v = R.heel(lo, hi); } while (!v); return v; }
+            var a = R.kies([2, 3, 4, 5, -2, -3]), b, n = R.kies([2, 3, 4, 5]), c = R.kies([1, 1, 1, 2, 3, -1]), u;
+            /* bij a = 4 of 5 en b een veelvoud van a komt u nooit tussen −3 en 3 (zonder 0): dan kiezen we een andere b */
+            do { b = nz(-6, 6); } while (Math.abs(a) >= 4 && b % a === 0);
+            u = E([[a, 'x'], [b, '']]);
+            var cS = c === 1 ? '' : c === -1 ? MIN : T(c), bp = polyS([[c * n, 1]]).replace('x', 'u') + (n - 1 > 1 ? sup(n - 1) : ''), k = c * n * a;
+            var d = T(k) + '(' + u + ')' + (n - 1 > 1 ? sup(n - 1) : ''), zonder = T(c * n) + '(' + u + ')' + (n - 1 > 1 ? sup(n - 1) : '');
+            var bpF = uniek([polyS([[c * n, 1]]).replace('x', 'u') + sup(n), cS + 'u' + (n - 1 > 1 ? sup(n - 1) : ''), polyS([[c * (n - 1), 1]]).replace('x', 'u') + (n - 1 > 1 ? sup(n - 1) : '')]).filter(function(x){ return x !== bp; });
+            var st = [
+              S('De binnenste functie is u = ' + u + '. u\' =', a, 'Het getal voor de x.', F(a, b, 'Dat is het losse getal. Je hebt het getal voor de x nodig.')),
+              K(R, 'De buitenste functie is ' + cS + 'u' + sup(n) + '. De afgeleide daarvan naar u is', bp, bpF, 'Machtsregel: de exponent ' + n + ' gaat ervoor en wordt 1 minder.')];
+            if (R.heel(0, 2) === 0){
+              var p, w; do { p = R.heel(-2, 3); w = a * p + b; } while (Math.abs(w) > 3 || !w);
+              var h = k * Math.pow(w, n - 1);
+              st.push(S('Bij x = ' + T(p) + ' is u = ' + T(a) + ' · ' + paren(p) + (b < 0 ? ' ' + MIN + ' ' + T(-b) : ' + ' + T(b)) + ' =', w, 'Vul ' + T(p) + ' in bij de binnenste functie.'));
+              st.push(S('f\'(' + T(p) + ') = ' + T(c * n) + ' · ' + paren(w) + (n - 1 > 1 ? sup(n - 1) : '') + ' · ' + paren(a) + ' =', h, paren(w) + (n - 1 > 1 ? sup(n - 1) : '') + ' = ' + T(Math.pow(w, n - 1)) + '.', F(h, c * n * Math.pow(w, n - 1), 'Vergeet niet keer u\' = ' + T(a) + '.')));
+              return af({ vraag:'f(x) = ' + cS + '(' + u + ')' + sup(n), context:'Bereken met de kettingregel de helling van de grafiek van f in het punt met x = ' + T(p) + '.', stappen:st });
+            }
+            st.push(S('f\'(x) = ' + bp.replace('u', '(' + u + ')') + ' · ' + paren(a) + ' =', d, 'Zet u = ' + u + ' terug en doe keer u\' = ' + T(a) + ': ' + T(c * n) + ' · ' + paren(a) + ' = ' + T(k) + '.', F(d, zonder, 'Vergeet niet keer de afgeleide van de binnenste functie, ' + paren(a) + '.'), { controle:exprC(d) }));
+            return af({ vraag:'f(x) = ' + cS + '(' + u + ')' + sup(n), context:'Bepaal f\'(x) met de kettingregel. Je mag de haakjes laten staan. Typ een macht met ^, zoals 12(3x − 1)^3.', stappen:st });
+          } },
+        { id:'wva-dif-exp', naam:'De afgeleide van eˣ, gˣ en ln x', kort:'eˣ blijft eˣ, gˣ wordt gˣ · ln g, en ln x wordt 1/x',
+          uit:'<p>Bij exponentiële groei en logaritmen horen eigen regels:</p><ul><li>f(x) = <b>eˣ</b> geeft f\'(x) = <b>eˣ</b>.</li><li>f(x) = <b>gˣ</b> geeft f\'(x) = <b>gˣ · ln g</b>.</li><li>f(x) = <b>ln x</b> geeft f\'(x) = <b>1/x</b>.</li></ul>' +
+            '<p>Een getal ervoor blijft staan: f(x) = 50 · 1,2ˣ geeft f\'(x) = 50 · 1,2ˣ · ln 1,2. Op x = 3 is de helling dan 50 · 1,728 · 0,1823 ≈ 15,75.</p>' +
+            '<p>Pas op: gˣ is geen macht van x. De machtsregel (x ervoor, exponent 1 omlaag) werkt hier niet.</p>',
+          wanneer:'je de helling zoekt van een exponentiële of logaritmische functie, bijvoorbeeld een groeimodel.',
+          maak:function(R){
+            var soort = R.kies(['e', 'g', 'g', 'ln']), a, g, gS, p, h, fS, goed, fout, hint;
+            do {
+              a = R.kies([2, 3, 5, 10, 20, 50, 100]); p = R.heel(soort === 'ln' ? 2 : 1, 6);
+              if (soort === 'e'){ fS = (a === 1 ? '' : T(a) + ' · ') + 'eˣ'; goed = T(a) + ' · eˣ'; fout = [T(a) + ' · x · eˣ⁻¹', T(a) + ' · eˣ · ln x']; h = a * Math.exp(p); hint = 'eˣ blijft eˣ; het getal ' + T(a) + ' blijft staan.'; }
+              else if (soort === 'g'){ g = R.kies([1.05, 1.1, 1.2, 1.5, 2, 3, 0.8, 0.9]); gS = T(g); fS = T(a) + ' · ' + gS + 'ˣ'; goed = T(a) + ' · ' + gS + 'ˣ · ln ' + gS; fout = [T(a) + ' · x · ' + gS + '^(x ' + MIN + ' 1)', T(a) + ' · ' + gS + 'ˣ']; h = a * Math.pow(g, p) * Math.log(g); hint = 'gˣ wordt gˣ · ln g. Het getal ' + T(a) + ' blijft staan.'; }
+              else { fS = T(a) + ' ln x'; goed = T(a) + '/x'; fout = [T(a) + ' ln x', T(a) + 'x']; h = a / p; hint = 'ln x wordt 1/x, dus ' + T(a) + ' ln x wordt ' + T(a) + '/x.'; }
+            } while (grens(h, 2) || Math.abs(h) > 5000);
+            var hw = soort === 'e' ? T(a) + ' · e' + sup(p) : soort === 'g' ? T(a) + ' · ' + gS + sup(p) + ' · ln ' + gS : T(a) + '/' + p;
+            return af({ vraag:'f(x) = ' + fS, context:'Bereken de helling van de grafiek van f in het punt met x = ' + p + '. Rond af op 2 decimalen.', stappen:[
+              K(R, 'f\'(x) =', goed, fout, hint),
+              SA('f\'(' + p + ') = ' + hw + ' ≈ (2 decimalen)', h, 2, 'Vul x = ' + p + ' in de afgeleide in.', soort === 'g' ? F(rnd(h, 2), rnd(a * Math.pow(g, p), 2), 'Dat is f(' + p + '). Doe nog keer ln ' + gS + '.') : soort === 'e' ? null : F(rnd(h, 2), rnd(a * Math.log(p), 2), 'Dat is f(' + p + '). De afgeleide van ln x is 1/x.')) ] });
           } }
       ] }
   ]);

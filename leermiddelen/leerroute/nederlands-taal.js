@@ -1166,4 +1166,61 @@
       ] }
   ]);
 
+  /* ================= erbij: afleiding of samenstelling, en voor- en achtervoegsels ================= */
+  /* [woord, eerste deel, tweede deel, s(amenstelling) of a(fleiding)] */
+  var BOUWSOORT = [
+    ['onaardig', 'on', 'aardig', 'a'], ['ongeluk', 'on', 'geluk', 'a'], ['herschrijven', 'her', 'schrijven', 'a'], ['ontdooien', 'ont', 'dooien', 'a'],
+    ['bekijken', 'be', 'kijken', 'a'], ['leraar', 'leer', 'aar', 'a'], ['bakkerij', 'bakker', 'ij', 'a'], ['eerlijkheid', 'eerlijk', 'heid', 'a'],
+    ['groenig', 'groen', 'ig', 'a'], ['tekening', 'teken', 'ing', 'a'], ['gebak', 'ge', 'bak', 'a'],
+    ['fietspad', 'fiets', 'pad', 's'], ['regenjas', 'regen', 'jas', 's'], ['huiswerk', 'huis', 'werk', 's'], ['voetbal', 'voet', 'bal', 's'],
+    ['schoolplein', 'school', 'plein', 's'], ['appeltaart', 'appel', 'taart', 's'], ['sneeuwpop', 'sneeuw', 'pop', 's'], ['kerstboom', 'kerst', 'boom', 's'],
+    ['handschoen', 'hand', 'schoen', 's'], ['zeemeeuw', 'zee', 'meeuw', 's'], ['tandarts', 'tand', 'arts', 's'] ];
+  /* [woord, voor- of achtervoegsel, de rest, betekenis van het voor- of achtervoegsel, betekenis van het woord] */
+  var AFFIX = [
+    ['ontkoppelen', 'ont-', 'koppelen', 'iets weghalen of ongedaan maken', 'de koppeling losmaken'],
+    ['ontbossen', 'ont-', 'bos', 'iets weghalen of ongedaan maken', 'de bomen van een gebied weghalen'],
+    ['ontsmetten', 'ont-', 'smet', 'iets weghalen of ongedaan maken', 'de bacteriën ergens van weghalen'],
+    ['kinderachtig', '-achtig', 'kind', 'lijkt op, een beetje zoals', 'zoals een klein kind doet'],
+    ['groenachtig', '-achtig', 'groen', 'lijkt op, een beetje zoals', 'een beetje groen'],
+    ['zanderig', '-ig', 'zand', 'met veel ...', 'met veel zand'], ['modderig', '-ig', 'modder', 'met veel ...', 'met veel modder'],
+    ['vriendschap', '-schap', 'vriend', 'het zijn, de toestand', 'het vrienden zijn'], ['ouderschap', '-schap', 'ouder', 'het zijn, de toestand', 'het ouder zijn'],
+    ['antivries', 'anti-', 'vries', 'tegen', 'een middel tegen bevriezen'], ['antipestbeleid', 'anti-', 'pestbeleid', 'tegen', 'afspraken tegen pesten'],
+    ['internationaal', 'inter-', 'nationaal', 'tussen', 'tussen landen'], ['interland', 'inter-', 'land', 'tussen', 'een wedstrijd tussen twee landen'],
+    ['biologie', '-logie', 'bio', 'de wetenschap van', 'de wetenschap van het leven'], ['geologie', '-logie', 'geo', 'de wetenschap van', 'de wetenschap van de aarde'],
+    ['toerisme', '-isme', 'toerist', 'een stroming, een gedrag of een verschijnsel', 'het reizen voor je plezier'], ['vandalisme', '-isme', 'vandaal', 'een stroming, een gedrag of een verschijnsel', 'het expres vernielen van spullen'],
+    ['zangeres', '-es', 'zanger', 'een vrouw die', 'een vrouw die zingt'], ['schrijfster', '-ster', 'schrijf', 'een vrouw die', 'een vrouw die boeken schrijft'] ];
+
+  LEERROUTE.voeg('nederlands', [
+    { groep:{ id:'taal-bouw' },
+      doelen:[
+        { id:'taal-bouw-afleiding', naam:'Samenstelling of afleiding', kort:'Twee hele woorden: samenstelling. Een woord met een stukje dat niet los kan: afleiding',
+          uit:'<p>Een <b>samenstelling</b> bestaat uit twee woorden die allebei ook los kunnen: <i>fiets + pad = fietspad</i>.</p><p>Een <b>afleiding</b> bestaat uit een woord met een <b>voorvoegsel</b> of <b>achtervoegsel</b>. Dat stukje kan niet los als woord voorkomen: <i>on + aardig = onaardig</i>, <i>bakker + ij = bakkerij</i>.</p><p>De proef: knip het woord in twee delen. Kunnen beide delen los? Dan is het een samenstelling.</p>',
+          wanneer:'je wilt weten hoe een woord gebouwd is.',
+          maak:function(R){
+            var x = R.kies(BOUWSOORT), sam = x[3] === 's', naam = sam ? 'samenstelling' : 'afleiding';
+            var zelf = BOUWSOORT.filter(function(b){ return b[3] === x[3] && b !== x; }), anders = BOUWSOORT.filter(function(b){ return b[3] !== x[3]; });
+            var o = OP({ vraag:x[0], context:'Is dit woord een <b>samenstelling</b> of een <b>afleiding</b>?',
+              stappen:[
+                V('Het woord bestaat uit ' + q(x[1]) + ' en ' + q(x[2]) + '. Kunnen beide delen ook los als woord voorkomen?', ['ja', 'nee'], sam ? 0 : 1, sam ? 'Je kunt zeggen: ' + x[1] + ' en ' + x[2] + '. Allebei gewone woorden.' : 'Kun je ' + q(sam ? x[2] : (x[1].length < x[2].length ? x[1] : x[2])) + ' los gebruiken in een zin? Nee, dat is een voor- of achtervoegsel.'),
+                V('Is ' + q(x[0]) + ' een samenstelling of een afleiding?', ['samenstelling', 'afleiding'], sam ? 0 : 1, 'Twee hele woorden: samenstelling. Een stukje dat niet los kan: afleiding.'),
+                K(R, 'Welk woord is op dezelfde manier gemaakt?', R.kies(zelf)[0], ander(R, anders, [], 2).map(function(b){ return b[0]; }), 'Zoek nog een ' + naam + '.') ] });
+            o.opties = o.stappen[1].opties; o.goed = o.stappen[1].goed;
+            return o;
+          } },
+        { id:'taal-bouw-affix', naam:'Voor- en achtervoegsels', kort:'Ken je de betekenis van het voor- of achtervoegsel, dan snap je het woord',
+          uit:'<p>Veel woorden zijn gemaakt met een <b>voorvoegsel</b> (ervoor) of een <b>achtervoegsel</b> (erachter). Elk stukje heeft een eigen betekenis.</p><ul><li><b>ont-</b>: iets weghalen of ongedaan maken (ontkoppelen)</li><li><b>anti-</b>: tegen (antivries)</li><li><b>inter-</b>: tussen (internationaal)</li><li><b>-achtig</b>: lijkt op (kinderachtig)</li><li><b>-ig</b>: met veel (zanderig)</li><li><b>-schap</b>: het zijn (vriendschap)</li><li><b>-logie</b>: de wetenschap van (biologie)</li><li><b>-isme</b>: een stroming of gedrag (toerisme)</li><li><b>-es, -ster</b>: een vrouw die (zangeres)</li></ul>',
+          wanneer:'je een lang woord tegenkomt met een stukje ervoor of erachter.',
+          maak:function(R){
+            var x = R.kies(AFFIX), andAff = AFFIX.filter(function(a){ return a[3] !== x[3]; });
+            var betek = [], woord = [];
+            R.hussel(andAff).forEach(function(a){ if (betek.length < 2 && betek.indexOf(a[3]) < 0) betek.push(a[3]); if (woord.length < 2 && woord.indexOf(a[4]) < 0) woord.push(a[4]); });
+            return OP({ vraag:x[0], context:'Wat betekent dit woord? Kijk naar het voor- of achtervoegsel.',
+              stappen:[
+                K(R, 'Welk deel is het voor- of achtervoegsel?', x[1], [x[2], R.kies(andAff)[1]], 'Zoek het stukje ervoor of erachter dat niet los als woord kan.'),
+                K(R, 'Wat betekent ' + q(x[1]) + '?', x[3], betek, 'Denk aan andere woorden met ' + q(x[1]) + '.'),
+                K(R, 'Wat betekent ' + q(x[0]) + '?', x[4], woord, 'Zet de betekenis van ' + q(x[1]) + ' en van ' + q(x[2]) + ' bij elkaar.') ] });
+          } }
+      ] }
+  ]);
+
 })();

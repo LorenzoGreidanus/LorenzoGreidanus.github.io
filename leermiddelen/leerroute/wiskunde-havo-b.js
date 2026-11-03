@@ -2,7 +2,8 @@
    midden tussen de nulpunten), functiewaarde, domein en bereik, transformaties,
    negatieve en gebroken exponenten, machts- en wortelvergelijkingen, logaritmen,
    exponentiële vergelijkingen (gelijke grondtallen of een logaritme), differentiëren
-   en de afgeleide gebruiken, periodieke functies, de sinus- en cosinusregel, en
+   (ook de kettingregel, de productregel en de quotiëntregel) en de afgeleide gebruiken,
+   periodieke functies met radialen, exacte waarden en sin x = c, de sinus- en cosinusregel, en
    cirkels met raaklijnen. Elke manier een eigen doel.
    Ongelijkheden, merkwaardige producten, ontbinden, kwadratische vergelijkingen en de
    rekenregels voor machten staan in wiskunde-algebra.js. Zie leerroute.js voor het formaat. */
@@ -808,6 +809,82 @@
         F(m2, macStr(na, n0 + 1), 'De exponent wordt 1 minder, ook als hij negatief is.', typ(macStr(na, n0 + 1)), 'De exponent wordt 1 minder, ook als hij negatief is.'))];
     return { vraag:'f(x) = ' + vraag, context:'Schrijf f eerst als a · xⁿ en bereken dan f′(x). Schrijf je antwoord ook als a · xⁿ, zoals ' + MIN + '6x^-3 of 2x^-0,5.', antwoord:'f′(x) = ' + m2, controle:macC(na, n0 - 1), invoer:'tekst', stappen:st };
   }
+  /* de kettingregel: c(ax + b)ⁿ als formule, c√(ax + b) als helling in een punt */
+  function mKetting(R){
+    var a, b, c, n, u, p, s;
+    if (R.heel(0, 3) > 0){
+      a = R.kies([2, 3, 4, 5, -2, -3]); b = nz(R, -6, 6); n = R.kies([2, 3, 4, 5]); c = R.kies([1, 1, 1, 2, 3, -1]);
+      u = E([[a, 'x'], [b, '']]);
+      var buiten = coefD(c) + 'u' + sup(n), bp = E([[c * n, 'u' + (n - 1 > 1 ? sup(n - 1) : '')]]), k = c * n * a;
+      var d = T(k) + '(' + u + ')' + (n - 1 > 1 ? sup(n - 1) : ''), zonder = T(c * n) + '(' + u + ')' + (n - 1 > 1 ? sup(n - 1) : '');
+      var bpF = uniek([E([[c * n, 'u' + sup(n)]]), E([[c, 'u' + (n - 1 > 1 ? sup(n - 1) : '')]]), E([[c * (n - 1), 'u' + (n - 1 > 1 ? sup(n - 1) : '')]])]).filter(function(x){ return x !== bp; });
+      return { vraag:'f(x) = ' + coefD(c) + '(' + u + ')' + sup(n), context:'Bereken f′(x) met de kettingregel. Je mag de haakjes laten staan. Typ een macht met ^, zoals ' + typ(T(k) + '(' + u + ')' + sup(Math.max(2, n - 1))) + '.',
+        antwoord:'f′(x) = ' + d, controle:exprC(d), invoer:'tekst', stappen:[
+          S('De binnenste functie is u = ' + u + '. De afgeleide daarvan: u′ =', a, 'Bij ' + u + ' is de afgeleide het getal voor de x.', F(a, b, 'Dat is het losse getal. Een los getal wordt 0; je houdt het getal voor de x over.')),
+          K(R, 'De buitenste functie is ' + buiten + '. De afgeleide daarvan is', bp, bpF, 'Machtsregel: de exponent ' + n + ' gaat ervoor en wordt 1 minder.'),
+          SC('f′(x) = ' + bp.replace(/u/g, '(' + u + ')') + ' · ' + paren(a) + ' =', d, exprC(d), 'Zet u = ' + u + ' terug en doe keer de afgeleide van de binnenste functie: ' + T(c * n) + ' · ' + paren(a) + ' = ' + T(k) + '. Typ ' + typ(d) + '.',
+            F(d, zonder, 'Vergeet niet keer de afgeleide van de binnenste functie, ' + paren(a) + '.', typ(zonder), 'Vergeet niet keer de afgeleide van de binnenste functie, ' + paren(a) + '.')) ] };
+    }
+    do { a = R.kies([1, 2, 3, 4, 5, 6, 8]); s = R.heel(1, 6); p = R.heel(-3, 6); b = s * s - a * p; } while (Math.abs(b) > 20 || !b);
+    c = R.kies([1, 1, 2, 3, 4]); u = E([[a, 'x'], [b, '']]);
+    var hp = breukS(c * a, 2 * s), fp2 = c === 1 ? a + '/(2√(' + u + '))' : T(c * a) + '/(2√(' + u + '))';
+    return { vraag:'f(x) = ' + (c === 1 ? '' : c) + '√(' + u + ')', context:'Bereken met de kettingregel de helling van de grafiek van f in het punt met x = ' + T(p) + '. Geef een exact antwoord, als breuk of als geheel getal.',
+      antwoord:hp, controle:getC(c * a / (2 * s)), invoer:'tekst', stappen:[
+        S('De binnenste functie is u = ' + u + '. De afgeleide daarvan: u′ =', a, 'Het getal voor de x.', F(a, b, 'Dat is het losse getal. Je hebt het getal voor de x nodig.')),
+        K(R, 'De buitenste functie is ' + (c === 1 ? '' : c) + '√u = ' + (c === 1 ? '' : c) + 'u^0,5. De afgeleide daarvan is', (c === 1 ? '' : c + ' · ') + '1/(2√u)', [(c === 1 ? '' : c + ' · ') + '1/√u', (c === 1 ? '' : c + ' · ') + '2√u'], 'u^0,5 wordt 0,5 · u^' + MIN + '0,5 = 1/(2√u).'),
+        S('Vul x = ' + T(p) + ' in bij de binnenste functie: u = ' + T(a) + ' · ' + paren(p) + plusQ(b) + ' =', s * s, T(a * p) + plusQ(b) + ' = ' + (s * s) + '.'),
+        SC('f′(' + T(p) + ') = ' + (c === 1 ? '' : c + ' · ') + '1/(2√' + (s * s) + ') · ' + a + ' =', hp, getC(c * a / (2 * s)), '√' + (s * s) + ' = ' + s + ', dus ' + (c === 1 ? '' : c + ' · ') + '1/(2 · ' + s + ') · ' + a + ' = ' + hp[0] + '.',
+          F(hp, breukS(c, 2 * s)[0], 'Vergeet niet keer u′ = ' + a + '.')) ] };
+  }
+  /* de productregel als formule, de quotiëntregel als helling in een punt */
+  function mProdQuot(R){
+    if (R.heel(0, 1)){
+      var a = R.kies([1, 2, 3, -1, -2]), b = nz(R, -5, 5), c = R.kies([1, 1, 2, -1]), e = R.kies([2, 3]), d = nz(R, -6, 6);
+      var f1 = E([[a, 'x'], [b, '']]), f2 = E([[c, XP[e]], [d, '']]), d1 = coefD(a), d2 = E([[c * e, XP[e - 1]]]);
+      /* f′ = a(cx^e + d) + (ax + b) · c·e·x^(e−1) */
+      var uit = P(pPolyAdd(pScale([d, 0, 0, 0].slice(0, e + 1).map(function(v, i){ return i === e ? c : i === 0 ? d : 0; }), a), pMul([b, a], pDeriv(e, c))));
+      var vorm = d1 + '(' + f2 + ') + (' + f1 + ')(' + d2 + ')';
+      return { vraag:'f(x) = (' + f1 + ')(' + f2 + ')', context:'Bereken f′(x) met de productregel. Je hoeft de haakjes niet weg te werken. Typ een macht met ^.', antwoord:'f′(x) = ' + vorm, controle:exprC(uit), invoer:'tekst', stappen:[
+        S('De eerste factor is ' + f1 + '. De afgeleide daarvan is', a, 'Het getal voor de x.'),
+        SC('De tweede factor is ' + f2 + '. De afgeleide daarvan is', d2, exprC(d2), 'Machtsregel; het losse getal ' + T(d) + ' wordt 0.'),
+        SC('Productregel: f′(x) = (afgeleide eerste) · tweede + eerste · (afgeleide tweede) =', vorm, exprC(uit), T(a) + ' · (' + f2 + ') + (' + f1 + ') · ' + d2 + '. Typ bijvoorbeeld ' + typ(vorm) + '.',
+          F(vorm, typ(E([[a * c * e, XP[e - 1]]])), 'Je vermenigvuldigde alleen de afgeleiden. Bij de productregel is het f′ · g + f · g′.')) ] };
+    }
+    var a2, b2, c2, d2q, p, nn, tt;
+    do { a2 = nz(R, -4, 4); b2 = R.heel(-6, 6); c2 = R.kies([1, 1, 2, -1]); d2q = nz(R, -6, 6); p = R.heel(-3, 4); nn = c2 * p + d2q; tt = a2 * d2q - b2 * c2; } while (!nn || Math.abs(nn) > 6 || !tt);
+    var T1 = E([[a2, 'x'], [b2, '']]), N1 = E([[c2, 'x'], [d2q, '']]), hp = breukS(tt, nn * nn);
+    return { vraag:'f(x) = (' + T1 + ') / (' + N1 + ')', context:'Bereken met de quotiëntregel de helling van de grafiek van f in het punt met x = ' + T(p) + '. Geef een exact antwoord, als breuk of als geheel getal.', antwoord:hp, controle:getC(tt / (nn * nn)), invoer:'tekst', stappen:[
+      S('De teller is ' + T1 + ' en de noemer ' + N1 + '. De afgeleide van de teller is', a2, 'Het getal voor de x.'),
+      S('De afgeleide van de noemer is', c2, 'Het getal voor de x.'),
+      S('Quotiëntregel: de teller van f′ is (afgeleide teller) · noemer ' + MIN + ' teller · (afgeleide noemer) = ' + paren(a2) + '(' + N1 + ') ' + MIN + ' ' + paren(c2) + '(' + T1 + '). Werk uit: dat is het getal', tt, 'De termen met x vallen tegen elkaar weg. Over blijft ' + paren(a2) + ' · ' + paren(d2q) + ' ' + MIN + ' ' + paren(c2) + ' · ' + paren(b2) + ' = ' + T(tt) + '.', F(tt, -tt, 'Let op de volgorde: afgeleide teller keer noemer, min teller keer afgeleide noemer.')),
+      S('De noemer van f′ is (' + N1 + ')². Bij x = ' + T(p) + ' is ' + N1 + ' =', nn, 'Vul ' + T(p) + ' in.'),
+      SC('f′(' + T(p) + ') = ' + T(tt) + ' / ' + paren(nn) + '² =', hp, getC(tt / (nn * nn)), paren(nn) + '² = ' + (nn * nn) + ', dus ' + T(tt) + '/' + (nn * nn) + (hp[0] !== T(tt) + '/' + (nn * nn) ? ' = ' + hp[0] : '') + '.', F(hp, breukS(tt, nn)[0], 'Vergeet het kwadraat van de noemer niet.')) ] };
+  }
+  /* ================= radialen en de eenheidscirkel ================= */
+  /* n/d · π zoals in de methode: 5/6π, π, 2π */
+  function piH(n, d){ var g = ggd(n, d) || 1; n /= g; d /= g; if (!n) return '0'; var a = Math.abs(n); return (n < 0 ? MIN : '') + (d === 1 ? (a === 1 ? '' : a) : a + '/' + d) + 'π'; }
+  function exH(v){ if (Math.abs(v) < 1e-9) return '0'; var s = v < 0 ? MIN : '', a = Math.abs(v); if (Math.abs(a - 1) < 1e-9) return s + '1'; if (Math.abs(a - 0.5) < 1e-9) return s + '½'; if (Math.abs(a - Math.SQRT2 / 2) < 1e-9) return s + '½√2'; if (Math.abs(a - Math.sqrt(3) / 2) < 1e-9) return s + '½√3'; return null; }
+  /* de eenheidscirkel met een hoek h (radialen) of een lijn y = v (sin) of x = v (cos) en punten */
+  function cirkelH(o){
+    var c = 150, r = 104, s = '', PIh = Math.PI;
+    s += ln(22, c, 278, c, { w:1.6 }) + ln(c, 278, c, 22, { w:1.6 }) + '<circle cx="150" cy="150" r="104" style="fill:none;stroke:var(--ink);stroke-width:2"/>';
+    s += tx(c + r + 10, c + 18, '1', { m:'klein' }) + tx(c - r - 12, c + 18, MIN + '1', { m:'klein' }) + tx(c - 10, c - r - 6, '1', { m:'klein', a:'end' }) + tx(c - 10, c + r + 16, MIN + '1', { m:'klein', a:'end' });
+    if (o.lijn){ var v = o.lijn.v;
+      if (o.lijn.sin) s += ln(c - r - 16, c - v * r, c + r + 16, c - v * r, { k:KL[1], w:2, dash:'7 5' }) + tx(c + r + 18, c - v * r + 5, 'y = ' + o.lijn.t, { m:'klein', a:'start', k:KL[1], vet:true });
+      else s += ln(c + v * r, c - r - 16, c + v * r, c + r + 16, { k:KL[1], w:2, dash:'7 5' }) + tx(c + v * r, c + r + 32, 'x = ' + o.lijn.t, { m:'klein', k:KL[1], vet:true }); }
+    (o.punten || []).forEach(function(h){ var x = c + r * Math.cos(h), y = c - r * Math.sin(h); s += ln(c, c, x, y, { k:KL[0], w:2.4 }) + stip(x, y, 6, KL[0]); });
+    if (o.hoek != null){ var h2 = o.hoek, x2 = c + r * Math.cos(h2), y2 = c - r * Math.sin(h2), b = 28;
+      s += '<path d="M' + (c + b) + ' ' + c + ' A' + b + ' ' + b + ' 0 ' + (h2 > PIh ? 1 : 0) + ' 0 ' + n1(c + b * Math.cos(h2)) + ' ' + n1(c - b * Math.sin(h2)) + '" style="fill:none;stroke:' + KL[2] + ';stroke-width:2.4"/>';
+      if (o.proj) s += ln(x2, y2, x2, c, { k:KL[3], w:2, dash:'5 4' }) + ln(x2, y2, c, y2, { k:KL[3], w:2, dash:'5 4' });
+      s += ln(c, c, x2, y2, { k:KL[0], w:2.6 }) + stip(x2, y2, 6.5, KL[1]); }
+    return svg(300, 300, s, o.aria || 'eenheidscirkel', 300);
+  }
+
+  /* veeltermen als coëfficiënten [c0, c1, ...] voor de productregel */
+  function pPolyAdd(p, q){ var r = []; for (var i = 0; i < Math.max(p.length, q.length); i++) r.push((p[i] || 0) + (q[i] || 0)); return r; }
+  function pScale(p, k){ return p.map(function(v){ return v * k; }); }
+  function pMul(p, q){ var r = []; for (var i = 0; i < p.length; i++) for (var j = 0; j < q.length; j++) r[i + j] = (r[i + j] || 0) + p[i] * q[j]; for (var k = 0; k < r.length; k++) r[k] = r[k] || 0; return r; }
+  function pDeriv(e, c){ var r = []; for (var i = 0; i < e - 1; i++) r.push(0); r.push(c * e); return r; }
 
   /* ================= de afgeleide gebruiken ================= */
   function polyKies(R){ return R.heel(0, 1) ? [R.heel(-6, 6), nz(R, -6, 6), nz(R, -3, 3)] : [R.heel(-6, 6), R.heel(-6, 6), R.heel(-3, 3), nz(R, -2, 2)]; }
@@ -1150,7 +1227,30 @@
         { id:'whb-fun-bereikp', naam:'Het bereik van een parabool', kort:'Bereken de top; bij een dalparabool is het bereik y ≥ de y van de top, bij een bergparabool y ≤',
           uit:'<p>Bij een parabool hangt het bereik af van de <b>top</b>.</p><p>Is a positief, dan is het een dalparabool. De top is het laagste punt. Ligt de top bij y = ' + MIN + '5, dan is het bereik <b>y ≥ ' + MIN + '5</b>.</p><p>Is a negatief, dan is het een bergparabool en is het bereik <b>y ≤</b> de y van de top. Bereken de top met x = ' + MIN + 'b : 2a.</p>',
           wanneer:'je wilt weten welke y-waarden een kwadratische functie kan hebben.',
-          maak:mBereikP }
+          maak:mBereikP },
+        { id:'whb-fun-asym', naam:'Asymptoten', kort:'Bij a + b/(x − p): verticaal x = p (de noemer 0) en horizontaal y = a. Bij a + b · gˣ: horizontaal y = a',
+          uit:'<p>Een <b>asymptoot</b> is een lijn waar de grafiek steeds dichter bij komt, zonder hem te raken.</p>' +
+            '<p>Bij f(x) = a + b/(x ' + MIN + ' p) mag de noemer niet 0 zijn. Bij x = p bestaat f niet: daar ligt de <b>verticale asymptoot x = p</b>. Wordt x heel groot, dan wordt b/(x ' + MIN + ' p) bijna 0 en f(x) bijna a: de <b>horizontale asymptoot y = a</b>.</p>' +
+            '<p>Bij f(x) = a + b · gˣ is er alleen een horizontale asymptoot: gˣ komt aan één kant steeds dichter bij 0, dus f(x) bij <b>y = a</b>.</p>' +
+            '<p>Voorbeeld: f(x) = 3 + 2/(x + 1). Verticaal x = ' + MIN + '1, horizontaal y = 3.</p>',
+          wanneer:'je bij een gebroken of exponentiële functie de asymptoten zoekt.',
+          maak:function(R){
+            var a = R.heel(-6, 6), b = nz(R, -8, 8), p = nz(R, -5, 5);
+            if (R.heel(0, 2) === 0){
+              var g = R.kies([2, 3, 0.5, 1.5]), gS = g === 0.5 ? '0,5' : T(g), f = (b === 1 ? '' : b === -1 ? MIN : T(b) + ' · ') + gS + 'ˣ' + (a ? (a < 0 ? ' ' + MIN + ' ' + T(-a) : ' + ' + T(a)) : '');
+              var goed = 'alleen y = ' + T(a), fout = ['y = ' + T(a) + ' en x = 0', 'alleen y = ' + T(b), 'alleen x = ' + T(a)];
+              return eindKeuze({ vraag:'f(x) = ' + f, context:'Welke asymptoten heeft de grafiek van f?', stappen:[
+                K(R, 'Wat gebeurt er met ' + gS + 'ˣ aan één kant van de grafiek?', 'het wordt bijna 0', ['het wordt bijna 1', 'het wordt bijna ' + gS], g > 1 ? 'Neem x heel negatief, bijvoorbeeld x = ' + MIN + '20: ' + gS + '^' + MIN + '20 is heel klein.' : 'Neem x heel groot, bijvoorbeeld x = 20: ' + gS + '^20 is heel klein.'),
+                S('Dan komt f(x) steeds dichter bij', a, 'Het stuk met ' + gS + 'ˣ valt weg; ' + (a ? T(a) : '0') + ' blijft over.', F(a, b, 'Het getal voor ' + gS + 'ˣ wordt keer bijna 0 gedaan. Het losse getal blijft over.')),
+                K(R, 'De asymptoten van de grafiek:', goed, fout, 'Een exponentiële functie heeft een horizontale asymptoot y = ' + T(a) + ' en geen verticale.') ] });
+            }
+            var noem = haak(p), f2 = (a ? T(a) + (b < 0 ? ' ' + MIN + ' ' : ' + ') + Math.abs(b) : T(b)) + '/' + noem;
+            var goed2 = 'x = ' + T(p) + ' en y = ' + T(a), fout2 = uniek(['x = ' + T(-p) + ' en y = ' + T(a), 'x = ' + T(p) + ' en y = ' + T(b), 'x = ' + T(a) + ' en y = ' + T(p)]).filter(function(x){ return x !== goed2; });
+            return eindKeuze({ vraag:'f(x) = ' + f2, context:'Welke asymptoten heeft de grafiek van f?', stappen:[
+              S('De noemer ' + noem + ' is 0 bij x =', eqAnt(p), 'Los ' + noem.replace(/[()]/g, '') + ' = 0 op.', F(eqAnt(p), -p, 'Let op het teken: bij ' + noem + ' hoort x = ' + T(p) + '.')),
+              S('Neem x heel groot. De breuk ' + T(b) + '/' + noem + ' wordt bijna 0, dus f(x) komt dicht bij', a, a ? 'Alleen het losse getal ' + T(a) + ' blijft over.' : 'Er staat geen los getal, dus f(x) komt bij 0.', F(a, b, 'De teller ' + T(b) + ' wordt gedeeld door iets heel groots: dat wordt bijna 0.')),
+              K(R, 'De asymptoten van de grafiek:', goed2, fout2, 'Verticaal waar de noemer 0 is, horizontaal het losse getal.') ] });
+          } }
       ] },
 
     /* ================= transformaties ================= */
@@ -1194,7 +1294,20 @@
         { id:'whb-afg-herleid', naam:'Eerst herleiden, dan differentiëren', kort:'Werk haakjes weg en schrijf breuken en wortels als a · xⁿ; differentieer daarna',
           uit:'<p>Haakjes, breuken en wortels kun je niet zomaar differentiëren. <b>Herleid eerst</b>.</p><p>f(x) = (2x ' + MIN + ' 1)(x + 3) = 2x² + 5x ' + MIN + ' 3, dus f′(x) = 4x + 5.</p><p>f(x) = 6 / x² = 6x⁻², dus f′(x) = ' + MIN + '12x⁻³. En f(x) = 4√x = 4x^0,5, dus f′(x) = 2x^' + MIN + '0,5.</p>',
           wanneer:'er haakjes, een breuk of een wortel in de formule staan.',
-          maak:mAfgHerleid }
+          maak:mAfgHerleid },
+        { id:'whb-afg-ketting', naam:'De kettingregel', kort:'f(x) = (ax + b)ⁿ: differentieer de buitenste functie, zet u terug en doe keer de afgeleide van de binnenste',
+          uit:'<p>Bij f(x) = (2x + 3)⁴ zit er een functie in een functie: de <b>binnenste</b> is u = 2x + 3, de <b>buitenste</b> is u⁴.</p>' +
+            '<p>De <b>kettingregel</b>: differentieer de buitenste functie, zet u terug, en vermenigvuldig met de afgeleide van de binnenste: <b>f′(x) = 4(2x + 3)³ · 2 = 8(2x + 3)³</b>.</p>' +
+            '<p>Bij een wortel gaat het net zo. √u = u^0,5 heeft als afgeleide 1/(2√u). Dus f(x) = √(3x + 1) geeft f′(x) = 1/(2√(3x + 1)) · 3 = 3/(2√(3x + 1)).</p>' +
+            '<p>De fout die het vaakst gemaakt wordt: die laatste vermenigvuldiging vergeten.</p>',
+          wanneer:'er iets anders dan alleen x tussen haakjes of onder een wortel staat.',
+          maak:mKetting },
+        { id:'whb-afg-prodquot', naam:'De productregel en de quotiëntregel', kort:'Product: f′ · g + f · g′. Quotiënt: (afgeleide teller · noemer − teller · afgeleide noemer) / noemer²',
+          uit:'<p>Bij een <b>product</b> f(x) · g(x) is de afgeleide <b>f′(x) · g(x) + f(x) · g′(x)</b>. Voorbeeld: (2x + 1)(x² ' + MIN + ' 3) geeft 2(x² ' + MIN + ' 3) + (2x + 1) · 2x.</p>' +
+            '<p>Bij een <b>quotiënt</b> teller / noemer is de afgeleide <b>(afgeleide teller · noemer ' + MIN + ' teller · afgeleide noemer) / noemer²</b>. Let op de volgorde, want bij min maakt die uit.</p>' +
+            '<p>Voorbeeld: f(x) = (x + 2) / (x ' + MIN + ' 1). f′(x) = (1 · (x ' + MIN + ' 1) ' + MIN + ' (x + 2) · 1) / (x ' + MIN + ' 1)² = ' + MIN + '3 / (x ' + MIN + ' 1)².</p>',
+          wanneer:'de formule een product of een breuk van twee functies van x is.',
+          maak:mProdQuot }
       ] },
 
     /* ================= de afgeleide gebruiken ================= */
@@ -1238,7 +1351,66 @@
         { id:'whb-per-opstel', naam:'Een formule opstellen', kort:'Zoek a, b, de periode en het beginpunt d in de grafiek; c = 2π : periode',
           uit:'<p>Je maakt een formule y = a + b sin(c(x ' + MIN + ' d)) bij een grafiek.</p><p><b>a</b> = evenwichtsstand en <b>b</b> = amplitude: die haal je uit de max en de min. Lees de <b>periode</b> af en reken uit: <b>c = 2π : periode</b>. Bij periode 12 is c = π/6.</p><p><b>d</b> is het <b>beginpunt</b>: een x waar de grafiek <b>stijgend</b> door de evenwichtsstand gaat.</p>',
           wanneer:'je bij een golvende grafiek een formule zoekt.',
-          maak:mPerOpstel }
+          maak:mPerOpstel },
+        { id:'whb-per-rad', naam:'Graden en radialen', kort:'180° = π radialen: graden : 180 · π geeft radialen, en π vervangen door 180° geeft graden',
+          uit:'<p>Bij periodieke functies meet je hoeken in <b>radialen</b>. Een halve cirkel is <b>180° = π rad</b>.</p>' +
+            '<p>Van graden naar radialen: welk deel van 180° is het? 120° = 120/180 · π = <b>2/3π</b>. Van radialen naar graden: vervang π door 180°. 5/4π = 5/4 · 180° = <b>225°</b>.</p>' +
+            '<p>Handig om te kennen: 1/6π = 30°, 1/4π = 45°, 1/3π = 60° en ½π = 90°.</p>',
+          wanneer:'je een hoek in graden en in radialen moet kunnen gebruiken.',
+          maak:function(R){
+            var j = R.heel(1, 24), d = 15 * j, g = ggd(j, 12), n = j / g, den = 12 / g, rad = piH(n, den);
+            if (R.heel(0, 1)){
+              var fout = uniek([piH(n, den * 2), piH(n * 2, den), piH(den, n), piH(n + 1, den), piH(Math.max(1, n - 1), den)]).filter(function(x){ return x !== rad; }).slice(0, 3);
+              var st = [
+                S('Welk deel van 180° is ' + d + '°? ' + d + ' : 180 =', breukS(d, 180), 'Deel ' + d + ' door 180 en vereenvoudig.', null),
+                K(R, 'Dus ' + d + '° =', rad, fout, '180° is π, dus ' + d + '° is ' + breukS(d, 180)[0] + ' keer π.') ];
+              st[0].controle = getC(d / 180); st[0].invoer = 'tekst';
+              return eindKeuze({ vraag:d + '° = ? rad', context:'Reken om naar radialen.', stappen:st });
+            }
+            var st2 = den === 1 ? [S('π rad = 180°. Dus ' + rad + ' = ' + n + ' · 180° =', gr(d), 'Vervang π door 180°.')] :
+              [S('π rad = 180°. Dus 1/' + den + 'π = 180° : ' + den + ' =', gr(180 / den), '180 : ' + den + ' = ' + (180 / den) + '.'),
+               S(rad + ' = ' + n + ' · ' + (180 / den) + '° =', gr(d), n + ' · ' + (180 / den) + ' = ' + d + '.', FM(String(180 / den), 'Dat is 1/' + den + 'π. Je hebt er ' + n + '.'))];
+            return { vraag:rad + ' rad = ?°', context:'Reken om naar graden.', eenheid:'°', stappen:st2 };
+          } },
+        { id:'whb-per-exact', naam:'Exacte waarden met de eenheidscirkel', kort:'sin is de y-coördinaat, cos de x-coördinaat; zoek de hoek met de x-as en het teken uit het kwadrant',
+          uit:'<p>Op de <b>eenheidscirkel</b> (straal 1) hoort bij een hoek een punt. De <b>x-coördinaat</b> is de <b>cosinus</b>, de <b>y-coördinaat</b> de <b>sinus</b>.</p>' +
+            '<p>Ken deze waarden: bij 1/6π is sin ½ en cos ½√3, bij 1/4π zijn sin en cos allebei ½√2, bij 1/3π is sin ½√3 en cos ½.</p>' +
+            '<p>Bij een andere hoek zoek je de hoek tussen de straal en de x-as (een van die drie) en het <b>teken</b> uit het kwadrant. cos(2/3π) = ' + MIN + '½: de hoek met de x-as is 1/3π, en het punt ligt links van de y-as.</p>',
+          wanneer:'je sin of cos van een hoek als 3/4π of 7/6π exact moet weten.',
+          maak:function(R){
+            var j, d; do { j = R.heel(1, 23); d = 15 * j; } while ((d % 30 && d % 45) || d % 90 === 0);
+            var h = d * Math.PI / 180, fn = R.kies(['sin', 'cos']), v = fn === 'sin' ? Math.sin(h) : Math.cos(h), w = exH(v), g = ggd(j, 12), rad = piH(j / g, 12 / g);
+            var kw = Math.floor(d / 90), ref = Math.min(d % 180, 180 - d % 180), KW = ['het eerste kwadrant', 'het tweede kwadrant', 'het derde kwadrant', 'het vierde kwadrant'], REF = ['1/6π', '1/4π', '1/3π'];
+            var refT = { 30:'1/6π', 45:'1/4π', 60:'1/3π' }[ref], opt = ['½', MIN + '½', '½√2', MIN + '½√2', '½√3', MIN + '½√3'];
+            var st = [
+              K(R, 'In welk kwadrant ligt het punt bij ' + rad + '?', KW[kw], [], rad + ' is ' + d + '°: tussen ' + (kw * 90) + '° en ' + (kw * 90 + 90) + '°.', { orde:KW }),
+              K(R, 'De hoek tussen de straal en de x-as is', refT, [], 'Hoeveel scheelt ' + rad + ' met 0, π of 2π? Dat is ' + ref + '°.', { orde:REF }),
+              K(R, 'Is ' + fn + '(' + rad + ') positief of negatief?', v > 0 ? 'positief' : 'negatief', [], fn === 'sin' ? 'sin is de y-coördinaat: boven de x-as positief.' : 'cos is de x-coördinaat: rechts van de y-as positief.', { orde:['positief', 'negatief'] }),
+              K(R, 'Dus ' + fn + '(' + rad + ') =', w, [], fn === 'sin' ? 'sin is de y-coördinaat van het punt.' : 'cos is de x-coördinaat van het punt.', { orde:opt }) ];
+            return eindKeuze({ vraag:fn + '(' + rad + ')', context:'Geef de exacte waarde.', stappen:st, beeld:function(n){ return cirkelH({ hoek:h, proj:n >= 3, aria:'eenheidscirkel met het punt bij ' + rad }); } });
+          } },
+        { id:'whb-per-gvgl', naam:'sin x = c en cos x = c exact oplossen', kort:'Zoek één oplossing; bij sin is de tweede π − x, bij cos is hij −x; tel 2π op tot je in het interval zit',
+          uit:'<p>Bij <b>sin x = ½</b> trek je op de eenheidscirkel de lijn y = ½. Die snijdt de cirkel in <b>twee</b> punten, dus er zijn twee oplossingen per rondje.</p>' +
+            '<p>De eerste ken je: x = 1/6π. Bij <b>sin</b> is de tweede <b>π ' + MIN + ' x</b> = 5/6π. Bij <b>cos</b> is de tweede <b>' + MIN + 'x</b>; tel daar 2π bij op om in [0, 2π] te komen.</p>' +
+            '<p>cos x = ½ op [0, 2π]: x = 1/3π of x = ' + MIN + '1/3π + 2π = 5/3π.</p>',
+          wanneer:'je een vergelijking als sin x = ½ of cos x = ' + MIN + '½√2 exact moet oplossen.',
+          maak:function(R){
+            var fn = R.kies(['sin', 'cos']), cv = R.kies([0.5, Math.SQRT2 / 2, Math.sqrt(3) / 2]) * R.kies([1, -1]), ct = exH(cv);
+            function waar(k){ var x = k * Math.PI / 12; return Math.abs((fn === 'sin' ? Math.sin(x) : Math.cos(x)) - cv) < 1e-9; }
+            var k0 = Math.round((fn === 'sin' ? Math.asin(cv) : Math.acos(cv)) / (Math.PI / 12)), k1 = fn === 'sin' ? 12 - k0 : -k0;
+            var opl = []; for (var k = 0; k <= 24; k++) if (waar(k)) opl.push(k);
+            function pk(k){ return piH(k, 12); }
+            function set(l){ return l.map(function(x){ return 'x = ' + pk(x); }).join(' of '); }
+            var goed = set(opl), fouten = uniek([set(opl.map(function(x){ return (x + 6) % 24; }).sort(function(a, b){ return a - b; })), set([opl[0]]), set(opl.map(function(x){ return 24 - x; }).sort(function(a, b){ return a - b; })), set(opl.map(function(x){ return (x + 12) % 24; }).sort(function(a, b){ return a - b; }))]).filter(function(x){ return x !== goed; }).slice(0, 3);
+            var af1 = uniek([-k0, 6 - k0, k0 + 6, 2 * k0, k0 + 12].filter(function(k){ return !waar(k) && k !== k0; }).map(pk)).slice(0, 2);
+            var af2 = uniek((fn === 'sin' ? [-k0, k0 + 12, k0 + 6] : [12 - k0, k0 + 12, k0 + 6]).filter(function(k){ return !waar(k); }).map(pk)).slice(0, 2);
+            var st = [
+              K(R, 'Eén oplossing, met de eenheidscirkel: x =', pk(k0), af1, fn === 'sin' ? 'sin is de y-coördinaat. Bij welke hoek is die ' + ct + '? Bij een negatieve waarde ligt het punt onder de x-as.' : 'cos is de x-coördinaat. Bij welke hoek tussen 0 en π is die ' + ct + '?'),
+              K(R, 'De tweede oplossing: bij ' + fn + ' is dat ' + (fn === 'sin' ? 'π ' + MIN + ' x' : MIN + 'x') + '. Dus x =', pk(k1), af2, fn === 'sin' ? 'π ' + MIN + ' (' + pk(k0) + ') = ' + pk(k1) + '.' : MIN + '(' + pk(k0) + ') = ' + pk(k1) + '.'),
+              K(R, 'Tel 2π op of trek 2π af tot alles in [0, 2π] ligt. De oplossingen:', goed, fouten, 'Een negatieve oplossing plus 2π: bijvoorbeeld ' + MIN + '1/6π + 2π = 11/6π.') ];
+            return eindKeuze({ vraag:fn + ' x = ' + ct, context:'Los exact op op het interval [0, 2π].', stappen:st,
+              beeld:function(n){ return cirkelH({ lijn:{ sin:fn === 'sin', v:cv, t:ct }, punten:n >= 2 ? [k0 * Math.PI / 12, k1 * Math.PI / 12] : n >= 1 ? [k0 * Math.PI / 12] : [], aria:'eenheidscirkel met de lijn ' + (fn === 'sin' ? 'y' : 'x') + ' = ' + ct }); } });
+          } }
       ] },
 
     /* ================= sinusregel en cosinusregel ================= */

@@ -598,7 +598,7 @@
             function mn(hh){ var m = Math.floor(hh / 6000), r = hh - m * 6000; return m + ':' + (r < 1000 ? '0' : '') + sec(r); }
             var nm = R.hussel(['Lisa', 'Sem', 'Noor', 'Daan', 'Fatima', 'Milan', 'Eva', 'Yusuf']);
             if (R.heel(0, 1)){
-              var a = R.heel(6005, 6599), b; do { b = R.heel(5600, 5995); } while (a - b < 50 || a % 100 === 0);
+              var a, b; do { a = R.heel(6005, 6599); b = R.heel(5600, 5995); } while (a - b < 50 || a % 100 === 0);
               return { vraag:'zwemmen ' + mn(a) + ' en ' + sec(b), vraagHtml:'Hoeveel seconden was ' + nm[1] + ' sneller?', context:'Op de 100 meter zwemmen zwemt ' + nm[0] + ' ' + mn(a) + ' en ' + nm[1] + ' ' + sec(b) + '.', eenheid:'s', antwoord:ant(a - b), stappen:[
                 { tekst:'Schrijf ' + mn(a) + ' in seconden: 60 + ' + sec(a - 6000) + ' =', antwoord:ant(a), eenheid:'s', hint:'1 minuut is 60 seconden. Tel de seconden erachter erbij.', fout:F(sec(a + 4000), 'Een minuut is 60 seconden, geen 100.') },
                 { tekst:'Het verschil: ' + sec(a) + ' − ' + sec(b) + ' =', antwoord:ant(a - b), eenheid:'s', hint:'Zet de komma\'s onder elkaar. Of vul aan: van ' + sec(b) + ' naar 60 en dan naar ' + sec(a) + '.' } ] };

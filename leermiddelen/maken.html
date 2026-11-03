@@ -386,6 +386,12 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
 .schakel.uit{cursor:default}
 .schakel.uit input{opacity:.45;cursor:default}
 .schakel.uit > span{color:var(--muted)}
+/* elke leerling een deel van de vragen: de schakelaar met het aantal eronder */
+.trekvak{display:grid;gap:10px}
+.trekaantal{display:grid;grid-template-columns:minmax(0,1fr) 5.5em;align-items:center;gap:4px 10px;font-size:.88rem;padding-left:12px;border-left:3px solid var(--rand2)}
+.trekaantal .veld{min-height:44px;text-align:center;font-variant-numeric:tabular-nums;padding:6px 8px}
+.trekaantal small{grid-column:1 / -1;font-size:.8rem;color:var(--muted)}
+.trekaantal .veld[aria-invalid="true"]{border-color:var(--fout)}
 .codekaart{background:var(--kies);border-radius:14px;padding:14px}
 .codekaart .tip{font-size:.85rem}
 .codekaart .codegroot{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:1.7rem;font-weight:700;letter-spacing:.12em;color:var(--link);margin:2px 0 10px;line-height:1.2}
@@ -555,6 +561,10 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
           </div>
           <label class="schakel" id="terugzienVak"><span>Na het inleveren de goede antwoorden laten zien<small id="terugzienUitleg"></small></span><input type="checkbox" role="switch" id="terugzien"></label>
           <label class="schakel"><span>Elke leerling een andere volgorde<small>De antwoorden komen bij jou in de vaste volgorde binnen.</small></span><input type="checkbox" role="switch" id="husselen"></label>
+          <div class="trekvak hide" id="trekVak">
+            <label class="schakel"><span>Elke leerling een deel van de vragen<small>Willekeurig gekozen uit alle vragen, voor elke leerling anders.</small></span><input type="checkbox" role="switch" id="trek" aria-describedby="trekVan"></label>
+            <label class="trekaantal hide" id="trekAantalVak"><span>Aantal vragen per leerling</span><input class="veld" type="number" id="trekAantal" min="2" step="1" inputmode="numeric"><small id="trekVan"></small></label>
+          </div>
           <div class="vakplek" data-soort="oefening"></div>
           <div class="codekaart" id="codeKaart">
             <p class="tip" id="codeKop">Leerlingen openen hem met</p>
@@ -1047,12 +1057,36 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
     if (it) straks();
   });
   $('bewerkvak').addEventListener('change', function(e){
-    if (e.target.name === 'modus' || e.target.id === 'terugzien' || e.target.id === 'husselen' || e.target.id === 'vak') zetVies(true);
+    if (e.target.name === 'modus' || e.target.id === 'terugzien' || e.target.id === 'husselen' || e.target.id === 'trek' || e.target.id === 'vak') zetVies(true);
+    if (e.target.id === 'trek'){
+      /* aanzetten: standaard 30, of een minder dan alle vragen bij een kleinere toets */
+      var n = $('items').children.length;
+      if (e.target.checked && !(Number($('trekAantal').value) >= 2)) $('trekAantal').value = Math.max(2, Math.min(30, n - 1));
+      toonTrek();
+      if (e.target.checked) $('trekAantal').focus();
+    }
+    if (e.target.id === 'trekAantal') toonTrek();
     if (e.target.id === 'terugzien' && modusNu() === 'toets') terugzienToets = e.target.checked;
     if (e.target.name === 'modus') toonTerugzien();
     if (e.target.closest('#items')) straks();
   });
   function modusNu(){ return (document.querySelector('input[name="modus"]:checked') || {}).value || 'oefenen'; }
+  /* Elke leerling een deel van de vragen: alleen bij meer dan twee vragen, en dan van 2 tot
+     een minder dan alle vragen (de server houdt dezelfde grenzen aan). */
+  function toonTrek(){
+    var n = $('items').children.length, aan = $('trek').checked, v = Math.floor(Number($('trekAantal').value));
+    $('trekVak').classList.toggle('hide', n <= 2);
+    $('trekAantalVak').classList.toggle('hide', !aan);
+    $('trekAantal').max = Math.max(2, n - 1);
+    var goed = !aan || (v >= 2 && v <= n - 1);
+    if (goed) $('trekAantal').removeAttribute('aria-invalid'); else $('trekAantal').setAttribute('aria-invalid', 'true');
+    $('trekVan').textContent = goed ? 'van de ' + n + ' vragen' : 'Kies een aantal van 2 tot ' + (n - 1) + '.';
+  }
+  function trekNu(){
+    var n = $('items').children.length, v = Math.floor(Number($('trekAantal').value));
+    if (!$('trek').checked || n <= 2) return 0;
+    return v >= 2 && v <= n - 1 ? v : -1;
+  }
   /* Bij een toets kies je of leerlingen na het inleveren de goede antwoorden zien
      (standaard niet). Bij oefenen zien ze dat altijd, na elke vraag. */
   var terugzienToets = false;
@@ -1080,6 +1114,8 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
     try { tekst = new TextDecoder().decode(Uint8Array.from(atob((q.get('w') || '').replace(/-/g, '+').replace(/_/g, '/')), function(c){ return c.charCodeAt(0); })); } catch (e){ return; }
     history.replaceState(null, '', location.pathname + location.search);
     var naam = (q.get('naam') || '').slice(0, 80), vak = q.get('vak') || '';
+    /* &trek=N: elke leerling N vragen uit alle vragen */
+    var trek = Math.floor(Number(q.get('trek'))) || 0;
     if (soort === 'lijst'){
       var paren = EIGEN.plakken(tekst).slice(0, 300);
       vulLijst({ naam:naam, vak:vak, kopA:q.get('a') || '', kopB:q.get('b') || '', paren:paren }); open('lijst');
@@ -1087,9 +1123,27 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
     } else if (soort === 'toets'){
       var kop = q.get('vraag') || 'Vertaal:';
       var items = woordRegels(tekst).slice(0, 300).map(function(p){ return { vorm:'open', vraag:kop + ' ' + p.a, antwoorden:woordVarianten(p.b), punten:1, uitleg:p.a + ' = ' + p.b }; });
-      plaatjesCode = ''; vulOef({ naam:naam, vak:vak, modus:'toets', items:items }); open('oefening');
+      plaatjesCode = ''; vulOef({ naam:naam, vak:vak, modus:'toets', items:items, trek:trek }); open('oefening');
       melding($('uitSiteMelding'), items.length + ' vragen staan klaar. Kijk ze na en bewaar de toets.', 'goed');
-    }
+    } else if (soort === 'items') importVragen(tekst, naam, vak, trek);
+  }
+  /* #import=items: w is dan een json-lijst met kant-en-klare vragen in de vorm van maken.html.
+     Een vraag met svg krijgt die figuur als plaatje, net als een figuur uit het opdrachtenboek. */
+  function importVragen(tekst, naam, vak, trek){
+    var lijst = []; try { lijst = JSON.parse(tekst); } catch (e){ return; }
+    if (!Array.isArray(lijst)) return;
+    lijst = lijst.slice(0, 300);
+    plaatjesCode = ''; vulOef({ naam:naam, vak:vak, modus:'toets', items:[] }); open('oefening');
+    melding($('uitSiteMelding'), 'De vragen klaarmaken…');
+    Promise.all(lijst.map(function(x){
+      var it = { vorm:x.vorm === 'mk' ? 'mk' : 'open', vraag:String(x.vraag || ''), uitleg:String(x.uitleg || ''), punten:Math.max(1, Math.min(10, Number(x.punten) || 1)) };
+      if (it.vorm === 'mk'){ it.goed = String(x.goed || ''); it.fout = (x.fout || []).map(String); } else it.antwoorden = (x.antwoorden || []).map(String).slice(0, 8);
+      if (!x.svg || !window.KIEZER || !KIEZER.plaatje) return Promise.resolve(it);
+      return KIEZER.plaatje({ svg:x.svg }).then(function(data){ it.afbData = data; return it; }, function(){ return it; });
+    })).then(function(items){
+      vulOef({ naam:naam, vak:vak, modus:'toets', items:items, trek:trek || 0 }); open('oefening');
+      melding($('uitSiteMelding'), items.length + ' vragen staan klaar. Kijk ze na en bewaar de toets.', 'goed');
+    });
   }
   setTimeout(importUitAdres, 0);
   $('nieuwDictee').addEventListener('click', function(){ vulDictee({ naam:'', vak:'ned', niveau:'', zinnen:[], uitleg:'' }); open('dictee'); });
@@ -1474,7 +1528,7 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
       [['op', 'omhoog'], ['neer', 'omlaag'], ['kopie', 'dupliceren'], ['weg', 'weghalen']].forEach(function(a){ it.querySelector('[data-actie="' + a[0] + '"]').setAttribute('aria-label', 'Vraag ' + n + ' ' + a[1]); });
       if (it.getAttribute('data-vorm') === 'mk') antNummer(it);
     });
-    tekenVraaglijst();
+    tekenVraaglijst(); toonTrek();
   }
   /* een vraag kiezen om te bewerken; stil: zonder de focus te verplaatsen */
   function kies(i, stil){
@@ -1590,6 +1644,7 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
     /* een nieuwe toets: standaard alleen de score; een oudere toets zonder die keuze liet de antwoorden zien */
     terugzienToets = m.modus === 'toets' && (m.terugzien === undefined ? !!m.code : !!m.terugzien);
     $('husselen').checked = !!m.husselen;
+    $('trek').checked = !!m.trek; $('trekAantal').value = m.trek || '';
     $('items').innerHTML = (m.items || []).map(itemHtml).join('');
     actief = 0; nummer(); toonTerugzien();
   }
@@ -1847,6 +1902,8 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
       m.modus = modusNu();
       m.terugzien = m.modus === 'toets' ? $('terugzien').checked : true;
       m.husselen = $('husselen').checked;
+      m.trek = trekNu();
+      if (m.trek < 0){ toonTrek(); melding($('bewaarMelding'), 'Kies bij Elke leerling een deel van de vragen een aantal van 2 tot ' + ($('items').children.length - 1) + '.', 'fout'); $('trekAantal').focus(); return; }
       m.items = [].map.call($('items').children, lees);
       if (!m.items.length){ melding($('bewaarMelding'), 'Zet er minstens een vraag in: kies + Vraag erbij.', 'fout'); $('vraagErbij').focus(); return; }
       var items = $('items').children, fouten = [];

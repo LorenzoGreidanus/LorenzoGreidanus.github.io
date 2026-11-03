@@ -3,7 +3,8 @@
 
      NAKIJK.bereken(u)            u = het antwoord van EIGEN.uitslagen, met norm en neutraal
                                   -> { max, cesuur, rijen: [{ naam, klas, score, pct, cijfer, open, ... }], gem, voldoende }
-     NAKIJK.analyse(u, b)         -> per vraag { p, rit, open, n, let }  (b = de uitkomst van bereken)
+     NAKIJK.analyse(u, b)         -> per vraag { p, rit, open, n, kreeg, goed, let }  (b = de uitkomst van bereken)
+     NAKIJK.gesteld(r, i)         -> kreeg deze leerling vraag i (bij trek staat dat in r.k)
      NAKIJK.cijferVan(s, max, norm, cesuurPct)
      NAKIJK.cohenSchotanus(u)     -> de cesuur in procenten, uit de beste leerlingen en de raadkans
      NAKIJK.vergelijk(toetsen)    -> leerlingen naast elkaar over meerdere toetsen
@@ -21,15 +22,24 @@ var NAKIJK = (function(){
   function punten(it){ return it && it.punten ? it.punten : 1; }
   /* de waarde van een vraag voor een leerling: met de hand nagekeken gaat voor; null is nog niet nagekeken */
   function waarde(r, i){ var h = r.h && r.h[i]; return h !== undefined && h !== null ? h : r.p[i]; }
-  function maxVan(u){ var m = 0; u.items.forEach(function(it, i){ if (telt(u, i)) m += punten(it); }); return m; }
+  /* Kreeg de leerling vraag i? Bij trek staat in r.k welke vragen hij kreeg; zonder k alle.
+     Een vraag die hij niet kreeg telt nergens mee: niet als fout, niet als open, niet in zijn maximum. */
+  function gesteld(r, i){
+    if (!r || !Array.isArray(r.k)) return true;
+    if (!r._k){ var s = {}; r.k.forEach(function(x){ s[x] = 1; }); Object.defineProperty(r, '_k', { value: s, configurable: true }); }
+    return !!r._k[i];
+  }
+  /* het maximum: over alle vragen, of met r over de vragen die die leerling kreeg */
+  function maxVan(u, r){ var m = 0; u.items.forEach(function(it, i){ if (telt(u, i) && gesteld(r, i)) m += punten(it); }); return m; }
   function scoreVan(u, r){
-    var s = 0, open = 0;
+    var s = 0, open = 0, max = 0;
     u.items.forEach(function(it, i){
-      if (!telt(u, i)) return;
+      if (!telt(u, i) || !gesteld(r, i)) return;
+      max += punten(it);
       var w = waarde(r, i);
       if (w === null || w === undefined) open++; else s += w * punten(it);
     });
-    return { score: s, open: open };
+    return { score: s, open: open, max: max };
   }
   function cijferVan(s, max, norm, cesuurPct){
     if (!max) return null;
@@ -52,31 +62,39 @@ var NAKIJK = (function(){
     });
     return g;
   }
+  /* in delen van het maximum, zodat het ook klopt als elke leerling andere vragen kreeg (trek) */
   function cohenSchotanus(u){
     var max = maxVan(u);
     if (!max || !u.rijen.length) return null;
-    var s = u.rijen.map(function(r){ return scoreVan(u, r).score; }).sort(function(a, b){ return b - a; });
+    var s = u.rijen.map(function(r){ var x = scoreVan(u, r); return x.max ? x.score / x.max : 0; }).sort(function(a, b){ return b - a; });
     var k = Math.max(1, Math.ceil(s.length * 0.05)), top = 0;
     for (var i = 0; i < k; i++) top += s[i];
     top /= k;
-    var g = raadkans(u), ces = g + 0.6 * (top - g);
-    return rond(Math.max(30, Math.min(90, ces / max * 100)), 1);
+    var g = raadkans(u) / max, ces = g + 0.6 * (top - g);
+    return rond(Math.max(30, Math.min(90, ces * 100)), 1);
   }
   function bereken(u){
     var max = maxVan(u), norm = u.norm || { methode: 'cesuur', cesuur: 55 };
     var ces = norm.methode === 'auto' ? cohenSchotanus(u) : norm.methode === 'cesuur' ? norm.cesuur : null;
+    /* elke leerling zijn eigen maximum: bij trek de punten van zijn eigen vragen */
     var rijen = u.rijen.map(function(r){
       var x = scoreVan(u, r);
       return { sid: r.sid, naam: r.naam, klas: r.klas || '', t: r.t, pogingen: r.pogingen, rij: r,
-        score: rond(x.score, 2), open: x.open, pct: max ? rond(x.score / max * 100) : 0,
-        cijfer: cijferVan(x.score, max, norm, ces) };
+        score: rond(x.score, 2), max: x.max, open: x.open, pct: x.max ? rond(x.score / x.max * 100) : 0,
+        cijfer: cijferVan(x.score, x.max, norm, ces) };
     });
+    /* het maximum van een leerling zoals het meestal is (bij trek kan het per leerling verschillen) */
+    if (rijen.length){
+      var tel = {}, best = 0;
+      rijen.forEach(function(r){ tel[r.max] = (tel[r.max] || 0) + 1; if (tel[r.max] > (tel[best] || 0)) best = r.max; });
+      max = best;
+    }
     var cijfers = rijen.map(function(r){ return r.cijfer; }).filter(function(c){ return c != null; });
     var gem = cijfers.length ? rond(cijfers.reduce(function(a, b){ return a + b; }, 0) / cijfers.length, 1) : null;
     var voldoende = cijfers.length ? rond(cijfers.filter(function(c){ return c >= 5.5; }).length / cijfers.length * 100) : null;
     var verdeling = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     cijfers.forEach(function(c){ verdeling[Math.min(9, Math.max(0, Math.floor(c) - 1))]++; });
-    return { max: max, cesuur: ces, norm: norm, rijen: rijen, gem: gem, voldoende: voldoende, verdeling: verdeling,
+    return { max: max, wisselend: rijen.some(function(r){ return r.max !== max; }), cesuur: ces, norm: norm, rijen: rijen, gem: gem, voldoende: voldoende, verdeling: verdeling,
       open: rijen.reduce(function(a, r){ return a + r.open; }, 0) };
   }
   function pearson(x, y){
@@ -92,11 +110,17 @@ var NAKIJK = (function(){
   function analyse(u, b){
     b = b || bereken(u);
     return u.items.map(function(it, i){
-      var x = [], y = [], open = 0;
+      var x = [], y = [], open = 0, kreeg = 0, goed = 0;
       b.rijen.forEach(function(r){
+        /* alleen de leerlingen die deze vraag kregen */
+        if (!gesteld(r.rij, i)) return;
+        kreeg++;
         var w = waarde(r.rij, i);
         if (w === null || w === undefined){ open++; return; }
-        x.push(w); y.push(r.score - (telt(u, i) ? w * punten(it) : 0));
+        if (w >= 0.999) goed++;
+        /* de rest van de toets als deel van zijn maximum: zonder trek hetzelfde als de score zelf */
+        var p = telt(u, i) ? punten(it) : 0, rest = r.max - p;
+        x.push(w); y.push(rest > 0 ? (r.score - w * p) / rest : 0);
       });
       var p = x.length ? rond(x.reduce(function(a, c){ return a + c; }, 0) / x.length, 2) : null;
       var rit = pearson(x, y); rit = rit == null ? null : rond(rit, 2);
@@ -106,7 +130,7 @@ var NAKIJK = (function(){
         else if (rit !== null && rit < 0.2) let_ = 'Wie het goed doet op de rest, doet het hier niet beter. Is de vraag duidelijk?';
         else if (p !== null && p > 0.95) let_ = 'Bijna iedereen had deze goed.';
       }
-      return { i: i, vorm: it.vorm, vraag: it.vraag, punten: punten(it), p: p, rit: rit, n: x.length, open: open, telt: telt(u, i), let: let_ };
+      return { i: i, vorm: it.vorm, vraag: it.vraag, punten: punten(it), p: p, rit: rit, n: x.length, open: open, kreeg: kreeg, goed: goed, telt: telt(u, i), let: let_ };
     });
   }
   function sleutelNaam(r){ return (r.klas || '') + '|' + String(r.naam || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
@@ -130,6 +154,6 @@ var NAKIJK = (function(){
     }).sort(function(a, b){ return (a.klas || '').localeCompare(b.klas || '') || a.naam.localeCompare(b.naam, 'nl'); });
     return { leerlingen: leerlingen, toetsen: toetsen.map(function(ts){ return { code: ts.code, naam: ts.naam, n: ts.b.rijen.length, gem: ts.b.gem, voldoende: ts.b.voldoende }; }) };
   }
-  return { bereken: bereken, analyse: analyse, cijferVan: cijferVan, cohenSchotanus: cohenSchotanus, vergelijk: vergelijk, waarde: waarde };
+  return { bereken: bereken, analyse: analyse, cijferVan: cijferVan, cohenSchotanus: cohenSchotanus, vergelijk: vergelijk, waarde: waarde, gesteld: gesteld };
 })();
 if (typeof module !== 'undefined') module.exports = NAKIJK;

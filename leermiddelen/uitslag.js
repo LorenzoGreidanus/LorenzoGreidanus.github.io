@@ -36,7 +36,7 @@ var UITSLAG = (function(){
   }
   var PIJL = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>';
   var opts = {}, terug = function(){};
-  var code = '', u = null, b = null, an = null, klasFilter = null, bewaard = null, leerling = null, alleRijen = false;
+  var code = '', u = null, b = null, an = null, klasFilter = null, bewaard = null, leerling = null, alleRijen = false, alleVragen = false;
 
   var SECTIES = ['lijstvak', 'bewerkvak', 'uitslagvak', 'vergelijkvak', 'nakijkvak', 'papiervak'];
   function toon(sectie){
@@ -48,6 +48,10 @@ var UITSLAG = (function(){
   function zichtbaar(){ return b.rijen.filter(function(r){ return klasFilter === null || r.klas === klasFilter; }); }
   function rijVan(sid){ return u.rijen.filter(function(x){ return x.sid === sid; })[0] || null; }
   function telt(i){ return (u.neutraal || []).indexOf(i) < 0; }
+  /* Elke leerling een deel van de vragen (trek): dan heeft een inlevering k, de vragen die hij
+     kreeg. Een vraag die hij niet kreeg staat nergens bij hem: niet als fout en niet als open. */
+  function gesteld(r, i){ return NAKIJK.gesteld(r, i); }
+  function trekAan(){ return !!u.trek || u.rijen.some(function(r){ return Array.isArray(r.k); }); }
 
   /* het antwoord van een leerling leesbaar, per vorm */
   function antwoordTekst(it, a, r){
@@ -69,7 +73,7 @@ var UITSLAG = (function(){
   /* ================= een stuk openen ================= */
   function open(c, o){
     opts = Object.assign({}, opts, o || {}); if (o && o.terug) terug = o.terug;
-    code = c; u = null; leerling = null; klasFilter = null; alleRijen = false; nk = null;
+    code = c; u = null; leerling = null; klasFilter = null; alleRijen = false; alleVragen = false; nk = null;
     toon('uitslagvak');
     $('uitslagKop').textContent = 'Resultaten';
     $('rsBewerk').classList.toggle('hide', !opts.bewerk);
@@ -215,7 +219,7 @@ var UITSLAG = (function(){
       '<button class="knop stil" type="button" id="terugzienWissel">' + (u.terugzien ? 'Alleen de score laten zien' : 'Goede antwoorden laten zien') + '</button><p class="melding" id="terugMelding" role="status" aria-live="polite"></p>';
     if (leerling) tekenLeerling();
   }
-  function openIn(i, rijen){ return rijen.filter(function(r){ return NAKIJK.waarde(r.rij, i) == null; }).length; }
+  function openIn(i, rijen){ return rijen.filter(function(r){ return gesteld(r.rij, i) && NAKIJK.waarde(r.rij, i) == null; }).length; }
   function tekenKlassen(){
     var per = {}, volg = [];
     b.rijen.forEach(function(r){ if (!(r.klas in per)){ per[r.klas] = 0; volg.push(r.klas); } per[r.klas]++; });
@@ -232,7 +236,7 @@ var UITSLAG = (function(){
             (r.rij.papier ? ' <span class="papierlabel" title="Op papier gemaakt, versie ' + schoon(r.rij.versie || 'A') + '">papier · ' + schoon(r.rij.versie || 'A') + '</span>' : '') +
             (r.pogingen > 1 ? ' <small class="tip">(' + r.pogingen + '×)</small>' : '') + '</td>' +
           '<td data-l="Klas">' + schoon(r.klas || '–') + '</td>' +
-          '<td class="getal" data-l="Punten">' + getal(r.score) + ' / ' + getal(b.max) + '</td>' +
+          '<td class="getal" data-l="Punten">' + getal(r.score) + ' / ' + getal(r.max) + '</td>' +
           '<td class="getal' + (r.cijfer != null && r.cijfer < 5.5 ? ' onv' : '') + '" data-l="Cijfer"><b>' + komma(r.cijfer) + '</b></td>' +
           '<td data-l="">' + (r.open ? '<span class="pil let">' + r.open + ' open</span>' : '') + '</td></tr>';
       }).join('') + '</tbody></table></div>' +
@@ -251,9 +255,15 @@ var UITSLAG = (function(){
     if (a.p != null && a.p < 0.25) return 'Bijna niemand had deze goed. Klopt het goede antwoord, en is de stof behandeld?';
     return '';
   }
+  /* Met trek staan alleen de vragen die iemand kreeg erin, en telt per vraag alleen wie hem
+     kreeg. Bij veel vragen eerst dertig, met een knop voor de rest. */
   function tekenVragen(rijen){
-    $('rsVragen').innerHTML = '<div class="vrrij vrkop" aria-hidden="true"><span>Nr</span><span>Vraag</span><span>Goed</span><span>Onderscheidt</span><span></span></div>' +
-      an.map(function(a){
+    var trek = trekAan(), l = trek ? an.filter(function(a){ return a.kreeg; }) : an, nooit = an.length - l.length;
+    var kort = !alleVragen && l.length > 40, zien = kort ? l.slice(0, 30) : l;
+    $('rsVragen').innerHTML = (trek ? '<p class="tip vrtrek">' + (u.trek ? 'Elke leerling krijgt ' + u.trek + ' van de ' + u.items.length + ' vragen, willekeurig gekozen.' : 'Elke leerling kreeg een deel van de vragen.') +
+        ' Per vraag tellen alleen de leerlingen die hem kregen.' + (nooit ? ' ' + meer(nooit, 'vraag kreeg', 'vragen kreeg') + ' nog niemand; die staan hier niet.' : '') + '</p>' : '') +
+      '<div class="vrrij vrkop" aria-hidden="true"><span>Nr</span><span>Vraag</span><span>Goed</span><span>Onderscheidt</span><span></span></div>' +
+      zien.map(function(a){
         var it = u.items[a.i], v = verdacht(a), o = onderscheid(a), open = openIn(a.i, rijen), pc = a.p == null ? null : Math.round(a.p * 100);
         var actie = !a.telt ? '<button class="knop stil klein" type="button" data-neutraal="' + a.i + '" data-aan="1">Laat weer meetellen</button>'
           : open ? '<button class="knop klein" type="button" data-nkvraag="' + a.i + '">Nakijken (' + open + ')</button>'
@@ -262,10 +272,12 @@ var UITSLAG = (function(){
         return '<div class="vrrij' + (v ? ' verdacht' : '') + (a.telt ? '' : ' uit') + '"><b class="vrnr">' + (a.i + 1) + '</b>' +
           '<span class="vrtekst"><button class="linkknop vrknop" type="button" data-nkvraag="' + a.i + '" data-alle="1">' + schoon(vraagVan(it)) + '</button> <span class="tip">· ' + VORMNAAM[soortVan(it)].toLowerCase() + ' · ' + meer(ptn(it), 'punt', 'punten') + '</span>' +
             (!a.telt ? '<small class="vruitleg">Telt niet mee: niemand krijgt er punten voor, en het maximum is lager.</small>' : v ? '<small class="vruitleg">' + v + '</small>' : '') + '</span>' +
-          '<span class="vrgoed" data-l="Goed"><span class="rsbalk klein"><i style="width:' + (pc || 0) + '%"></i></span><span class="getal">' + (pc == null ? '–' : pc + '%') + '</span></span>' +
+          '<span class="vrgoed" data-l="Goed"><span class="rsbalk klein"><i style="width:' + (pc || 0) + '%"></i></span><span class="getal">' + (pc == null ? '–' : pc + '%') + '</span>' +
+            (trek ? '<small class="vrwie">' + a.goed + ' van de ' + a.kreeg + ' goed' + (a.open ? ', ' + a.open + ' open' : '') + '</small>' : '') + '</span>' +
           '<span class="vrond ' + o.k + '" data-l="Onderscheidt" title="' + schoon(o.titel) + '">' + o.t + '</span>' +
           '<span class="vractie">' + actie + '</span></div>';
-      }).join('');
+      }).join('') +
+      (kort ? '<button class="linkknop vralle" type="button" id="alleVragen">Alle ' + l.length + ' vragen</button>' : '');
   }
   /* Topografie: per plek hoe vaak het goed ging, over alle vragen over die plek */
   function tekenPerPlek(rijen){
@@ -306,15 +318,17 @@ var UITSLAG = (function(){
     var lijst = zichtbaar(), k = lijst.map(function(x){ return x.sid; }).indexOf(r.sid);
     var br = b.rijen.filter(function(x){ return x.sid === r.sid; })[0];
     var soort = {};
-    u.items.forEach(function(it, i){ var w = NAKIJK.waarde(r, i); if (w == null || !telt(i)) return; var s = soort[soortVan(it)] = soort[soortVan(it)] || [0, 0]; s[0] += w * ptn(it); s[1] += ptn(it); });
+    u.items.forEach(function(it, i){ var w = NAKIJK.waarde(r, i); if (w == null || !telt(i) || !gesteld(r, i)) return; var s = soort[soortVan(it)] = soort[soortVan(it)] || [0, 0]; s[0] += w * ptn(it); s[1] += ptn(it); });
     el.innerHTML = '<div class="rspkop"><h3>' + schoon(r.naam) + (r.klas ? ' <small class="tip">' + schoon(r.klas) + '</small>' : '') + (r.papier ? ' <span class="papierlabel">papier · versie ' + schoon(r.versie || 'A') + '</span>' : '') + '</h3>' +
       '<span class="rspknoppen"><button class="knop stil klein" type="button" data-llstap="-1"' + (k > 0 ? '' : ' disabled') + '>← Vorige</button>' +
       '<button class="knop stil klein" type="button" data-llstap="1"' + (k >= 0 && k < lijst.length - 1 ? '' : ' disabled') + '>Volgende →</button>' +
       '<button class="knop stil klein" type="button" data-llsluit>Sluiten</button></span></div>' +
-      '<p>Cijfer <b>' + komma(br.cijfer) + '</b>' + (br.open ? ' (voorlopig, ' + br.open + ' open)' : '') + ' · ' + getal(br.score) + ' van de ' + getal(b.max) + ' punten · ' +
+      '<p>Cijfer <b>' + komma(br.cijfer) + '</b>' + (br.open ? ' (voorlopig, ' + br.open + ' open)' : '') + ' · ' + getal(br.score) + ' van de ' + getal(br.max) + ' punten · ' +
+        (Array.isArray(r.k) ? meer(r.k.length, 'vraag', 'vragen') + ' van de ' + u.items.length + ' gekregen · ' : '') +
         (r.papier ? 'op papier ingevoerd ' : 'ingeleverd ') + new Date(r.t).toLocaleString('nl-NL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</p>' +
       '<div class="soortscore">' + Object.keys(soort).map(function(v){ var s = soort[v], p = s[1] ? s[0] / s[1] : 0; return '<div><span>' + VORMNAAM[v] + '</span><span class="pbalk"><i style="width:' + Math.round(p * 100) + '%"></i></span><b>' + Math.round(p * 100) + '%</b></div>'; }).join('') + '</div>' +
       '<div class="nklijst">' + u.items.map(function(it, i){
+        if (!gesteld(r, i)) return '';
         return '<div class="nkrij' + (telt(i) ? '' : ' uit') + '"><div><b>' + (i + 1) + '. ' + schoon(vraagVan(it)) + '</b><p>' + schoon(antwoordTekst(it, r.a[i], r)) + '</p>' +
           (u.juist[i] ? '<small class="tip">Goed: ' + schoon(u.juist[i]) + '</small>' : '') + '</div>' + oordeelKnoppen(r, i) + '</div>';
       }).join('') + '</div>' +
@@ -332,6 +346,7 @@ var UITSLAG = (function(){
     else if (k.hasAttribute('data-nkvraag')) startNakijk({ per: 'vraag', i: Number(g('data-nkvraag')), alleenOpen: !k.hasAttribute('data-alle') });
     else if (k.hasAttribute('data-klas')){ var w = g('data-klas'); klasFilter = w === '*' ? null : w; alleRijen = false; teken(); }
     else if (k.id === 'alleRijen'){ alleRijen = true; teken(); }
+    else if (k.id === 'alleVragen'){ alleVragen = true; teken(); }
     else if (k.hasAttribute('data-leerling')){ leerling = g('data-leerling'); tekenTabel(zichtbaar()); tekenLeerling(true); }
     else if (k.hasAttribute('data-llstap')){
       var l = zichtbaar(), i = l.map(function(x){ return x.sid; }).indexOf(leerling) + Number(g('data-llstap'));
@@ -421,16 +436,17 @@ var UITSLAG = (function(){
   /* de rij antwoorden om langs te gaan; wat je nakijkt blijft erin staan, zodat Vorige werkt */
   function nkRij(){
     var rijen = zichtbaar();
-    if (nk.per === 'vraag') nk.rij = rijen.filter(function(r){ return !nk.alleenOpen || NAKIJK.waarde(r.rij, nk.i) == null; }).map(function(r){ return { sid: r.sid, i: nk.i }; });
+    if (nk.per === 'vraag') nk.rij = rijen.filter(function(r){ return gesteld(r.rij, nk.i) && (!nk.alleenOpen || NAKIJK.waarde(r.rij, nk.i) == null); }).map(function(r){ return { sid: r.sid, i: nk.i }; });
     else {
       var r = rijVan(nk.sid);
-      nk.rij = r ? u.items.map(function(it, i){ return i; }).filter(function(i){ return !nk.alleenOpen || NAKIJK.waarde(r, i) == null; }).map(function(i){ return { sid: r.sid, i: i }; }) : [];
+      nk.rij = r ? u.items.map(function(it, i){ return i; }).filter(function(i){ return gesteld(r, i) && (!nk.alleenOpen || NAKIJK.waarde(r, i) == null); }).map(function(i){ return { sid: r.sid, i: i }; }) : [];
     }
     nk.pos = 0;
   }
   function nkLijst(){
     var rijen = zichtbaar();
-    if (nk.per === 'vraag') return an.filter(function(a){ return !nk.alleenOpen || (a.telt && openIn(a.i, rijen)) || a.i === nk.i; }).map(function(a){
+    var trek = trekAan();
+    if (nk.per === 'vraag') return an.filter(function(a){ return a.i === nk.i || (nk.alleenOpen ? a.telt && openIn(a.i, rijen) : !trek || a.kreeg); }).map(function(a){
       var it = u.items[a.i], n = openIn(a.i, rijen), aan = a.i === nk.i;
       return '<li><button type="button" class="nkvraag' + (aan ? ' aan' : '') + '" data-nkkies="v:' + a.i + '"' + (aan ? ' aria-current="true"' : '') + '><i>' + (a.i + 1) + '</i>' +
         '<span class="nkvtekst"><b>' + schoon(PAPIER.kort(it)) + '</b><small>' + VORMNAAM[soortVan(it)].toLowerCase() + ' · ' + meer(ptn(it), 'punt', 'punten') + '</small></span>' +
@@ -470,7 +486,7 @@ var UITSLAG = (function(){
     /* hetzelfde antwoord bij anderen: wat nog open staat, en wat je eerder gaf */
     var mijn = gelijkVan(it, r, i), zelfde = [], eerder = {};
     if (mijn != null) u.rijen.forEach(function(x){
-      if (x === r || x.papier || (klasFilter !== null && x.klas !== klasFilter) || gelijkVan(it, x, i) !== mijn) return;
+      if (x === r || x.papier || !gesteld(x, i) || (klasFilter !== null && x.klas !== klasFilter) || gelijkVan(it, x, i) !== mijn) return;
       /* alleen wat nog helemaal open staat gaat mee; een automatisch nagekeken antwoord niet */
       var hx = x.h && x.h[i];
       if (hx !== undefined && hx !== null) eerder[hx] = (eerder[hx] || 0) + 1;
@@ -518,7 +534,7 @@ var UITSLAG = (function(){
     var mee = [];
     if (zelfdeAan && waarde !== null && $('nkZelfde')){
       var mijn = gelijkVan(it, r, e.i);
-      u.rijen.forEach(function(x){ if (x !== r && !x.papier && (klasFilter === null || x.klas === klasFilter) && gelijkVan(it, x, e.i) === mijn && NAKIJK.waarde(x, e.i) == null) mee.push(x.sid); });
+      u.rijen.forEach(function(x){ if (x !== r && !x.papier && gesteld(x, e.i) && (klasFilter === null || x.klas === klasFilter) && gelijkVan(it, x, e.i) === mijn && NAKIJK.waarde(x, e.i) == null) mee.push(x.sid); });
     }
     /* de anderen eerst lokaal, dan een keer tekenen */
     mee.forEach(function(sid){ var x = rijVan(sid); x.h = x.h || {}; x.h[e.i] = waarde; });
@@ -560,7 +576,8 @@ var UITSLAG = (function(){
   var inv = null;
   function startInvoer(sid){
     var r = sid ? rijVan(sid) : null;
-    inv = r ? { sid: r.sid, naam: r.naam, klas: r.klas || '', versie: r.versie || 'A', w: {} } : { sid: null, naam: '', klas: inv ? inv.klas : '', versie: inv ? inv.versie : 'A', w: {} };
+    inv = r ? { sid: r.sid, naam: r.naam, klas: r.klas || '', versie: r.versie || 'A', w: {}, oudVersie: r.versie || 'A', oudK: Array.isArray(r.k) ? r.k : null }
+            : { sid: null, naam: '', klas: inv ? inv.klas : '', versie: inv ? inv.versie : 'A', w: {} };
     if (r) Object.keys(r.h || {}).forEach(function(i){ var x = r.h[i]; if (x != null) inv.w[i] = getal(x * ptn(u.items[i])); });
     toon('papiervak');
     $('papierNaam').textContent = u.naam;
@@ -585,8 +602,11 @@ var UITSLAG = (function(){
       '<aside class="paneel pvlijst" aria-labelledby="pvLijstKop" id="pvLijst"></aside></div>';
     pvTekenVragen(); pvTekenLijst();
   }
+  /* Met trek: de vragen van die versie. Een bestaande papieren toets van dezelfde versie houdt
+     de vragen die hij had (net als de server). */
+  function pvK(){ return inv.sid && inv.versie === inv.oudVersie ? inv.oudK : PAPIER.getrokken(code, inv.versie, u.items.length, u.trek); }
   function pvTekenVragen(){
-    var orde = PAPIER.volgorde(u.items, code, inv.versie);
+    var orde = PAPIER.volgorde(u.items, code, inv.versie, pvK());
     $('pvVragen').innerHTML = orde.map(function(i, k){
       var it = u.items[i], p = ptn(it);
       return '<li><span class="pvnr">' + (k + 1) + '</span><label for="pv-' + i + '" class="pvvraag"><b>' + schoon(PAPIER.kort(it)) + '</b><small>' + VORMNAAM[soortVan(it)] + (orde[k] !== k ? ' · in de site vraag ' + (i + 1) : '') + (telt(i) ? '' : ' · telt niet mee') + '</small></label>' +
@@ -657,10 +677,11 @@ var UITSLAG = (function(){
       var r = rijVan(j.sid);
       if (!r){ r = { sid: j.sid, t: Date.now(), a: [], pogingen: 1, papier: true }; u.rijen.push(r); }
       Object.assign(r, { naam: naam, klas: klas, versie: inv.versie, h: j.h || h, p: u.items.map(function(){ return null; }) });
+      delete r._k; if (j.k) r.k = j.k; else delete r.k;
       u.rijen.sort(function(x, y){ return x.naam.localeCompare(y.naam, 'nl'); });
       b = NAKIJK.bereken(u); an = NAKIJK.analyse(u, b);
       var br = b.rijen.filter(function(x){ return x.sid === j.sid; })[0];
-      var klaar = 'Bewaard: ' + naam + ' (versie ' + inv.versie + '), ' + getal(br.score) + ' van ' + getal(b.max) + ' punten' + (br.open ? ', ' + br.open + ' open' : ', cijfer ' + komma(br.cijfer)) + '.';
+      var klaar = 'Bewaard: ' + naam + ' (versie ' + inv.versie + '), ' + getal(br.score) + ' van ' + getal(br.max) + ' punten' + (br.open ? ', ' + br.open + ' open' : ', cijfer ' + komma(br.cijfer)) + '.';
       inv = { sid: null, naam: '', klas: klas, versie: inv.versie, w: {} };
       pvTeken(); melding($('pvMelding'), klaar, 'goed'); $('pvNaam').focus();
     }).catch(function(f){
@@ -673,7 +694,7 @@ var UITSLAG = (function(){
     var l = b.rijen.filter(function(r){ return r.rij.papier; });
     $('pvLijst').innerHTML = '<h3 class="kopje" id="pvLijstKop">Op papier ingevoerd · ' + l.length + '</h3>' +
       (l.length ? '<ul class="pvrijen">' + l.map(function(r){
-        return '<li' + (inv && inv.sid === r.sid ? ' class="aan"' : '') + '><span><b>' + schoon(r.naam) + '</b><small>' + schoon(r.klas || 'zonder klas') + ' · versie ' + schoon(r.rij.versie || 'A') + ' · ' + getal(r.score) + ' / ' + getal(b.max) + (r.open ? ' · ' + r.open + ' open' : ' · ' + komma(r.cijfer)) + '</small></span>' +
+        return '<li' + (inv && inv.sid === r.sid ? ' class="aan"' : '') + '><span><b>' + schoon(r.naam) + '</b><small>' + schoon(r.klas || 'zonder klas') + ' · versie ' + schoon(r.rij.versie || 'A') + ' · ' + getal(r.score) + ' / ' + getal(r.max) + (r.open ? ' · ' + r.open + ' open' : ' · ' + komma(r.cijfer)) + '</small></span>' +
           '<button class="knop stil klein" type="button" data-pvbewerk="' + schoon(r.sid) + '">Bewerken</button><button class="knop gevaar klein" type="button" data-pvwis="' + schoon(r.sid) + '" aria-label="' + schoon(r.naam) + ' weghalen">Weghalen</button></li>';
       }).join('') + '</ul>' : '<p class="tip">Nog niemand. Wie je bewaart, komt hier te staan en telt meteen mee in de cijfers.</p>') +
       '<button class="knop stil pvklaar" type="button" data-naarresultaten>Klaar: naar de resultaten</button>';
@@ -684,7 +705,7 @@ var UITSLAG = (function(){
     var cel = function(x){ x = String(x == null ? '' : x); return /[;"\n]/.test(x) ? '"' + x.replace(/"/g, '""') + '"' : x; };
     var kop = ['Naam', 'Klas', 'Punten', 'Max', 'Procent', 'Cijfer', 'Voorlopig', 'Papier'].concat(u.items.map(function(it, i){ return 'V' + (i + 1); }));
     var regels = [kop.join(sep)].concat(rijen.map(function(r){
-      return [r.naam, r.klas, komma(r.score, 2), b.max, r.pct, komma(r.cijfer), r.open ? 'ja' : '', r.rij.papier ? 'versie ' + (r.rij.versie || 'A') : ''].concat(u.items.map(function(it, i){ var w = NAKIJK.waarde(r.rij, i); return w == null ? '' : komma(w * ptn(it), 2); })).map(cel).join(sep);
+      return [r.naam, r.klas, komma(r.score, 2), r.max, r.pct, komma(r.cijfer), r.open ? 'ja' : '', r.rij.papier ? 'versie ' + (r.rij.versie || 'A') : ''].concat(u.items.map(function(it, i){ var w = NAKIJK.waarde(r.rij, i); return w == null ? '' : komma(w * ptn(it), 2); })).map(cel).join(sep);
     }));
     var blob = new Blob(['﻿' + regels.join('\r\n')], { type: 'text/csv;charset=utf-8' });
     var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = (u.naam || 'uitslag').replace(/[^\w\- ]+/g, '') + '.csv';

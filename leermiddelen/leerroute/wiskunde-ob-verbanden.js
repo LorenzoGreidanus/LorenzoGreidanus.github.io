@@ -545,6 +545,44 @@
               K(R, 'Heen doe je eerst ' + KEER + ' ' + aT + ' en dan + ' + bT + '. Wat doe je bij terugrekenen eerst?', MIN + ' ' + bT, [': ' + aT], 'Terug begin je aan het eind: de laatste stap was + ' + bT + '. Het omgekeerde is ' + MIN + ' ' + bT + '.'),
               S(geldT(y0) + ' ' + MIN + ' ' + bT + ' =', [geldT(mid), mid], 'Haal ' + bT + ' eraf.'),
               S('Het omgekeerde van ' + KEER + ' ' + aT + ' is : ' + aT + '. ' + geldT(mid) + ' : ' + aT + ' =', x0, 'Deel ' + geldT(mid) + ' door ' + aT + '. Controle: ' + aT + ' ' + KEER + ' ' + x0 + ' + ' + bT + ' = ' + geldT(y0) + '.', F(x0, rnd(y0 / a, 2), 'Je deelde voordat je ' + bT + ' eraf haalde. Eerst ' + MIN + ' ' + bT + '.')) ] };
+          } },
+        { id:'wob-v-fo-patroon', naam:'Een formule bij een patroon', kort:'Tel hoeveel er per figuur bijkomt, reken terug naar figuur 0 en schrijf L = erbij × n + figuur 0',
+          uit:'<p>Bij een <b>patroon</b> wordt elke figuur een stukje groter. Je maakt er een formule bij in drie stappen.</p><p>1. <b>Tel</b> de lucifers in figuur 1, 2 en 3, bijvoorbeeld 4, 7 en 10.</p><p>2. Kijk wat er <b>steeds bijkomt</b>: 3. Dat getal komt bij de n: <b>3n</b>.</p><p>3. Reken <b>terug</b> naar figuur 0: 4 ' + MIN + ' 3 = 1. Dat is het losse getal. De formule is <b>L = 3n + 1</b>.</p><p>Controleer met figuur 3: 3 ' + KEER + ' 3 + 1 = 10. Klopt.</p>',
+          wanneer:'je bij een rij figuren wilt uitrekenen hoeveel je nodig hebt voor een grote figuur.',
+          maak:function(R){
+            var h = Math.sqrt(3) / 2;
+            var PAT = [
+              { naam:'vierkantjes in een rij', seg:function(n){ var l = []; for (var i = 0; i < n; i++) l.push([i, 0, i + 1, 0], [i, 1, i + 1, 1], [i, 0, i, 1], [i + 1, 0, i + 1, 1]); return l; }, br:function(n){ return n; }, ho:1 },
+              { naam:'driehoekjes in een rij', seg:function(n){ var l = []; for (var i = 0; i < n; i++){ var j = Math.floor(i / 2); if (i % 2 === 0) l.push([j, 0, j + 1, 0], [j, 0, j + 0.5, h], [j + 1, 0, j + 0.5, h]); else l.push([j + 0.5, h, j + 1.5, h], [j + 0.5, h, j + 1, 0], [j + 1.5, h, j + 1, 0]); } return l; }, br:function(n){ return Math.floor((n + 1) / 2) + (n % 2 ? 0 : 0.5); }, ho:h },
+              { naam:'huisjes in een rij', seg:function(n){ var l = []; for (var i = 0; i < n; i++) l.push([i, 0, i + 1, 0], [i, 1, i + 1, 1], [i, 0, i, 1], [i + 1, 0, i + 1, 1], [i, 1, i + 0.5, 1 + h], [i + 1, 1, i + 0.5, 1 + h]); return l; }, br:function(n){ return n; }, ho:1 + h },
+              { naam:'drie rijen vierkantjes', seg:function(n){ var l = []; for (var i = 0; i < n; i++) for (var r = 0; r < 3; r++) l.push([i, r, i + 1, r], [i, r + 1, i + 1, r + 1], [i, r, i, r + 1], [i + 1, r, i + 1, r + 1]); return l; }, br:function(n){ return n; }, ho:3 },
+              { naam:'losse vierkantjes', seg:function(n){ var l = []; for (var i = 0; i < n; i++){ var x = i * 1.5; l.push([x, 0, x + 1, 0], [x, 1, x + 1, 1], [x, 0, x, 1], [x + 1, 0, x + 1, 1]); } return l; }, br:function(n){ return n * 1.5 - 0.5; }, ho:1 },
+              { naam:'losse driehoekjes', seg:function(n){ var l = []; for (var i = 0; i < n; i++){ var x = i * 1.5; l.push([x, 0, x + 1, 0], [x, 0, x + 0.5, h], [x + 1, 0, x + 0.5, h]); } return l; }, br:function(n){ return n * 1.5 - 0.5; }, ho:h },
+              { naam:'twee rijen vierkantjes', seg:function(n){ var l = []; for (var i = 0; i < n; i++) for (var r = 0; r < 2; r++) l.push([i, r, i + 1, r], [i, r + 1, i + 1, r + 1], [i, r, i, r + 1], [i + 1, r, i + 1, r + 1]); return l; }, br:function(n){ return n; }, ho:2 } ];
+            var P = R.kies(PAT), s0 = R.kies([1, 2]), NR = [s0, s0 + 1, s0 + 2];
+            function uniekSeg(l){ var z = {}; l.forEach(function(s){ var p = [n1(s[0]) + ',' + n1(s[1]), n1(s[2]) + ',' + n1(s[3])].sort().join('|'); z[p] = s; }); return Object.keys(z).map(function(k){ return z[k]; }); }
+            var tel = NR.map(function(n){ return uniekSeg(P.seg(n)).length; }), a = tel[1] - tel[0], b = tel[0] - s0 * a;
+            var form = 'L = ' + E([[a, 'n'], [b, '']]), chk = formL('L', linQ('n', a, b));
+            function pl(){
+              var u = 40, gap = 1.3, x = 0.6, s = '', hoMax = 0, stuk = [];
+              NR.forEach(function(n){ var ho = typeof P.ho === 'function' ? P.ho(n) : P.ho; hoMax = Math.max(hoMax, ho); stuk.push({ n:n, x:x }); x += P.br(n) + gap; });
+              var W = x * u, H = (hoMax + 1.6) * u, yb = (hoMax + 0.5) * u;
+              stuk.forEach(function(f){
+                uniekSeg(P.seg(f.n)).forEach(function(sg){
+                  var x1 = (f.x + sg[0]) * u, y1 = yb - sg[1] * u, x2 = (f.x + sg[2]) * u, y2 = yb - sg[3] * u, dx = (x2 - x1) * 0.12, dy = (y2 - y1) * 0.12;
+                  s += ln(x1 + dx, y1 + dy, x2 - dx, y2 - dy, { k:'var(--lr-4)', w:4 }) + cirkel(x2 - dx, y2 - dy, 3, 'var(--lr-2)');
+                });
+                s += tx((f.x + P.br(f.n) / 2) * u, yb + 0.9 * u, 'figuur ' + f.n, { m:'klein', a:'middle', vet:true });
+              });
+              return svg(W, H, s, 'figuur ' + NR.join(', ').replace(/, (\d)$/, ' en $1') + ' van een patroon met lucifers: ' + P.naam, Math.min(600, W * 1.3));
+            }
+            return { vraag:'Formule bij het patroon?', context:'Hier zie je figuur ' + NR.join(', ').replace(/, (\d)$/, ' en $1') + ' van een patroon met lucifers (' + P.naam + '). L is het aantal lucifers in figuur n. Maak een formule, zoals L = 6n + 2.', antwoord:form, controle:chk, invoer:'tekst',
+              beeld:pl, zelfBeeld:pl(), stappen:[
+                S('Hoeveel lucifers heeft figuur ' + NR[0] + '?', tel[0], 'Tel elke lucifer in de eerste figuur één keer.'),
+                S('En figuur ' + NR[1] + '?', tel[1], 'Tel de lucifers in de tweede figuur. Een lucifer die twee vakjes deelt, tel je één keer.'),
+                S('Hoeveel lucifers komen er steeds bij? ' + tel[1] + ' ' + MIN + ' ' + tel[0] + ' =', a, 'Figuur ' + NR[2] + ' heeft er ' + tel[2] + ': ook daar komen er ' + a + ' bij.', F(a, tel[1], 'Dat is figuur 2 zelf. Reken uit wat erbij komt.')),
+                S(s0 === 1 ? 'Reken terug naar figuur 0: ' + tel[0] + ' ' + MIN + ' ' + a + ' =' : 'Reken terug naar figuur 0. Dat is ' + s0 + ' figuren terug: ' + tel[0] + ' ' + MIN + ' ' + s0 + ' ' + KEER + ' ' + a + ' =', b, 'Elke figuur terug gaan er ' + a + ' af.', F(b, tel[0] + a, 'Terug naar figuur 0 is eraf, niet erbij.', s0 > 1 ? tel[0] - a : null, 'Dat is figuur ' + (s0 - 1) + '. Ga nog verder terug, naar figuur 0.')),
+                SC('De formule: L =', form, chk, 'Wat erbij komt hoort bij de n, figuur 0 is het losse getal: ' + form + '. Controle met figuur ' + NR[2] + ': ' + a + ' ' + KEER + ' ' + NR[2] + ' + ' + b + ' = ' + tel[2] + '.', F(form, 'L = ' + E([[b, 'n'], [a, '']]), 'Je draaide ze om. Wat erbij komt, staat bij de n.', 'L = ' + E([[a, 'n'], [tel[0], '']]), 'Het losse getal is figuur 0, niet figuur ' + s0 + '.')) ] };
           } }
       ] },
 
@@ -647,6 +685,49 @@
               K(R, 'Het hellingsgetal is ' + T(a) + '. Stijgt of daalt de lijn?', a > 0 ? 'stijgt' : 'daalt', [], a > 0 ? 'Een positief hellingsgetal: de lijn gaat omhoog.' : 'Een negatief hellingsgetal: de lijn gaat omlaag.', { orde:['stijgt', 'daalt'] }),
               S('Ga vanaf (0, ' + T(b) + ') ' + dx + ' naar rechts. Dan ga je ' + (a > 0 ? T(a * dx) + ' omhoog' : T(-a * dx) + ' omlaag') + '. Bij welke y kom je uit? ' + T(b) + ' + ' + paren(a * dx) + ' =', y1, T(b) + ' + ' + paren(a * dx) + ' = ' + T(y1) + '. De lijn gaat dus ook door (' + dx + ', ' + T(y1) + ').'),
               K(R, 'Welke grafiek gaat door (0, ' + T(b) + ') en door (' + dx + ', ' + T(y1) + ')?', lt[goed], [], 'Zoek de lijn die de y-as snijdt bij ' + T(b) + ' en ook door (' + dx + ', ' + T(y1) + ') gaat: dat is ' + lt[goed] + '.', { orde:lt }) ] };
+          } },
+        { id:'wob-v-lin-teken', naam:'Een lijn tekenen bij een formule', kort:'Maak een tabel met drie x-waarden, zet de punten in het assenstelsel en trek er een rechte lijn door',
+          uit:'<p>Bij y = 2x ' + MIN + ' 1 teken je de grafiek in drie stappen.</p><p>1. Maak een <b>tabel</b>. Kies een paar x-waarden, bijvoorbeeld ' + MIN + '2, 0 en 2, en reken y uit. Bij x = 2 is y = 2 ' + KEER + ' 2 ' + MIN + ' 1 = 3.</p><p>2. Zet de punten <b>(' + MIN + '2, ' + MIN + '5)</b>, <b>(0, ' + MIN + '1)</b> en <b>(2, 3)</b> in het assenstelsel.</p><p>3. Trek met je liniaal een <b>rechte lijn</b> door de punten, tot aan de rand van het rooster.</p><p>Twee punten zijn genoeg voor een lijn. Het derde punt is je <b>controle</b>: ligt het niet op de lijn, dan heb je ergens verkeerd gerekend.</p>',
+          wanneer:'je bij een formule zelf de grafiek moet tekenen, bijvoorbeeld op een werkblad met een leeg assenstelsel.',
+          maak:function(R){
+            var a, b, xs = [-2, 0, 2], ys;
+            do { a = R.kies([-3, -2, -1, 1, 2, 3, 0.5, -0.5, 1.5]); b = R.heel(-3, 3); ys = xs.map(function(x){ return a * x + b; }); } while (ys.some(function(y){ return Math.abs(y) > 6; }));
+            var kx = R.hussel([-3, -1, 1, 3, -4, 4]).filter(function(x){ var y = a * x + b; return Math.abs(y) <= 6 && Math.abs(y % 1) < 1e-9; })[0], ky = a * kx + b;
+            var fout = [punt(kx, ky + 1), punt(kx, ky - 1), b - a * kx !== ky ? punt(kx, b - a * kx) : punt(kx + 1, ky)];
+            var f = 'y = ' + E([[a, 'x'], [b, '']]);
+            function pl(n){
+              var rij = ['y'].concat(xs.map(function(x, i){ return n > i ? T(ys[i]) : ''; })), pts = [];
+              xs.forEach(function(x, i){ if (n > i) pts.push({ x:x, y:ys[i], k:1 }); });
+              if (n >= 4) pts.push({ x:kx, y:ky, k:3, label:punt(kx, ky), links:kx > 0 });
+              return stapel(tabel([['x'].concat(xs.map(T)), rij]), assen({ xmin:-6, xmax:6, ymin:-6, ymax:6, max:420, lijnen:n >= 4 ? [{ a:a, b:b, k:0 }] : [], punten:pts, aria:n >= 4 ? 'de lijn ' + f : 'een leeg assenstelsel' }));
+            }
+            var st = xs.map(function(x, i){
+              var fo = x !== 0 ? F(ys[i], a * -x + b, 'Let op het teken: x is hier ' + T(x) + '.', b ? a * x : null, 'Vergeet het losse getal ' + T(b) + ' niet.') : F(ys[i], a, 'Bij x = 0 is ' + T(a) + ' ' + KEER + ' 0 = 0. Alleen het losse getal blijft over.');
+              return S('Vul de tabel in. Bij x = ' + T(x) + ': y = ' + invul(a, b, x) + ' =', ys[i], 'Eerst keer, dan ' + (b < 0 ? 'min' : 'plus') + ': ' + invul(a, b, x) + ' = ' + T(ys[i]) + '.', fo);
+            });
+            st.push(K(R, 'Zet de punten ' + xs.map(function(x, i){ return punt(x, ys[i]); }).join(', ').replace(/, ([^,(]*\([^)]*\))$/, ' en $1') + ' in het assenstelsel en trek er een rechte lijn door. Welk punt ligt ook op jouw lijn?', punt(kx, ky), fout,
+              'Volg je lijn tot x = ' + T(kx) + ' en lees y af. Narekenen kan ook: ' + invul(a, b, kx) + ' = ' + T(ky) + '.'));
+            var l = st[st.length - 1];
+            return { vraag:f, context:'Teken de grafiek bij deze formule in een assenstelsel. Maak eerst een tabel met x = ' + MIN + '2, 0 en 2.', opties:l.opties, goed:l.goed, beeld:pl, zelfBeeld:pl(0), stappen:st };
+          } },
+        { id:'wob-v-lin-evenredig', naam:'Recht evenredig', kort:'Recht evenredig: y : x is steeds hetzelfde getal. De grafiek is een rechte lijn door (0, 0)',
+          uit:'<p>Twee grootheden zijn <b>recht evenredig</b> als je bij twee keer zo veel van het een ook twee keer zo veel van het ander krijgt. Denk aan appels en de prijs: 2 kg kost twee keer zo veel als 1 kg.</p><p>In een tabel zie je het zo: deel steeds y door x. Komt er <b>steeds hetzelfde getal</b> uit, dan is het recht evenredig. De formule is dan <b>y = a ' + KEER + ' x</b>, zonder startgetal.</p><p>De grafiek is een rechte lijn <b>door de oorsprong (0, 0)</b>. Een taxi met instaptarief is wel lineair, maar niet recht evenredig: de lijn begint niet bij 0.</p>',
+          wanneer:'je wilt weten of twee dingen in dezelfde verhouding groeien.',
+          maak:function(R){
+            var C = R.kies([
+              { xk:'gewicht (kg)', yk:'prijs (€)', xs:[1, 2, 4, 5], ev:true, ks:[1.5, 2, 2.5, 3, 3.5, 4], b:0, t:'De tabel laat zien wat appels op de markt kosten.' },
+              { xk:'tijd (uur)', yk:'afstand (km)', xs:[1, 2, 3, 5], ev:true, ks:[4, 5, 15, 18, 20], b:0, t:'Iemand fietst of wandelt steeds even snel. De tabel laat de afgelegde afstand zien.' },
+              { xk:'aantal pakken', yk:'aantal liter', xs:[2, 3, 5, 8], ev:true, ks:[1, 1.5, 2], b:0, t:'De tabel laat zien hoeveel liter melk er in een aantal pakken zit.' },
+              { xk:'afstand (km)', yk:'prijs (€)', xs:[1, 2, 4, 5], ev:false, ks:[2, 2.5, 3], b:R.kies([3, 4, 5]), t:'De tabel laat de prijs van een taxirit zien.' },
+              { xk:'aantal maanden', yk:'kosten (€)', xs:[1, 2, 4, 5], ev:false, ks:[15, 20, 25], b:R.kies([20, 30, 40]), t:'De tabel laat de kosten van een sportschool zien, met inschrijfgeld.' },
+              { xk:'zijde (cm)', yk:'oppervlakte (cm²)', xs:[1, 2, 4, 5], ev:false, kw:true, t:'De tabel laat de oppervlakte van vierkanten zien.' } ]);
+            var k = C.kw ? 1 : R.kies(C.ks), ys = C.xs.map(function(x){ return C.kw ? x * x : rnd(k * x + C.b, 2); });
+            var yT = /€/.test(C.yk) ? geldT : T, q0 = rnd(ys[0] / C.xs[0], 4), q3 = rnd(ys[3] / C.xs[3], 4), OPT = ['ja: recht evenredig', 'nee: niet recht evenredig'], goed = C.ev ? 0 : 1;
+            function tab(){ return tabel([[C.xk].concat(C.xs.map(T)), [C.yk].concat(ys.map(yT))]); }
+            return { vraag:'tabel ' + C.xs.join(' ') + ' | ' + ys.join(' '), vraagHtml:'Is het verband recht evenredig?', context:C.t + ' Deel y door x om het te controleren.', opties:OPT, goed:goed, beeld:tab, zelfBeeld:tab(), stappen:[
+              S('Deel in de eerste kolom y door x: ' + yT(ys[0]) + ' : ' + T(C.xs[0]) + ' =', q0, 'Reken ' + yT(ys[0]) + ' gedeeld door ' + T(C.xs[0]) + '.', F(q0, rnd(C.xs[0] / ys[0], 4), 'Andersom: y gedeeld door x.')),
+              S('En in de laatste kolom: ' + yT(ys[3]) + ' : ' + T(C.xs[3]) + ' =', q3, 'Reken ' + yT(ys[3]) + ' gedeeld door ' + T(C.xs[3]) + '.', F(q3, rnd(C.xs[3] / ys[3], 4), 'Andersom: y gedeeld door x.')),
+              K(R, 'Je vond ' + T(q0) + ' en ' + T(q3) + '. Is het verband recht evenredig?', OPT[goed], [], C.ev ? 'Steeds hetzelfde getal, ' + T(q0) + ': recht evenredig. De formule is y = ' + T(k) + ' ' + KEER + ' x.' : 'Er komt niet steeds hetzelfde uit, dus het is niet recht evenredig.' + (C.kw ? '' : ' Er zit een vast bedrag van € ' + geldT(C.b) + ' in, dus de lijn begint niet bij 0.'), { orde:OPT }) ] };
           } }
       ] },
 
@@ -808,6 +889,40 @@
               SC('De tweede verschillen: de verschillen tussen de eerste verschillen.', d2.map(T).join('; '), rijC(d2), 'Steeds rechts min links bij ' + d1.map(T).join(', ') + ': ' + d2.map(T).join(', ') + '.'),
               K(R, 'Eerste verschillen ' + d1.map(T).join(', ') + ', tweede verschillen ' + d2.map(T).join(', ') + '. Wat voor verband is het?', OPT[goed], [],
                 goed === 0 ? 'De eerste verschillen zijn allemaal gelijk: lineair.' : goed === 1 ? 'De eerste verschillen zijn niet gelijk, de tweede verschillen wel: kwadratisch.' : 'De eerste verschillen zijn niet gelijk en de tweede verschillen ook niet.', { orde:OPT }) ] };
+          } },
+        { id:'wob-v-kw-teken', naam:'Een parabool tekenen bij een formule', kort:'Maak een tabel rond de top, gebruik de symmetrie en verbind de punten met een vloeiende, ronde lijn',
+          uit:'<p>Bij een kwadratische formule hoort een <b>parabool</b>. Je tekent hem met een tabel.</p><p>1. Reken y uit voor vijf x-waarden rond de top. Bij y = x² ' + MIN + ' 3 neem je x = ' + MIN + '2 tot en met 2. Let op: (' + MIN + '2)² = 4, een kwadraat is nooit negatief.</p><p>2. De tabel is <b>symmetrisch</b>: links en rechts van de top staan dezelfde getallen. Bij x = 2 komt hetzelfde uit als bij x = ' + MIN + '2.</p><p>3. Zet de punten in het assenstelsel en verbind ze met een <b>vloeiende, ronde lijn</b>. Geen rechte stukken en geen punt bij de top: de top is rond.</p><p>Een plus voor x² geeft een <b>dalparabool</b>, een min een <b>bergparabool</b>.</p>',
+          wanneer:'je bij een kwadratische formule zelf de grafiek moet tekenen.',
+          maak:function(R){
+            var V = R.kies([{ a:1, b:0, c:R.heel(-4, 1), p:0 }, { a:-1, b:0, c:R.heel(-1, 4), p:0 }, { a:1, b:-2, c:R.heel(-3, 1), p:1 }, { a:-1, b:2, c:R.heel(-1, 3), p:1 }]);
+            var a = V.a, b = V.b, c = V.c, p = V.p, xs = [p - 2, p - 1, p, p + 1, p + 2];
+            function fy(x){ return a * x * x + b * x + c; }
+            var ys = xs.map(fy), f = 'y = ' + E([[a, 'x²'], [b, 'x'], [c, '']]), top = punt(p, ys[2]), dal = a > 0, OPT = ['dalparabool', 'bergparabool'];
+            function hint(x){ var k = x * x; return 'Eerst het kwadraat: ' + paren(x) + '² = ' + k + '.' + (a < 0 ? ' Er staat een min voor x², dus dat wordt ' + T(-k) + '.' : '') + ' Dan de rest: ' + kwSub(a, b, c, x) + ' = ' + T(fy(x)) + '.'; }
+            function fo(x){ return x < 0 ? F(fy(x), a * -(x * x) + b * x + c, 'Een negatief getal in het kwadraat wordt positief: ' + paren(x) + '² = ' + (x * x) + '.') : F(fy(x), a * 2 * x + b * x + c, 'x² is x keer x, niet x keer 2.'); }
+            function pl(n){
+              var vul = [0, 1, 2, 3, 4].map(function(i){ return n > i; }), pts = [];
+              xs.forEach(function(x, i){ if (vul[i]) pts.push({ x:x, y:ys[i], k:1 }); });
+              var rij = ['y'].concat(ys.map(function(y, i){ return vul[i] ? T(y) : ''; }));
+              return stapel(tabel([['x'].concat(xs.map(T)), rij]), assen({ xmin:-4, xmax:4, ymin:-6, ymax:6, max:400, punten:pts, aria:n >= 7 ? 'de parabool ' + f : 'een leeg assenstelsel',
+                teken:function(X, Y){
+                  if (n < 7) return '';
+                  var d = '', x;
+                  for (x = -4; x <= 4.0001; x += 0.05){ var y = fy(x); if (y < -6.2 || y > 6.2) continue; d += (d ? ' L' : 'M') + n1(X(x)) + ' ' + n1(Y(y)); }
+                  return '<path d="' + d + '" style="fill:none;stroke:var(--lr-1);stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round"/>';
+                } }));
+            }
+            var st = [
+              S('Vul de tabel in. Bij x = ' + T(xs[0]) + ': y = ' + kwSub(a, b, c, xs[0]) + ' =', ys[0], hint(xs[0]), fo(xs[0])),
+              S('Bij x = ' + T(xs[1]) + ': y = ' + kwSub(a, b, c, xs[1]) + ' =', ys[1], hint(xs[1]), fo(xs[1])),
+              S('Bij x = ' + T(xs[2]) + ': y = ' + kwSub(a, b, c, xs[2]) + ' =', ys[2], hint(xs[2]), fo(xs[2])),
+              S('De tabel is symmetrisch rond x = ' + p + '. Bij x = ' + T(xs[3]) + ' komt hetzelfde uit als bij x = ' + T(xs[1]) + '. Dus y =', ys[3], 'Kijk in de tabel bij x = ' + T(xs[1]) + ': daar staat ' + T(ys[1]) + '. Narekenen: ' + kwSub(a, b, c, xs[3]) + ' = ' + T(ys[3]) + '.'),
+              S('En bij x = ' + T(xs[4]) + ' komt hetzelfde uit als bij x = ' + T(xs[0]) + '. Dus y =', ys[4], 'Kijk in de tabel bij x = ' + T(xs[0]) + ': daar staat ' + T(ys[0]) + '.'),
+              K(R, 'Er staat ' + (dal ? 'een plus' : 'een min') + ' voor x². Wat voor parabool wordt het?', OPT[dal ? 0 : 1], [], dal ? 'Plus voor x²: een dalparabool, met de top onderaan.' : 'Min voor x²: een bergparabool, met de top bovenaan.', { orde:OPT }),
+              K(R, 'Zet de vijf punten in het assenstelsel en verbind ze met een vloeiende, ronde lijn. Welk punt is de top van jouw parabool?', top, [punt(p, ys[1]), punt(p + 1, ys[2]), ys[2] ? punt(p, -ys[2]) : punt(p, ys[2] + 2)],
+                'De top is het ' + (dal ? 'laagste' : 'hoogste') + ' punt, in het midden van de tabel: bij x = ' + p + ' is y = ' + T(ys[2]) + '.') ];
+            var l = st[st.length - 1];
+            return { vraag:f, context:'Teken de grafiek bij deze formule in een assenstelsel. Maak eerst een tabel met x = ' + xs.map(T).join(', ').replace(/, ([^,]*)$/, ' en $1') + '.', opties:l.opties, goed:l.goed, beeld:pl, zelfBeeld:pl(0), stappen:st };
           } }
       ] },
 
