@@ -130,7 +130,7 @@ var OPENVRAAG = (function(){
     if (RIJTJE.test(v) && GAT.test(v)) uit.opdr = 'Vul de ontbrekende vorm in.';
     else if (GAT.test(v) && !heeftOpdracht && !/\?/.test(v)) uit.opdr = haakjesWoord(v) ? 'Vul de goede vorm in.' : 'Vul het ontbrekende woord in.';
     else if (EINDGAT.test(v) && !/\?/.test(v) && !heeftOpdracht) uit.opdr = 'Maak de zin af.';
-    else if (!/\?/.test(v) && !/:\s*\S/.test(v) && !heeftOpdracht && !/\d/.test(v)) uit.opdr = 'Schrijf het antwoord op de lijn.';
+    else if (!/\?/.test(v) && !/:\s*\S/.test(v) && !heeftOpdracht && !/\d/.test(v)) uit.opdr = 'Schrijf het antwoord op.';
     return uit;
   }
   function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
@@ -140,7 +140,7 @@ var OPENVRAAG = (function(){
   function uitleg(vormen){
     var soorten = {}; vormen.forEach(function(p){ soorten[p.soort] = true; });
     if (!soorten.open && !soorten.kies && !soorten.omcirkel) return '';
-    return 'Schrijf je antwoord op de lijn.' + (soorten.kies ? ' Staat er Kies uit, kies dan een woord uit dat rijtje en schrijf het op de lijn.' : '') + (soorten.omcirkel ? ' Staan er keuzes met letters, omcirkel dan de letter van het goede antwoord.' : '');
+    return (soorten.open ? 'Schrijf je antwoord in het vak of op de lijn.' : 'Schrijf je antwoord op de lijn.') + (soorten.kies ? ' Staat er Kies uit, kies dan een woord uit dat rijtje en schrijf het op de lijn.' : '') + (soorten.omcirkel ? ' Staan er keuzes met letters, omcirkel dan de letter van het goede antwoord.' : '');
   }
   return { vorm:vorm, schrijfOp:schrijfOp, kiesUit:kiesUit, uitleg:uitleg };
 })();

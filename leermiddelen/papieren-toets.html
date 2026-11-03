@@ -16,6 +16,7 @@
 <link rel="icon" href="/icoon-donker-192.png" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M52.3 10 C76.2 12.1 91.9 30.6 89.4 52.8 C86.5 76.5 71.1 93.3 48.1 90.6 C24.3 87.8 6.7 71.4 11.1 47.8 C15.5 24.3 29.2 8.1 52.3 10Z' fill='%23204ECF'/><g transform='translate(50 51) scale(2.2) translate(-12 -12)' fill='none' stroke='%23FBF6F1' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'><path d='M6 4.5h8l4 4v11H6z'/><path d='M14 4.5v4h4'/><path d='M9.5 12h5M9.5 16h5'/></g></svg>">
 <link rel="stylesheet" href="eigen.css">
+<link rel="stylesheet" href="open-papier.css">
 <style>
 /* ---------- het scherm: kiezen wat je print ---------- */
 .terugknop{display:inline-flex;align-items:center;gap:6px;min-height:44px;color:var(--link);font-weight:600;text-decoration:none;padding:0 8px 0 4px;border-radius:10px}
@@ -31,6 +32,8 @@
 .seg input:checked + span{background:var(--kaart);border-color:var(--rand2);box-shadow:0 1px 3px rgba(20,34,76,.15);font-weight:600}
 .seg input:focus-visible + span{outline:3px solid var(--focusring);outline-offset:2px}
 .vinken{display:flex;flex-wrap:wrap;gap:0 22px}
+.seg.seg4{max-width:560px;flex-wrap:wrap}
+.seg.seg4 label{flex:1 1 110px}
 .printkeus .knop{min-width:150px}
 .printtip{grid-column:1 / -1;max-width:72ch}
 .letop{grid-column:1 / -1;background:color-mix(in srgb,var(--amber) 16%,transparent);border:1px solid color-mix(in srgb,var(--amber) 60%,transparent);border-radius:12px;padding:10px 14px;font-size:.9rem}
@@ -169,6 +172,16 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
           <label class="vink"><input type="checkbox" id="metModel" checked> Met nakijkmodel</label>
           <label class="vink"><input type="checkbox" id="alleenModel"> Alleen het nakijkmodel</label>
         </div>
+        <div class="hide" id="hulpVeld">
+          <p class="kopje" id="hulpKop">Hulp bij open vragen</p>
+          <div class="seg seg4" role="radiogroup" aria-labelledby="hulpKop">
+            <label><input type="radio" name="hulp" value="geen" checked><span>Geen</span></label>
+            <label><input type="radio" name="hulp" value="letter"><span>Eerste letter</span></label>
+            <label><input type="radio" name="hulp" value="hokjes"><span>Letterhokjes</span></label>
+            <label><input type="radio" name="hulp" value="bank"><span>Woordbank</span></label>
+          </div>
+          <label class="vink" id="alleenBVeld"><input type="checkbox" id="alleenB"> Alleen op versie B; versie A blijft zonder hulp</label>
+        </div>
       </div>
       <button class="knop" id="print" type="button">Printen</button>
       <p class="letop hide" id="letop" role="note"></p>
@@ -185,6 +198,7 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
 <script src="nagekeken.js"></script>
 <script src="eigen.js"></script>
 <script src="topo-eigen.js"></script>
+<script src="open-papier.js"></script>
 <script src="papier.js"></script>
 <script>
 (function(){
@@ -200,14 +214,18 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
   function teken(){
     var ab = document.querySelector('input[name="versies"]:checked').value === 'AB', alleen = $('alleenModel').checked, model = alleen || $('metModel').checked;
     $('metModel').disabled = alleen;
+    /* hulp bij open vragen: alleen op versie B kan pas als B ook geprint wordt */
+    var hulp = document.querySelector('input[name="hulp"]:checked').value;
+    $('alleenBVeld').classList.toggle('hide', !ab || hulp === 'geen');
+    var o = { hulp:hulp, alleenB:ab && $('alleenB').checked };
     var versies = ab ? ['A', 'B'] : ['A'], h = '';
-    if (!alleen) versies.forEach(function(v){ h += PAPIER.toets(m, code, v); });
+    if (!alleen) versies.forEach(function(v){ h += PAPIER.toets(m, code, v, o); });
     if (model) versies.forEach(function(v){ h += PAPIER.model(m, code, v); });
     $('bladen').innerHTML = h;
     document.title = (m.naam || 'Toets') + (alleen ? ' · nakijkmodel' : ab ? ' · versie A en B' : ' · versie A');
     $('print').textContent = alleen ? 'Nakijkmodel printen' : 'Printen';
   }
-  [].forEach.call(document.querySelectorAll('input[name="versies"], #metModel, #alleenModel'), function(el){ el.addEventListener('change', teken); });
+  [].forEach.call(document.querySelectorAll('input[name="versies"], input[name="hulp"], #metModel, #alleenModel, #alleenB'), function(el){ el.addEventListener('change', teken); });
   $('print').addEventListener('click', function(){ window.print(); });
 
   if (!/^[A-Z0-9]{6}$/.test(code)){ melding('Open deze pagina vanuit Mijn materiaal, met de knop Op papier bij een toets.', 'fout'); return; }
@@ -224,6 +242,8 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
     /* elke leerling een deel van de vragen: op papier heeft elke versie zijn eigen deel */
     if (PAPIER.getrokken(code, 'A', m.items.length, m.trek)) letop.push('Elke versie heeft ' + m.trek + ' van de ' + m.items.length + ' vragen, willekeurig gekozen; versie A en B hebben elk een eigen deel. Kies bij het invoeren van de punten dezelfde versie als op het blad.');
     if (letop.length){ $('letop').textContent = letop.join(' '); $('letop').classList.remove('hide'); }
+    /* de hulpkeuze alleen als er open vragen met een goed antwoord zijn */
+    $('hulpVeld').classList.toggle('hide', !m.items.some(function(it){ return it.vorm === 'open' && (it.antwoorden || []).length; }));
     var klaar = function(){ melding(''); $('keuzes').classList.remove('hide'); teken(); };
     if (topo && window.TOPO) TOPO.laad(klaar); else klaar();
   }).catch(function(f){ melding((f && f.message) || 'Ophalen lukte niet.', 'fout'); });

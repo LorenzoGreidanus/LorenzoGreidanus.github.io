@@ -4,7 +4,7 @@
      PAPIER.volgorde(items, code, versie, k) -> de echte nummers (0, 1, ...) in de volgorde van die versie;
                                                met k (bij trek) alleen die vragen
      PAPIER.getrokken(code, versie, n, trek) -> bij trek de vragen van die versie, op volgorde (of null: alle)
-     PAPIER.toets(m, code, versie)          -> het blad om te printen (html)
+     PAPIER.toets(m, code, versie, o)       -> het blad om te printen (html); o: { hulp, alleenB }
      PAPIER.model(m, code, versie)          -> het nakijkmodel van die versie (html)
      PAPIER.kort(it)                        -> de vraag in een regel, voor lijsten
 
@@ -151,7 +151,7 @@ var PAPIER = (function(){
   function wat(it){ var m = window.KAARTEN && KAARTEN[it.kaart]; return m && m.soort === 'gemengd' && it.wat ? ' (' + schoon(it.wat) + ')' : ''; }
   function opKaart(kn, it){ return kn.n > 1 ? ' op kaart ' + kn.per[it.kaart].volgnr : ' op de kaart'; }
   /* wat een vraag op papier is, en het antwoord in het nakijkmodel */
-  function vraag(it, code, versie, kn){
+  function vraag(it, code, versie, kn, hulp){
     var z = zaadVan(code, it), v = it.vorm, h = '', ant = '';
     var beeld = it.afb && v !== 'aanwijzen' ? '<div class="beeld"><img alt="" src="' + schoon(afbAdres(code, it.afb)) + '"></div>' : '';
     var tekst = '<span class="vr">' + schoon(it.vraag) + '</span>';
@@ -160,8 +160,9 @@ var PAPIER = (function(){
       h = tekst + beeld + '<div class="opties">' + o.map(function(w, i){ return '<span><b>' + LETTERS[i] + '</b>' + schoon(w) + '</span>'; }).join('') + '</div>';
       ant = LETTERS[o.indexOf(it.goed)] + ': ' + schoon(it.goed);
     } else if (v === 'open'){
-      var n = (it.punten || 1) >= 4 ? 5 : (it.punten || 1) >= 2 ? 3 : 2;
-      h = tekst + beeld + regels(n);
+      /* de ruimte past bij het antwoord: een vak, een regel of een regel per punt (open-papier.js) */
+      h = window.OPENPAPIER ? OPENPAPIER.open(it, { kop:'<span class="vr">' + OPENPAPIER.vraagHtml(it.vraag) + '</span>', beeld:beeld, hulp:hulp })
+        : tekst + beeld + regels((it.punten || 1) >= 4 ? 5 : (it.punten || 1) >= 2 ? 3 : 2);
       ant = (it.antwoorden || []).length ? (it.antwoorden || []).map(schoon).join(' <i>of</i> ') : '<i>Geen antwoord opgegeven: zelf beoordelen.</i>';
     } else if (v === 'koppel'){
       var rechts = perVersie(it.paren.map(function(p){ return p.b; }), z, versie);
@@ -218,14 +219,42 @@ var PAPIER = (function(){
   function puntenVan(items){ return items.reduce(function(a, it){ return a + (it.punten || 1); }, 0); }
   function pt(n){ return n + (n === 1 ? ' punt' : ' punten'); }
 
-  /* ---------- het blad ---------- */
-  function toets(m, code, versie){
+  /* ---------- woordjes als tabel ----------
+     Vier of meer woordvragen achter elkaar, in dezelfde stijl, worden een tabel met de opdracht
+     er een keer boven. Ze houden hun eigen nummer, dus het invoeren van de punten blijft gelijk. */
+  var TABEL_VANAF = 4;
+  function zelfdeSoort(a, b){ var x = OPENPAPIER.woord(a.vraag), y = OPENPAPIER.woord(b.vraag); return x.stijl === y.stijl && x.naar === y.naar; }
+  function tabelStukken(items, orde){
+    var uit = [], k = 0;
+    while (k < orde.length){
+      var j = k;
+      if (window.OPENPAPIER && OPENPAPIER.kanTabel(items[orde[k]]))
+        while (j + 1 < orde.length && OPENPAPIER.kanTabel(items[orde[j + 1]]) && zelfdeSoort(items[orde[k]], items[orde[j + 1]])) j++;
+      uit.push(j - k + 1 >= TABEL_VANAF ? { tabel:orde.slice(k, j + 1) } : { i:orde[k] });
+      k = j - k + 1 >= TABEL_VANAF ? j + 1 : k + 1;
+    }
+    return uit;
+  }
+  /* de woordbank: de antwoorden van de tabel en een woord dat niet op het blad staat, door elkaar */
+  function woordbank(items, orde, stuk, zaad){
+    var l = stuk.map(function(i){ return items[i].antwoorden[0]; }), op = {};
+    orde.forEach(function(i){ op[i] = 1; });
+    var over = items.map(function(it, i){ return i; }).filter(function(i){ return !op[i] && OPENPAPIER.kanTabel(items[i]) && l.indexOf(items[i].antwoorden[0]) < 0; });
+    if (over.length) l.push(items[schud(over, zaad + '|extra')[0]].antwoorden[0]);
+    return schud(l, zaad);
+  }
+
+  /* ---------- het blad ----------
+     o.hulp: geen, letter, hokjes of bank (open-papier.js); o.alleenB: versie A zonder hulp */
+  function hulpVan(o, versie){ o = o || {}; return !o.hulp || o.hulp === 'geen' || (o.alleenB && versie !== 'B') ? 'geen' : o.hulp; }
+  function toets(m, code, versie, o){
     var items = m.items || [], orde = volgorde(items, code, versie, getrokken(code, versie, items.length, m.trek)), kn = kaartNummers(items, orde, code, versie), getekend = {};
-    var op = orde.map(function(i){ return items[i]; });
+    var op = orde.map(function(i){ return items[i]; }), hulp = hulpVan(o, versie);
     var heeftMk = op.some(function(it){ return it.vorm === 'mk' || (it.vorm === 'topo' && it.wijze === 'kies'); });
     var li = [];
-    orde.forEach(function(i, k){
-      var it = items[i];
+    tabelStukken(items, orde).forEach(function(st, k){
+      if (st.tabel){ li.push(OPENPAPIER.tabel(st.tabel.map(function(i){ return items[i]; }), hulp, hulp === 'bank' ? woordbank(items, orde, st.tabel, code + '|bank|' + versie + '|' + k) : null)); return; }
+      var i = st.i, it = items[i];
       /* de kaart staat een keer, boven de eerste vraag erover */
       if (it.vorm === 'topo' && !getekend[it.kaart]){
         getekend[it.kaart] = true;
@@ -237,11 +266,11 @@ var PAPIER = (function(){
           li.push('<li class="kaartblok"><span class="odkop">' + (kn.n > 1 ? 'Kaart ' + kaart.volgnr + ': ' : 'Kaart: ') + schoon(km.naam) + ', bij ' + welke + '</span>' + kaartSvg(km, mee) + '</li>');
         }
       }
-      var x = vraag(it, code, versie, kn);
+      var x = vraag(it, code, versie, kn, hulp);
       li.push('<li><span class="ptvak"><i></i>/ ' + (it.punten || 1) + '</span>' + x.html + '</li>');
     });
     return '<article class="blad toetsblad" data-versie="' + versie + '" aria-label="Toets, versie ' + versie + '">' +
-      '<div class="bkop"><div class="bkoptekst"><h2>' + schoon(m.naam) + '</h2><p class="sub">' + op.length + (op.length === 1 ? ' vraag' : ' vragen') + ' · ' + pt(puntenVan(op)) + '</p></div>' +
+      '<div class="bkop"><div class="bkoptekst"><h2>' + schoon(m.naam) + '</h2><p class="sub">' + op.length + (op.length === 1 ? ' vraag' : ' vragen') + ' · ' + pt(puntenVan(op)) + (hulp !== 'geen' ? ' · met hulp' : '') + '</p></div>' +
         '<div class="bkoprechts"><span class="versiemerk" aria-label="Versie ' + versie + '"><small>versie</small>' + versie + '</span><span class="cijfervak"><small>cijfer</small></span></div></div>' +
       '<div class="invul"><span>Naam</span><span></span><span>Klas</span><span></span><span>Datum</span><span></span></div>' +
       '<p class="bladintro">' + (heeftMk ? 'Omcirkel bij meerkeuze de letter van het goede antwoord. ' : '') + 'Rechts naast elke vraag staat hoeveel punten hij waard is.</p>' +
@@ -257,8 +286,10 @@ var PAPIER = (function(){
     return '<article class="blad modelblad" data-versie="' + versie + '" aria-label="Nakijkmodel, versie ' + versie + '">' +
       '<div class="bkop"><div class="bkoptekst"><h2>Nakijkmodel: ' + schoon(m.naam) + '</h2><p class="sub">Versie ' + versie + ' · ' + pt(puntenVan(op)) + '</p></div>' + stempel + '</div>' +
       (deels ? '<p class="bladintro">Bij koppelen, volgorde, groepen, gatenteksten en aanwijzen telt elk goed deel even zwaar, net als in de site.</p>' : '') +
-      '<ol class="pv antw">' + orde.map(function(i){
-        var it = items[i], x = vraag(it, code, versie, kn);
+      '<ol class="pv antw">' + tabelStukken(items, orde).map(function(st){
+        /* woordjes die op het blad een tabel zijn, staan hier ook zo: woord en antwoord */
+        if (st.tabel) return OPENPAPIER.modelTabel(st.tabel.map(function(i){ return items[i]; }), function(it){ return vraag(it, code, versie, kn).ant; });
+        var i = st.i, it = items[i], x = vraag(it, code, versie, kn);
         return '<li><span class="ptvak">' + pt(it.punten || 1) + '</span><span class="vr">' + schoon(kort(it)) + (anders ? ' <small class="echt">in de site vraag ' + (i + 1) + '</small>' : '') + '</span>' +
           '<span class="goed">' + x.ant + '</span>' + (it.uitleg ? '<small>' + schoon(it.uitleg) + '</small>' : '') + '</li>';
       }).join('') + '</ol>' +

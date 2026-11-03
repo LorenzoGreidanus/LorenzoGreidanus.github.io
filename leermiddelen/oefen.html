@@ -116,6 +116,7 @@
 <script src="profiel.js"></script>
 <script src="klas.js"></script>
 <script src="eigen.js"></script>
+<script src="open-papier.js"></script>
 <script src="voorbeeldtoetsen.js"></script>
 <script src="topo-eigen.js"></script>
 <script>
@@ -258,7 +259,9 @@
     var it = oef.items[nr];
     $('teller').textContent = 'Vraag ' + (nr + 1) + ' van ' + oef.items.length + (it.punten > 1 ? ' · ' + it.punten + ' punten' : '');
     $('balk').style.width = (nr / oef.items.length * 100) + '%';
-    $('vraagtekst').textContent = it.vraag || '';
+    /* een woordvraag zet het woord in de kijker (open-papier.js) */
+    if (it.vorm === 'open') $('vraagtekst').innerHTML = OPENPAPIER.vraagHtml(it.vraag || '');
+    else $('vraagtekst').textContent = it.vraag || '';
     $('hoe').textContent = (it.vorm === 'topo' ? TOPOHOE[it.wijze] : HOE[it.vorm]) || '';
     $('terug').className = 'terug hide'; $('terug').innerHTML = '';
     $('veld').innerHTML = '';
@@ -435,7 +438,8 @@
         } };
     },
     open: function(it, veld, veranderd){
-      veld.innerHTML = '<form class="open" autocomplete="off"><label class="sronly" for="openIn">Je antwoord</label>' +
+      /* het begin van het antwoord staat er al; de leerling typt de rest */
+      veld.innerHTML = (it.begin ? '<p class="ow-begin">' + schoon(it.begin) + ' …</p>' : '') + '<form class="open" autocomplete="off"><label class="sronly" for="openIn">' + (it.begin ? 'Maak de zin af' : 'Je antwoord') + '</label>' +
         (it.antwoorden && !it.antwoorden.length || !it.antwoorden ? '<textarea class="veld" id="openIn" maxlength="400" rows="4" spellcheck="true"></textarea>' : '<input class="veld" id="openIn" maxlength="200" spellcheck="false">') + '</form>';
       var inp = veld.querySelector('#openIn');
       inp.addEventListener('input', veranderd);

@@ -539,7 +539,15 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
           <details class="woordplak" id="woordPlak" style="margin-top:10px">
             <summary style="min-height:44px;display:flex;align-items:center;cursor:pointer;font-weight:600">Woordjes plakken als open vragen</summary>
             <p class="tip">Een woord per regel: <i>braces = beugel</i>, of twee kolommen uit Excel. Meer goede antwoorden met een schuine streep: <i>spot / pimple = puistje</i>. Wat tussen haakjes staat mag erbij of weg: <i>(een) beetje</i> keurt <i>een beetje</i> en <i>beetje</i> goed.</p>
-            <label class="veldnaam"><span>De vraag bij elk woord</span><input class="veld" id="wpVraag" maxlength="120" value="Vertaal:"></label>
+            <label class="veldnaam"><span>Zo stel je de vraag</span><select class="veld" id="wpStijl">
+              <option value="betekent">Wat betekent braces?</option>
+              <option value="vertaal">Vertaal: braces</option>
+              <option value="groot">Woord groot</option>
+              <option value="zin">In een zin</option>
+              <option value="eigen">Eigen tekst</option>
+            </select></label>
+            <p class="tip hide" id="wpZinTip">Zet de zin achter een streep: <i>braces = beugel | She wears braces on her teeth.</i> Een woord zonder zin krijgt <i>Wat betekent braces?</i></p>
+            <label class="veldnaam hide" id="wpEigen"><span>De tekst voor elk woord</span><input class="veld" id="wpVraag" maxlength="120" value="Vertaal:"></label>
             <label class="vink" style="margin-top:6px"><input type="checkbox" id="wpOm"> Andersom: vraag het rechterwoord, het linkerwoord is het antwoord</label>
             <textarea class="veld" id="wpTekst" rows="7" placeholder="braces = beugel&#10;to describe = omschrijven&#10;slightly = (een) beetje"></textarea>
             <div class="rij" style="margin-top:8px"><button class="knop stil klein" id="wpZet" type="button">Zet erbij</button><span class="tip" id="wpUit" role="status" aria-live="polite"></span></div>
@@ -691,6 +699,7 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
 <script src="maken-kiezer.js"></script>
 <script src="voorbeeldtoetsen.js"></script>
 <script src="nakijk.js"></script>
+<script src="open-papier.js"></script>
 <script src="papier.js"></script>
 <script src="uitslag.js"></script>
 <script src="topo-eigen.js"></script>
@@ -1121,8 +1130,9 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
       vulLijst({ naam:naam, vak:vak, kopA:q.get('a') || '', kopB:q.get('b') || '', paren:paren }); open('lijst');
       melding($('plakUit'), paren.length + ' woorden staan klaar. Kijk ze na en bewaar de lijst.', 'goed');
     } else if (soort === 'toets'){
-      var kop = q.get('vraag') || 'Vertaal:';
-      var items = woordRegels(tekst).slice(0, 300).map(function(p){ return { vorm:'open', vraag:kop + ' ' + p.a, antwoorden:woordVarianten(p.b), punten:1, uitleg:p.a + ' = ' + p.b }; });
+      /* &vraag=Tekst: die tekst voor elk woord; anders &stijl= (open-papier.js), standaard Wat betekent ...? */
+      var kop = q.get('vraag'), stijl = q.get('stijl') || 'betekent';
+      var items = woordRegels(tekst).slice(0, 300).map(function(p){ return { vorm:'open', vraag:kop ? kop + ' ' + p.a : woordVraag(stijl, p.a, p.zin, false, vak), antwoorden:woordVarianten(p.b), punten:1, uitleg:p.a + ' = ' + p.b }; });
       plaatjesCode = ''; vulOef({ naam:naam, vak:vak, modus:'toets', items:items, trek:trek }); open('oefening');
       melding($('uitSiteMelding'), items.length + ' vragen staan klaar. Kijk ze na en bewaar de toets.', 'goed');
     } else if (soort === 'items') importVragen(tekst, naam, vak, trek);
@@ -1300,23 +1310,35 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
     });
     return uit.slice(0, 8);
   }
+  /* een zin bij het woord mag erachter, na een streep (of in een derde kolom uit Excel) */
   function woordRegels(tekst){
     return String(tekst || '').split(/\r?\n/).map(function(r){
       /* een regel met # ervoor is een kopje of een opmerking */
       r = r.trim(); if (!r || r.charAt(0) === '#') return null;
-      var d = r.indexOf('\t') >= 0 ? r.split('\t') : r.split(/\s+=\s+|\s*=\s*/);
+      var zin = '', d;
+      if (r.indexOf('\t') >= 0){ d = r.split('\t'); zin = (d[2] || '').trim(); d = d.slice(0, 2); }
+      else { var st = r.split(/\s+\|\s+|\s*\|\s*/); r = st[0]; zin = st.slice(1).join(' ').trim(); d = r.split(/\s+=\s+|\s*=\s*/); }
       if (d.length < 2) return null;
       var a = d[0].trim(), b = d.slice(1).join(' ').trim();
-      return a && b ? { a:a, b:b } : null;
+      return a && b ? { a:a, b:b, zin:zin } : null;
     }).filter(Boolean);
   }
+  /* De woordvraag in de gekozen stijl (open-papier.js). Andersom vraagt hoe je het Nederlandse
+     woord zegt in de andere taal; die taal kennen we alleen bij Engels, anders wordt het Vertaal:. */
+  function woordVraag(stijl, woord, zin, om, vak){
+    var naar = om ? (vak === 'eng' ? 'Engels' : '') : 'Nederlands';
+    if (om && !naar) return 'Vertaal: ' + woord;
+    return OPENPAPIER.maakVraag(stijl, woord, { naar:naar, zin:om ? '' : zin });
+  }
+  function toonWpStijl(){ $('wpEigen').classList.toggle('hide', $('wpStijl').value !== 'eigen'); $('wpZinTip').classList.toggle('hide', $('wpStijl').value !== 'zin'); }
+  $('wpStijl').addEventListener('change', toonWpStijl);
   $('wpZet').addEventListener('click', function(){
-    var paren = woordRegels($('wpTekst').value), om = $('wpOm').checked, kop = $('wpVraag').value.replace(/\s+/g, ' ').trim();
+    var paren = woordRegels($('wpTekst').value), om = $('wpOm').checked, stijl = $('wpStijl').value, kop = $('wpVraag').value.replace(/\s+/g, ' ').trim();
     var ruimte = Math.max(0, 300 - $('items').children.length);
     if (!paren.length){ melding($('wpUit'), 'Zet een woord per regel, zoals braces = beugel.', 'fout'); return; }
     var items = paren.slice(0, ruimte).map(function(p){
       var vraag = om ? p.b : p.a, ant = om ? p.a : p.b;
-      return { vorm:'open', vraag:(kop ? kop + ' ' : '') + vraag, antwoorden:woordVarianten(ant), punten:1, uitleg:vraag + ' = ' + ant };
+      return { vorm:'open', vraag:stijl === 'eigen' ? (kop ? kop + ' ' : '') + vraag : woordVraag(stijl, vraag, p.zin, om, $('vak').value), antwoorden:woordVarianten(ant), punten:1, uitleg:vraag + ' = ' + ant };
     });
     if (!items.length){ melding($('wpUit'), 'Er past niets meer bij: een toets heeft hoogstens 300 vragen.', 'fout'); return; }
     var eerst = $('items').children.length;
@@ -1326,7 +1348,7 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
     melding($('wpUit'), (items.length === 1 ? 'Een vraag' : items.length + ' vragen') + ' erbij gezet' + (paren.length > items.length ? '; ' + (paren.length - items.length) + ' pasten er niet meer bij (hoogstens 300)' : '') + '.', 'goed');
   });
   /* zo lang als de server bewaart (server/materiaal.js): langer typen verdwijnt anders stil bij het opslaan */
-  var MAX_VELD = { vraag:300, uitleg:300, goed:150, tekst:1200 };
+  var MAX_VELD = { vraag:300, uitleg:300, goed:150, tekst:1200, begin:80 };
   function veld(naam, waarde, plek, lang){
     var max = MAX_VELD[naam] ? ' maxlength="' + MAX_VELD[naam] + '"' : '';
     return lang ? '<textarea class="veld" data-v="' + naam + '" rows="3"' + max + ' placeholder="' + schoon(plek || '') + '">' + schoon(waarde || '') + '</textarea>'
@@ -1365,7 +1387,8 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
       h = label('De vraag', kortVak('vraag', x.vraag, 'bijv. Wat is de hoofdstad van Frankrijk?')) + antwoordenHtml(x);
     } else if (v === 'open'){
       h = label('De vraag', kortVak('vraag', x.vraag, 'bijv. In welk jaar viel de Berlijnse Muur?')) +
-          label('Goede antwoorden <span class="mag">een per regel; hoofdletters en spaties tellen niet. Leeg laten: je kijkt hem zelf na bij de resultaten.</span>', veld('antwoorden', (x.antwoorden || []).join('\n'), 'leeg: je kijkt hem zelf na', true));
+          label('Goede antwoorden <span class="mag">een per regel; hoofdletters en spaties tellen niet. Leeg laten: je kijkt hem zelf na bij de resultaten.</span>', veld('antwoorden', (x.antwoorden || []).join('\n'), 'leeg: je kijkt hem zelf na', true)) +
+          label('Begin van het antwoord <span class="mag">mag leeg; staat er al, op papier en op het scherm</span>', veld('begin', x.begin, 'bijv. Ze kwamen in opstand omdat'));
     } else if (v === 'koppel'){
       h = label('Opdracht', kortVak('vraag', x.vraag || 'Koppel wat bij elkaar hoort.', '')) +
           label('Paren <span class="mag">een per regel: links = rechts, twee tot tien</span>', veld('paren', (x.paren || []).map(function(p){ return p.a + ' = ' + p.b; }).join('\n'), 'hart = pompt het bloed rond\nlongen = gaswisseling', true));
@@ -1584,13 +1607,13 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
     var vak = it.querySelector('.voorbeeldvak'); if (!vak) return;
     var x = lees(it), v = x.vorm, h = '', leeg = '<span class="leegtekst">sleep hierheen</span>';
     var beeld = x.afbData || (x.afb ? afbAdres(x.afb) : '');
-    var kop = '<p class="vraagtekst">' + schoon(x.vraag || (v === 'topo' ? 'Kies eerst een plek.' : 'Hier komt de vraag.')) + '</p>';
+    var kop = '<p class="vraagtekst">' + (v === 'open' && x.vraag ? OPENPAPIER.vraagHtml(x.vraag) : schoon(x.vraag || (v === 'topo' ? 'Kies eerst een plek.' : 'Hier komt de vraag.'))) + '</p>';
     if (v !== 'aanwijzen' && beeld) kop += '<div class="vraagafb"><img alt="" src="' + schoon(beeld) + '"></div>';
     if (v === 'mk'){
       var o = [x.goed].concat(x.fout).filter(Boolean);
       h = o.length ? '<div class="keuzes">' + door(it, o).map(function(w){ return '<span class="keuze">' + schoon(w) + '</span>'; }).join('') + '</div>' : '<p class="tip">Hier komen de antwoorden, door elkaar.</p>';
     } else if (v === 'open'){
-      h = '<div class="open"><span class="veld nepveld">Typ je antwoord</span><span class="knop klein">Klaar</span></div>';
+      h = (x.begin ? '<p class="ow-begin">' + schoon(x.begin) + ' …</p>' : '') + '<div class="open"><span class="veld nepveld">Typ je antwoord</span><span class="knop klein">Klaar</span></div>';
     } else if (v === 'koppel'){
       h = tegels(door(it, x.paren.map(function(p){ return p.b; }))) + '<div class="koppels">' + x.paren.map(function(p){ return '<div class="koppel"><span class="links">' + schoon(p.a) + '</span><span class="plek">' + leeg + '</span></div>'; }).join('') + '</div>';
     } else if (v === 'volgorde'){
@@ -1658,7 +1681,7 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
       x.goed = g ? g.querySelector('input').value.trim() : '';
       x.fout = rijen.filter(function(r){ return r !== g; }).map(function(r){ return r.querySelector('input').value.trim(); }).filter(Boolean);
     }
-    if (v === 'open') x.antwoorden = regels(w('antwoorden'));
+    if (v === 'open'){ x.antwoorden = regels(w('antwoorden')); x.begin = w('begin').replace(/\s+/g, ' ').trim(); }
     if (v === 'koppel') x.paren = EIGEN.plakken(w('paren'));
     if (v === 'volgorde') x.stappen = regels(w('stappen'));
     if (v === 'groepen') x.groepen = regels(w('groepen')).map(function(r){ var i = r.indexOf(':'); return i < 0 ? null : { naam: r.slice(0, i).trim(), dingen: r.slice(i + 1).split(/[,;]/).map(function(y){ return y.trim(); }).filter(Boolean) }; }).filter(Boolean);

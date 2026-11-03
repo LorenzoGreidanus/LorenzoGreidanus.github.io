@@ -209,7 +209,9 @@ function item(x){
     case "open": {
       /* zonder goede antwoorden kijkt de docent hem met de hand na */
       const antwoorden = lijstVan(x.antwoorden, 8, 100);
-      return v ? met({ vorm: "open", vraag: v, antwoorden }) : null;
+      /* begin: het begin van het antwoord, dat er al staat (geen antwoord, dus de leerling mag het zien) */
+      const begin = t(x.begin, 80);
+      return v ? met(Object.assign({ vorm: "open", vraag: v, antwoorden }, begin ? { begin } : {})) : null;
     }
     case "koppel": {
       const paren = (Array.isArray(x.paren) ? x.paren : []).map(p => ({ a: t(p && p.a, 100), b: t(p && p.b, 100) })).filter(p => p.a && p.b).slice(0, 10);
@@ -255,6 +257,7 @@ function item(x){
 function verborgen(it){
   const b = { vorm: it.vorm, vraag: it.vraag, punten: it.punten, afb: it.afb || "" };
   switch (it.vorm){
+    case "open": if (it.begin) b.begin = it.begin; break;
     case "mk": b.opties = schud([it.goed].concat(it.fout)); break;
     case "koppel": b.links = it.paren.map(p => p.a); b.rechts = schud(it.paren.map(p => p.b)); break;
     case "volgorde": {
