@@ -837,6 +837,8 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
     var l = '<a role="menuitem" href="' + schoon(linkVan(m)) + '" target="_blank" rel="noopener">Uitproberen</a>' +
       '<button role="menuitem" type="button" data-kopie="' + schoon(linkVan(m)) + '">Link kopiëren</button>' +
       '<button role="menuitem" type="button" data-bord="' + c + '">Code op het bord</button>' +
+      '<button role="menuitem" type="button" data-dupl="' + c + '">Dupliceren</button>' +
+      (s === 'toets' ? '<button role="menuitem" type="button" data-oefentoets="' + c + '">Als oefentoets meegeven</button>' : '') +
       (s === 'dictee' ? '<a role="menuitem" href="klas.html?dictee=' + c + '">Als opdracht voor je klas</a>' : '') +
       (s === 'topo' ? '<a role="menuitem" href="' + werkbladTopo(c) + '">Werkblad</a><a role="menuitem" href="klas.html?topo=' + c + '">Als opdracht voor je klas</a>' : '') +
       (s === 'toets' || s === 'oefening' ? (window.NAKIJK && (info[m.code] || {}).open ? '<button role="menuitem" type="button" data-uitslag="' + c + '">Resultaten</button>' : '') +
@@ -915,6 +917,8 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
     if (g('data-werk')) laadVoorBewerken(g('data-werk'), b);
     if (g('data-topotoets')) laadVoorBewerken(g('data-topotoets'), b, function(){ $('tToets').scrollIntoView({ block: 'start' }); $('tMaakToets').focus({ preventScroll: true }); });
     if (g('data-kopie')) kopieer(adres(g('data-kopie')), $('lijstMelding'));
+    if (g('data-dupl')) dupliceer(g('data-dupl'), false);
+    if (g('data-oefentoets')) dupliceer(g('data-oefentoets'), true);
     if (g('data-bord')){ var m = mijnVan(g('data-bord')); if (m) toonBord(m.code, m.soort, m.naam); }
     if (weg){
       if (!confirm('"' + g('data-naam') + '" weghalen? Leerlingen kunnen het daarna niet meer openen, en alle inleveringen en je nakijkwerk zijn ook weg. Dit kan niet terug.')) return;
@@ -986,6 +990,40 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
     else if (a && a.mogelijk) $('accTip').innerHTML = 'Je materiaal staat nu in deze browser. <a href="' + PROFIEL.inlogAdres() + '">Log in met Microsoft</a>, dan heb je het op al je apparaten.';
   });
   tekenLijst();
+  /* Dupliceren: een nieuw stuk met een eigen code, met dezelfde vragen, instellingen en plaatjes.
+     Als oefentoets: dezelfde vragen als oefening (meteen nakijken, zo vaak als je wilt); de toets
+     zelf verandert niet. De plaatjes gaan opnieuw mee, want een plaatje hoort bij een code. */
+  function alsData(blob){ return new Promise(function(klaar, mis){ var f = new FileReader(); f.onload = function(){ klaar(f.result); }; f.onerror = mis; f.readAsDataURL(blob); }); }
+  function dupliceer(code, oefen){
+    menuDicht();
+    melding($('lijstMelding'), oefen ? 'Oefentoets maken…' : 'Kopie maken…');
+    var bron;
+    EIGEN.volledig(code).then(function(m){
+      bron = m;
+      var k = JSON.parse(JSON.stringify(m));
+      ['code', 'gemaakt', 'bijgewerkt', 'n', 'afbs', 'norm', 'neutraal'].forEach(function(x){ delete k[x]; });
+      k.naam = ((oefen ? 'Oefentoets: ' : 'Kopie van ') + (m.naam || '')).slice(0, 80);
+      if (oefen){ k.modus = 'oefenen'; delete k.terugzien; }
+      return Promise.all((k.items || []).map(function(it){
+        if (!it.afb) return null;
+        return fetch(EIGEN.afbAdres(code, it.afb)).then(function(r){ if (!r.ok) throw new Error('Een plaatje ophalen lukte niet.'); return r.blob(); })
+          .then(alsData).then(function(d){ it.afbData = d; delete it.afb; });
+      })).then(function(){ return bewaarMetPlaatjes(k); }).then(function(j){
+        /* een gewone kopie houdt ook de cijfernorm en de vragen die niet meetellen */
+        var na = !oefen && bron.soort === 'oefening' && bron.norm ? EIGEN.instel(j.code, { norm: bron.norm, neutraal: bron.neutraal || [] }).catch(function(){}) : null;
+        return Promise.resolve(na).then(function(){ return { j: j, k: k }; });
+      });
+    }).then(function(x){
+      var k = x.k, n = (k.items || k.paren || k.zinnen || k.plekken || []).length;
+      zetInfo(x.j.code, { modus: k.soort === 'oefening' ? (k.modus === 'toets' ? 'toets' : 'oefenen') : undefined, n: n, ingeleverd: 0, keer: 0, laatst: 0, open: 0, weg: false });
+      tab = 'alles'; $('zoek').value = ''; tekenLijst();
+      melding($('lijstMelding'), oefen
+        ? 'De oefentoets staat bij je materiaal als "' + k.naam + '", met de code ' + x.j.code + '. Leerlingen zien bij elke vraag meteen of het goed is en mogen hem zo vaak maken als ze willen. Je toets zelf blijft zoals hij was. Het zijn wel dezelfde vragen: geef de oefentoets dus alleen als dat de bedoeling is.'
+        : 'De kopie staat bij je materiaal als "' + k.naam + '", met de code ' + x.j.code + '. Pas hem aan met Bewerken; het origineel en de resultaten daarvan blijven zoals ze waren.', 'goed');
+      var el = $('stukken').querySelector('[data-f="' + x.j.code + ':hoofd"], [data-werk="' + x.j.code + '"]'); if (el) el.closest('.mrij').scrollIntoView({ block: 'center' });
+    }).catch(function(f){ melding($('lijstMelding'), ((f && f.message) || 'Kopiëren lukte niet.') + ' Probeer het opnieuw.', 'fout'); });
+  }
+
   /* de drie voorbeelden: bekijken als leerling, of een kopie in je eigen materiaal */
   function tekenVoorbeelden(){
     var l = Object.keys(window.VOORBEELDTOETSEN || {}).map(function(k){ return VOORBEELDTOETSEN[k]; });

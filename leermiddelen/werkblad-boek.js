@@ -327,10 +327,18 @@
   /* Voor Samenstellen (werkblad-samen.js): een opgave uit het boek als paar voor
      het werkblad en het antwoordblad, ook op een blad dat zelf niet uit het boek
      komt. Het li krijgt dan ob-blad, zodat de figuren hun kleuren houden. */
+  /* opgaven en leesteksten apart geteld */
+  function aantalTekst(items){
+    var t = items.filter(function(it){ return it.bl; }).length, o = items.length - t, uit = [];
+    if (o) uit.push(o + (o === 1 ? ' opgave' : ' opgaven'));
+    if (t) uit.push(t + (t === 1 ? ' leestekst' : ' leesteksten'));
+    return uit.join(' en ');
+  }
   window.BOEKBLAD = {
     laad:function(){ return laadBoek().then(stijlBoek); },
     paar:function(o, metStappen){
       stijlBoek();
+      if (o.soort === 'lezen'){ var bl = LEESBLAD.blad(o.prep, {}); return { v:'<li class="lb-li">' + bl.v + '</li>', a:'<li class="lb-li">' + bl.a + '</li>' }; }
       var it = { soort:o.soort, op:o.op, q:o.q };
       if (o.soort === 'bank'){ var volg = OPDRACHTENBOEK.schud(o.q.o.map(function(_, j){ return j; })); it.o = volg.map(function(j){ return o.q.o[j]; }); it.g = volg.indexOf(o.q.g); }
       return { v:'<li class="ob-wb ob-blad">' + opgaveHtml(it) + '</li>', a:'<li class="ob-blad">' + antwoordHtml(it, metStappen) + '</li>' };
@@ -341,6 +349,7 @@
     var vak = VAKKEN[wvak];
     window.SPELBLAD['boek-' + wvak] = {
       naam:'Opdrachtenboek', vak:wvak, eigenNiveau:true,
+      genoeg:function(items){ return items.some(function(it){ return it.bl; }); },
       aantallen:[4, 6, 8, 10, 12, 15, 20], standaard:6, aantalNaam:'Opgaven per paragraaf',
       delenKop:'Kies uit het boek',
       delenTip:'Zoals in een opdrachtenboek: thema, hoofdstuk en paragraaf. Elke paragraaf maakt nieuwe opgaven uit de leerroute, met uitleg en figuren.',
@@ -370,6 +379,8 @@
             var uit = k.uitleg ? B.uitleg(vak, id) : '';
             lijst.forEach(function(o, i){
               var it = { soort:o.soort, op:o.op, doel:o.doel, q:o.q, par:x, eerste:i === 0, vb:vb, uit:uit, keuze:k };
+              /* een leesblad: een hele tekst met zijn opdrachten, een keer opgemaakt voor het blad en de antwoorden */
+              if (o.soort === 'lezen') it.bl = LEESBLAD.blad(o.prep, {});
               /* een vraag uit de vragenbank: de keuzes een keer geschud, voor het blad en de antwoorden */
               if (o.soort === 'bank'){ var volg = B.schud(o.q.o.map(function(_, j){ return j; })); it.o = volg.map(function(j){ return o.q.o[j]; }); it.g = volg.indexOf(o.q.g); }
               items.push(it);
@@ -392,23 +403,26 @@
         var niv = []; pars.forEach(function(x){ x.p.niveau.split('/').forEach(function(n){ if (niv.indexOf(n) < 0) niv.push(n); }); });
         var titel = pars.length === 1 ? pars[0].p.naam : hfds.length === 1 ? hfds[0] : hfds.slice(0, 3).join(' · ') + (hfds.length > 3 ? ' en meer' : '');
         var kop = B.VAKNAAM[vak] + ' · ' + themas.join(' · ');
-        var sub = (pars.length === 1 ? pars[0].hoofdstuk.naam + ' · ' : '') + pars.length + (pars.length === 1 ? ' paragraaf' : ' paragrafen') + ' · ' + items.length + ' opgaven · ' + niv.join(', ');
+        var sub = (pars.length === 1 ? pars[0].hoofdstuk.naam + ' · ' : '') + pars.length + (pars.length === 1 ? ' paragraaf' : ' paragrafen') + ' · ' + aantalTekst(items) + ' · ' + niv.join(', ');
         var vragen = '', antwoorden = '';
         if (!k.mix){
           items.forEach(function(it){
             if (it.eerste){
-              vragen += parKop(it.par, k.uitleg, it.uit, it.vb);
+              /* een leesblad heeft zijn eigen kaartje met de aanpak */
+              vragen += parKop(it.par, k.uitleg && !it.bl, it.uit, it.vb);
               antwoorden += parKop(it.par, false);
             }
+            if (it.bl){ vragen += '<li class="lb-li">' + it.bl.v + '</li>'; antwoorden += '<li class="lb-li">' + it.bl.a + '</li>'; return; }
             vragen += '<li class="ob-wb">' + opgaveHtml(it) + '</li>';
             antwoorden += '<li>' + antwoordHtml(it, w.uitleg) + '</li>';
           });
         } else {
           /* door elkaar: eerst de uitleg van elke paragraaf, dan de opgaven met hun paragraaf erboven */
-          if (k.uitleg) pars.forEach(function(x){ var it = items.filter(function(y){ return y.par === x && y.eerste; })[0]; if (it) vragen += parKop(x, true, it.uit, it.vb); });
+          if (k.uitleg) pars.forEach(function(x){ var it = items.filter(function(y){ return y.par === x && y.eerste; })[0]; if (it && !it.bl) vragen += parKop(x, true, it.uit, it.vb); });
           if (k.uitleg) vragen += '<li class="ob-kop"><div class="ob-parkop"><h3>Opgaven door elkaar</h3></div></li>';
           items.forEach(function(it){
             var od = '<span class="odkop">' + it.par.nummer + ' ' + schoon(it.par.p.naam) + '</span>';
+            if (it.bl){ vragen += '<li class="lb-li">' + od + it.bl.v + '</li>'; antwoorden += '<li class="lb-li">' + od + it.bl.a + '</li>'; return; }
             vragen += '<li class="ob-wb">' + od + opgaveHtml(it) + '</li>';
             antwoorden += '<li>' + od + antwoordHtml(it, w.uitleg) + '</li>';
           });

@@ -14,6 +14,8 @@
      thema:      { naam, hoofdstukken:[ hoofdstuk, ... ] }
      hoofdstuk:  { naam, verdieping (mag weg), paragrafen:[ paragraaf, ... ] }
      paragraaf:  { id, naam, niveau, doelen:[doel-id, ...], bank:[{ t, zoek }] (mag weg), verdieping (mag weg) }
+                 of een leesblad: { id, naam, niveau, doelen:[], lezen:'zoekend' } met een hele tekst uit
+                 de leesbank (leesbank.js, leesteksten.js, leesblad.js); opgaven geeft dan { soort:'lezen', prep }
    Het id van een paragraaf staat in de link van een werkblad (deel=...): verander
    het dus niet als je de paragraaf verplaatst of er doelen bij zet. Het niveau
    is dat van de groepen in de leerroute (rekenen en Nederlands basis/1F/2F/3F;
@@ -449,7 +451,8 @@ window.OPDRACHTENBOEK = (function(){
           { id:"woord-synoniem", naam:"Synoniemen", niveau:"1F", doelen:["woord-synoniem"], bank:[{t:"synoniemen"}] },
           { id:"woord-antoniem", naam:"Tegenstellingen", niveau:"1F", doelen:["woord-antoniem"] },
           { id:"woord-gevoel", naam:"Gevoelswaarde: positief, neutraal of negatief", niveau:"1F", doelen:["woord-gevoel"] },
-          { id:"woord-veld", naam:"Woordvelden: het overkoepelende woord", niveau:"1F", doelen:["woord-veld"] }
+          { id:"woord-veld", naam:"Woordvelden: het overkoepelende woord", niveau:"1F", doelen:["woord-veld"] },
+          { id:"ls-woord", naam:"Woordbetekenis in een hele tekst", niveau:"1F/2F/3F", doelen:[], lezen:"woord" }
         ] },
         { naam:"Uitdrukkingen en schooltaal", paragrafen:[
           { id:"woord-uitdrukking", naam:"Uitdrukkingen en spreekwoorden", niveau:"2F", doelen:["woord-uitdrukking"], bank:[{t:"uitdrukkingen"}] },
@@ -481,10 +484,20 @@ window.OPDRACHTENBOEK = (function(){
         ] }
       ] },
       { naam:"Lezen", hoofdstukken:[
+        { naam:"Leesstrategieën", paragrafen:[
+          { id:"ls-verkennend", naam:"Verkennend lezen", niveau:"1F/2F/3F", doelen:[], lezen:"verkennend" },
+          { id:"ls-globaal", naam:"Globaal lezen", niveau:"1F/2F/3F", doelen:[], lezen:"globaal" },
+          { id:"ls-zoekend", naam:"Zoekend lezen", niveau:"1F/2F/3F", doelen:[], lezen:"zoekend" },
+          { id:"ls-nauwkeurig", naam:"Nauwkeurig lezen", niveau:"1F/2F/3F", doelen:[], lezen:"nauwkeurig" },
+          { id:"ls-kritisch", naam:"Kritisch lezen", niveau:"1F/2F/3F", doelen:[], lezen:"kritisch" },
+          { id:"ls-studerend", naam:"Studerend lezen", niveau:"1F/2F/3F", doelen:[], lezen:"studerend" }
+        ] },
         { naam:"De tekst als geheel", paragrafen:[
           { id:"lees-onderwerp", naam:"Het onderwerp", niveau:"1F", doelen:["lees-onderwerp"] },
           { id:"lees-hoofdgedachte", naam:"De hoofdgedachte", niveau:"1F", doelen:["lees-hoofdgedachte"] },
-          { id:"lees-strategie", naam:"Leesstrategieën", niveau:"1F", doelen:["lees-strategie"] }
+          { id:"lees-strategie", naam:"Leesstrategieën", niveau:"1F", doelen:["lees-strategie"] },
+          { id:"ls-onderwerp", naam:"Onderwerp en hoofdgedachte in een hele tekst", niveau:"1F/2F/3F", doelen:[], lezen:"onderwerp" },
+          { id:"ls-tussen", naam:"Tussen de regels lezen", niveau:"1F/2F/3F", doelen:[], lezen:"tussen" }
         ] },
         { naam:"Tekstdoelen en tekstsoorten", paragrafen:[
           { id:"lees-doel-informeren", naam:"Tekstdoel: informeren", niveau:"1F", doelen:["lees-doel-informeren"] },
@@ -494,12 +507,14 @@ window.OPDRACHTENBOEK = (function(){
           { id:"lees-doel-activeren", naam:"Tekstdoel: activeren", niveau:"1F", doelen:["lees-doel-activeren"] },
           { id:"lees-doel-mix", naam:"Tekstdoelen door elkaar", niveau:"1F", doelen:["lees-doel-mix"] },
           { id:"lees-soort", naam:"Tekstsoorten", niveau:"1F", doelen:["lees-soort"] },
-          { id:"lees-tsoort-boven", naam:"Uiteenzetting, beschouwing of betoog", niveau:"3F", doelen:["lees-tsoort-boven"] }
+          { id:"lees-tsoort-boven", naam:"Uiteenzetting, beschouwing of betoog", niveau:"3F", doelen:["lees-tsoort-boven"] },
+          { id:"ls-doel", naam:"Tekstdoel in een echte tekst", niveau:"1F/2F/3F", doelen:[], lezen:"doel" }
         ] },
         { naam:"Alinea's", paragrafen:[
           { id:"lees-kernzin", naam:"De kernzin van een alinea", niveau:"1F", doelen:["lees-kernzin"] },
           { id:"lees-functie", naam:"De functie van een alinea", niveau:"1F", doelen:["lees-functie"] },
-          { id:"lees-hoofdzaak", naam:"Hoofdzaak en bijzaak", niveau:"1F", doelen:["lees-hoofdzaak"] }
+          { id:"lees-hoofdzaak", naam:"Hoofdzaak en bijzaak", niveau:"1F", doelen:["lees-hoofdzaak"] },
+          { id:"ls-alinea", naam:"Alinea's in een hele tekst", niveau:"1F/2F/3F", doelen:[], lezen:"alinea" }
         ] },
         { naam:"Signaalwoorden en verbanden", paragrafen:[
           { id:"lees-signaal-opsomming", naam:"Opsomming", niveau:"1F", doelen:["lees-signaal-opsomming"] },
@@ -513,12 +528,14 @@ window.OPDRACHTENBOEK = (function(){
           { id:"lees-signaal-conclusie", naam:"Conclusie", niveau:"2F", doelen:["lees-signaal-conclusie"] },
           { id:"lees-signaal-vergelijking", naam:"Vergelijking", niveau:"2F", doelen:["lees-signaal-vergelijking"] },
           { id:"lees-signaal-welk", naam:"Welk verband?", niveau:"2F", doelen:["lees-signaal-welk"], bank:[{t:"tekstverbanden"}] },
-          { id:"lees-signaal-invullen", naam:"Het goede signaalwoord invullen", niveau:"2F", doelen:["lees-signaal-invullen"] }
+          { id:"lees-signaal-invullen", naam:"Het goede signaalwoord invullen", niveau:"2F", doelen:["lees-signaal-invullen"] },
+          { id:"ls-signaal", naam:"Verbanden in een hele tekst", niveau:"1F/2F/3F", doelen:[], lezen:"signaal" }
         ] },
         { naam:"Verwijswoorden", paragrafen:[
           { id:"lees-verwijs-persoon", naam:"Hij, zij, ze en het", niveau:"1F", doelen:["lees-verwijs-persoon"] },
           { id:"lees-verwijs-aanwijs", naam:"Die, dat, deze, dit en daar", niveau:"1F", doelen:["lees-verwijs-aanwijs"] },
-          { id:"lees-verwijs-kies", naam:"Het goede verwijswoord kiezen", niveau:"1F", doelen:["lees-verwijs-kies"], bank:[{t:"verwijswoorden"}] }
+          { id:"lees-verwijs-kies", naam:"Het goede verwijswoord kiezen", niveau:"1F", doelen:["lees-verwijs-kies"], bank:[{t:"verwijswoorden"}] },
+          { id:"ls-verwijs", naam:"Verwijswoorden in een hele tekst", niveau:"1F/2F/3F", doelen:[], lezen:"verwijs" }
         ] },
         { naam:"Tekststructuren", paragrafen:[
           { id:"lees-struct-probleem", naam:"Probleem en oplossing", niveau:"2F", doelen:["lees-struct-probleem"] },
@@ -533,7 +550,8 @@ window.OPDRACHTENBOEK = (function(){
           { id:"lees-feit-mening", naam:"Feit of mening", niveau:"2F", doelen:["lees-feit-mening"] },
           { id:"lees-standpunt", naam:"Standpunt en argument", niveau:"2F", doelen:["lees-standpunt"] },
           { id:"lees-arg-signaal", naam:"Signaalwoorden bij argumenten", niveau:"2F", doelen:["lees-arg-signaal"] },
-          { id:"lees-conclusie", naam:"Een conclusie trekken", niveau:"2F", doelen:["lees-conclusie"] }
+          { id:"lees-conclusie", naam:"Een conclusie trekken", niveau:"2F", doelen:["lees-conclusie"] },
+          { id:"ls-argument", naam:"Standpunt en argumenten in een tekst", niveau:"1F/2F/3F", doelen:[], lezen:"argument" }
         ] },
         { naam:"Argumentatie", paragrafen:[
           { id:"lees-arg-soort", naam:"Soorten argumenten", niveau:"3F", doelen:["lees-arg-soort"] },
@@ -555,7 +573,8 @@ window.OPDRACHTENBOEK = (function(){
         { naam:"Samenvatten", paragrafen:[
           { id:"lees-samen-schrap", naam:"Bijzaken schrappen", niveau:"3F", doelen:["lees-samen-schrap"] },
           { id:"lees-samen-alinea", naam:"Per alinea de kern", niveau:"3F", doelen:["lees-samen-alinea"] },
-          { id:"lees-samen-kies", naam:"De beste samenvatting kiezen", niveau:"3F", doelen:["lees-samen-kies"] }
+          { id:"lees-samen-kies", naam:"De beste samenvatting kiezen", niveau:"3F", doelen:["lees-samen-kies"] },
+          { id:"ls-samenvat", naam:"Een hele tekst samenvatten", niveau:"1F/2F/3F", doelen:[], lezen:"samenvat" }
         ] },
         { naam:"Zakelijke genres", paragrafen:[
           { id:"taal-genre-kenmerk", naam:"Kenmerken van een genre", niveau:"3F", doelen:["taal-genre-kenmerk"] },
@@ -1115,8 +1134,28 @@ window.OPDRACHTENBOEK = (function(){
     var lr = heeftAl(vak) ? Promise.resolve() : (window.LEERROUTE ? Promise.resolve() : script('leerroute.js?v=' + v)).then(function(){
       return (LEERROUTE.BESTANDEN[vak] || []).reduce(function(p, f){ return p.then(function(){ return script('leerroute/' + f + '.js?v=' + v); }); }, Promise.resolve());
     }).then(function(){ DOEL = {}; if (LEERROUTE._mixen) LEERROUTE._mixen(); });
-    bezig[vak] = Promise.all([lr, bank]).then(function(){}, function(e){ bezig[vak] = null; throw e; });
+    bezig[vak] = Promise.all([lr, bank, laadLezen(vak)]).then(function(){}, function(e){ bezig[vak] = null; throw e; });
     return bezig[vak];
+  }
+  /* de leesbank, alleen als het vak leesbladen heeft */
+  function laadLezen(vak){
+    if (!paragrafen(vak).some(function(x){ return x.p.lezen; })) return Promise.resolve();
+    return (window.LEESBANK ? Promise.resolve() : script('leesbank.js?v=1')).then(function(){
+      return Promise.all([window.LEESBLAD ? null : script('leesblad.js?v=1'), LEESBANK.TEKSTEN.length ? null : script('leesteksten.js?v=1')]);
+    });
+  }
+  /* een leesblad: een tekst met taken voor het doel, op een niveau dat in het boek aan staat */
+  var laatsteTekst = {};
+  function leesOpgaven(vak, p){
+    if (!window.LEESBANK || !window.LEESBLAD) return [];
+    var refs = NIVEAU.lees(vak).refs, pot = LEESBANK.teksten(p.lezen).filter(function(t){ return !refs || refs.indexOf(t.niv) >= 0; });
+    if (!pot.length) pot = LEESBANK.teksten(p.lezen);
+    if (!pot.length) return [];
+    /* niet twee keer op rij dezelfde tekst */
+    var vers = pot.filter(function(t){ return t.id !== laatsteTekst[p.id]; });
+    var t = schud(vers.length ? vers : pot)[0];
+    laatsteTekst[p.id] = t.id;
+    return [{ soort:'lezen', prep:LEESBLAD.bereid(t, p.lezen) }];
   }
 
   /* ---------- een opgave lezen ---------- */
@@ -1160,6 +1199,7 @@ window.OPDRACHTENBOEK = (function(){
   function opgaven(vak, id, n){
     var x = paragraaf(vak, id); if (!x) return [];
     var p = x.p, R = window.LEERROUTE ? LEERROUTE.R : null;
+    if (p.lezen) return leesOpgaven(vak, p);
     var bronnen = p.doelen.map(doel).filter(Boolean).map(function(d){ return { soort:'lr', doel:d, mis:0 }; });
     (p.bank || []).forEach(function(b){ var pot = schud(bankPot(p, b)); if (pot.length) bronnen.push({ soort:'bank', pot:pot, mis:0 }); });
     var uit = [], gezien = {};
@@ -1189,6 +1229,7 @@ window.OPDRACHTENBOEK = (function(){
   /* een doel: zijn eigen uitleg; meer doelen: per doel de regel in een zin */
   function uitleg(vak, id){
     var x = paragraaf(vak, id); if (!x) return '';
+    if (x.p.lezen){ var ld = window.LEESBANK && LEESBANK.doel(x.p.lezen); return ld ? '<p>' + schoon(ld.kort) + '.</p>' : ''; }
     var ds = x.p.doelen.map(doel).filter(Boolean);
     if (ds.length === 1) return ds[0].uit || '<p>' + schoon(ds[0].kort || '') + '</p>';
     return '<ul class="ob-regels">' + ds.map(function(d){ return '<li><b>' + schoon(d.naam) + '</b>' + (d.kort ? ': ' + schoon(d.kort.charAt(0).toLowerCase() + d.kort.slice(1)) : '') + '</li>'; }).join('') + '</ul>';

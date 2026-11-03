@@ -187,9 +187,12 @@
      aantal opgaven is het aantal zinnen). Elk woord telt apart; het eindscherm
      laat de hele tekst zien met de fouten erin. */
   var lopend = null, volgnr = 0;
-  function kiesTekst(niveau){
+  function kiesTekst(niveau, thema){
     var n = NIV[niveau] || 2;
-    var t = vers('dl', D.teksten.filter(function(t){ return t.n === n; }), function(t){ return t.id; }, null);
+    /* een thema: alleen teksten over dat vak; gewoon: alleen de teksten zonder vak */
+    var pot = D.teksten.filter(function(t){ return t.n === n && (!thema || thema === 'alles' || (thema === 'gewoon' ? !t.thema : (D.themaVan ? D.themaVan(t) : t.thema) === thema)); });
+    if (!pot.length) pot = D.teksten.filter(function(t){ return t.n === n; });
+    var t = vers('dl', pot, function(t){ return t.id; }, null);
     return t && D.opLengte ? D.opLengte(t, D.STANDAARD) : t;
   }
   function zinVan(z){ return typeof z === 'string' ? z : z.z; }
@@ -200,7 +203,7 @@
   }
   function doorlopend(keuze, nr){
     if (nr === 1 || !lopend || lopend.i >= lopend.tekst.zinnen.length){
-      var tekst = docentTekst(keuze) || kiesTekst(keuze.niveau);
+      var tekst = docentTekst(keuze) || kiesTekst(keuze.niveau, keuze.thema);
       lopend = { tekst: tekst, i: 0, uitslag: [], nr: ++volgnr };
       if (ronde) ronde.teksten.push(lopend);
     }
@@ -324,6 +327,10 @@
     { id:'leenwoorden', naam:'leenwoorden', uit:'Engelse en Franse woorden in Nederlandse spelling. Op vmbo-bb krijg je die van kgt.' },
     { id:'doorlopend', naam:'doorlopend dictee', uit:'Een korte tekst, zin voor zin voorgelezen. Elk woord telt, en aan het eind zie je de hele tekst met je fouten.' } ] };
 
+  /* het onderwerp van het doorlopende dictee: gewone teksten of teksten over een vak */
+  var THEMA = { id:'thema', kop:'waarover (doorlopend dictee)', std:'alles', items:[{ id:'alles', naam:'alle onderwerpen' }, { id:'gewoon', naam:'dagelijks leven', uit:'School, sport, vrienden en thuis.' }]
+    .concat(Object.keys(D.THEMAS || {}).map(function(k){ return { id:k, naam:D.THEMAS[k].charAt(0).toLowerCase() + D.THEMAS[k].slice(1), uit:'Een tekst over ' + D.THEMAS[k].toLowerCase() + ', met de vakwoorden erin. Telt alleen bij het doorlopende dictee.' }; })) };
+
   var CFG = {
     id:'dictee', naam:'Dictee', vak:'ned', kleur:'#F26749',
     hand:'luisteren, en dan goed schrijven',
@@ -334,7 +341,7 @@
       { kop:'Leer van je fout', tekst:'Fout? Dan zie je letter voor letter wat er anders moest: <b>doorgestreept</b> wat te veel was, groen wat er hoort. En je ziet wat voor fout het was, zoals d/t, ei of ij of een hoofdletter, met de regel erbij.' },
       { kop:'Doorlopend dictee', tekst:'Een korte tekst, zin voor zin. Elk woord telt apart, en aan het eind zie je de hele tekst met je fouten erin, en welke fouten je het vaakst maakte.' }
     ],
-    keuzes: !docent ? [NIVEAU, SOORT] : docent.wat === 'week' ? [NIVEAU] : [],
+    keuzes: !docent ? [NIVEAU, SOORT, THEMA] : docent.wat === 'week' ? [NIVEAU] : [],
     aantal:10,
     maak:function(keuze, nr){
       var soort = docent ? 'doorlopend' : keuze.soort === 'alles' ? kies(MIX[keuze.niveau] || MIX.kgt) : keuze.soort;
@@ -358,6 +365,16 @@
     ]
   };
   VAKSPEL.maak(CFG);
+  /* waarover hoort alleen bij het doorlopende dictee: bij de andere soorten staat het niet in beeld */
+  (function(){
+    var soort = document.getElementById('keuze-soort'); if (!soort) return;
+    function zet(){
+      var b = soort.querySelector('button.on'), aan = !!b && b.getAttribute('data-id') === 'doorlopend';
+      ['keuze-thema', 'kop-thema', 'uit-thema'].forEach(function(id){ var e = document.getElementById(id); if (e) e.classList.toggle('hide', !aan); });
+    }
+    soort.addEventListener('click', function(){ setTimeout(zet, 0); });
+    zet();
+  })();
 
   /* ---------- het startscherm: de stem, en het blok van de docent ---------- */
   var start = $('scherm-start'), knoppen = start ? start.querySelector('.startknoppen') : null;

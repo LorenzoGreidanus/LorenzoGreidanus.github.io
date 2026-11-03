@@ -415,6 +415,7 @@ const KLAS_SPELLEN = { leerroute: "Leerroute", race: "Vragenrace", metriek: "Het
   situaties: "English in real life",
   voordoen: "Eerst kijken, dan zelf",
   begrijpend: "Begrijpend lezen",
+  leesstrategie: "Leesstrategieën",
   woordformules: "Tabel, grafiek en formule",
   bedrijf: "Werk, bedrijf en wereld",
   afweer: "Afweer en evolutie",

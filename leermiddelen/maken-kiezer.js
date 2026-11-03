@@ -699,6 +699,8 @@ window.KIEZER = (function(){
   function boekMaak(ander){
     var vak = bVak, id = bPar, x = OPDRACHTENBOEK.paragraaf(vak, id); if (!x) return;
     var R = $('kzbRechts');
+    /* een leesblad is een hele tekst met opdrachten: dat past niet als losse toetsvragen */
+    if (x.p.lezen){ R.innerHTML = kopHtml(x) + '<p class="kzb-leeg">Deze paragraaf is een leesblad: een hele tekst met opdrachten. Die maak je bij Werkblad maken (Nederlands, Lezen of Opdrachtenboek), of laat je leerlingen oefenen in Leesstrategieën.</p>'; return; }
     R.setAttribute('aria-busy', 'true');
     R.innerHTML = kopHtml(x) + '<p class="kzb-leeg">Opgaven maken…</p>';
     /* loopt de leerroute van de vragenbank nog (Rekenen of Nederlands uit de leerroute), dan eerst die */
