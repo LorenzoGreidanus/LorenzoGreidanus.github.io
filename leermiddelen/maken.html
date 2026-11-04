@@ -9,7 +9,7 @@
 (function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();
 </script>
 <title>Mijn materiaal · meneer Greidanus</title>
-<meta name="description" content="Maak je eigen woordenlijsten voor de spellen, oefeningen of toetsen met meerkeuze, open vragen, koppelen, volgorde, groepen en gatenteksten, en je eigen dictee. Bewaren met een code, delen met je klas.">
+<meta name="description" content="Maak je eigen woordenlijsten voor de spellen, oefeningen of toetsen met meerkeuze, open vragen, koppelen, volgorde, groepen en gatenteksten en invulschema’s, en je eigen dictee. Bewaren met een code, delen met je klas.">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="nl_NL">
 <meta property="og:site_name" content="meneer Greidanus">
@@ -361,6 +361,11 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
 .voorbeeldvak .volgorde .tekst{display:flex;align-items:center;min-height:40px}
 .voorbeeldvak .groepvak{min-height:70px}
 .voorbeeldvak .gatentekst{font-size:1rem;line-height:2.3;margin:0}
+/* een invulschema: de getallenlijn in vier velden, de vinkjes onder elkaar */
+.lijnvelden{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+@media (max-width:560px){.lijnvelden{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.item .vinken{display:grid;gap:8px;margin-top:4px}
+.voorbeeldvak .sc-wrap{margin-top:6px}
 .voorbeeldvak .gat{min-width:80px}
 .voorbeeldvak .open .nepveld{flex:1 1 200px;color:var(--muted);display:flex;align-items:center}
 .voorbeeldvak .vraagafb img{max-height:220px}
@@ -444,7 +449,7 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
     <p class="intro">Toetsen, oefeningen en lijsten die je zelf maakt. Elk krijgt een code; leerlingen openen het met die code.</p>
     <details class="hoewerkt">
       <summary>Hoe werkt het?</summary>
-      <p>Een <b>woordenlijst of begrippenlijst</b> kies je in Tekenslag, de Klasquiz en de Klasstrijd, speel je in de Vragenrace, Torenverdediging en Zwaardvechter, of je print hem als werkblad. Een <b>oefening</b> maak je met meerkeuze, open vragen en sleepvragen: koppelen, op volgorde zetten, in groepen verdelen en gatenteksten. Zet hem op toets, dan zien leerlingen pas aan het eind wat goed was. Een <b>dictee</b> plak je als tekst: de computer leest het zin voor zin voor, en je zet het als opdracht bij je klas of print het als voorleesblad. Bij <b>topografie</b> tik je op de kaart aan welke landen, provincies of steden je leerlingen moeten kennen: zij oefenen precies die plekken in Topografie, en jij maakt er met een klik een toets van. Alles krijgt een code; leerlingen openen het met die code.</p>
+      <p>Een <b>woordenlijst of begrippenlijst</b> kies je in Tekenslag, de Klasquiz en de Klasstrijd, speel je in de Vragenrace, Torenverdediging en Zwaardvechter, of je print hem als werkblad. Een <b>oefening</b> maak je met meerkeuze, open vragen, sleepvragen (koppelen, op volgorde zetten, in groepen verdelen en gatenteksten) en invulschema’s: het DHTE-schema, onder elkaar rekenen, de verhoudingstabel, de getallenlijn, het kruisingsschema of een eigen tabel. Zet hem op toets, dan zien leerlingen pas aan het eind wat goed was. Een <b>dictee</b> plak je als tekst: de computer leest het zin voor zin voor, en je zet het als opdracht bij je klas of print het als voorleesblad. Bij <b>topografie</b> tik je op de kaart aan welke landen, provincies of steden je leerlingen moeten kennen: zij oefenen precies die plekken in Topografie, en jij maakt er met een klik een toets van. Alles krijgt een code; leerlingen openen het met die code.</p>
     </details>
     <p class="tip" id="accTip"></p>
   </div>
@@ -700,6 +705,7 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
 <script src="voorbeeldtoetsen.js"></script>
 <script src="nakijk.js"></script>
 <script src="open-papier.js"></script>
+<script src="schema.js"></script>
 <script src="papier.js"></script>
 <script src="uitslag.js"></script>
 <script src="topo-eigen.js"></script>
@@ -711,7 +717,7 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
   var VORMEN = [
     ['mk', 'Meerkeuze'], ['open', 'Open vraag'], ['koppel', 'Koppelen (slepen)'],
     ['volgorde', 'Volgorde (slepen)'], ['groepen', 'In groepen (slepen)'], ['gaten', 'Gatentekst (slepen)'],
-    ['aanwijzen', 'Aanwijzen op een plaatje (slepen)'], ['topo', 'Topografie (kaart)']
+    ['aanwijzen', 'Aanwijzen op een plaatje (slepen)'], ['topo', 'Topografie (kaart)'], ['schema', 'Invulschema (DHTE, tabel, getallenlijn)']
   ];
   var WIJZENAAM = { wijs: 'aanwijzen op de kaart', typ: 'de naam typen', kies: 'kiezen uit vier' };
   /* de code van het stuk dat open staat: nodig om een plaatje te tonen */
@@ -1294,7 +1300,7 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
   /* ---------- oefening ----------
      Alle vragen staan als .item in #items; er is er steeds een zichtbaar (.aan),
      links staat de lijst om te kiezen. Bewaren leest ze allemaal (lees). */
-  var VORMKORT = { mk: 'Meerkeuze', open: 'Open vraag', koppel: 'Koppelen', volgorde: 'Volgorde', groepen: 'In groepen', gaten: 'Gatentekst', aanwijzen: 'Aanwijzen', topo: 'Topografie' };
+  var VORMKORT = { mk: 'Meerkeuze', open: 'Open vraag', koppel: 'Koppelen', volgorde: 'Volgorde', groepen: 'In groepen', gaten: 'Gatentekst', aanwijzen: 'Aanwijzen', topo: 'Topografie', schema: 'Invulschema' };
   var IKOON = {
     op: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg>',
     neer: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6"/></svg>',
@@ -1386,7 +1392,7 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
     melding($('wpUit'), (items.length === 1 ? 'Een vraag' : items.length + ' vragen') + ' erbij gezet' + (paren.length > items.length ? '; ' + (paren.length - items.length) + ' pasten er niet meer bij (hoogstens 300)' : '') + '.', 'goed');
   });
   /* zo lang als de server bewaart (server/materiaal.js): langer typen verdwijnt anders stil bij het opslaan */
-  var MAX_VELD = { vraag:300, uitleg:300, goed:150, tekst:1200, begin:80 };
+  var MAX_VELD = { vraag:300, uitleg:300, goed:150, tekst:1200, begin:80, bron:600 };
   function veld(naam, waarde, plek, lang){
     var max = MAX_VELD[naam] ? ' maxlength="' + MAX_VELD[naam] + '"' : '';
     return lang ? '<textarea class="veld" data-v="' + naam + '" rows="3"' + max + ' placeholder="' + schoon(plek || '') + '">' + schoon(waarde || '') + '</textarea>'
@@ -1449,6 +1455,8 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
           label('Extra woorden om het lastiger te maken <span class="mag">mag leeg, een per regel</span>', veld('extra', (x.extra || []).join('\n'), 'bijv. lever', true));
     } else if (v === 'topo'){
       h = topoVelden(x);
+    } else if (v === 'schema'){
+      h = schemaVelden(x);
     }
     var uitleg = label('Uitleg na de vraag' + MAG, kortVak('uitleg', x.uitleg, 'bijv. waarom dit het antwoord is'));
     h += v !== 'aanwijzen' && v !== 'topo' ? '<div class="tweekolom">' + afbRij(x, false) + uitleg + '</div>' : uitleg;
@@ -1459,6 +1467,38 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
       '<div class="velden2">' + h + '</div>' +
       '<div class="voorvak"><p class="kopje">Zo ziet de leerling het</p><div class="voorbeeldvak"></div></div></div>';
   }
+  /* Een invulschema (schema.js): de soort, wat je intypt (een som, een tabel, de ouders of de
+     getallenlijn) en de keuzes. De site maakt er het schema met de antwoorden van. */
+  var SCHEMAHULP = {
+    dhte: ['De som of het getal', '347 + 285', 'Een som met + of −, of een getal om in het schema te zetten, zoals 3528. De site rekent het antwoord uit.'],
+    onder: ['De som', '46 × 23', 'Een som met +, − of ×. Bij een keersom maakt de site de tussenrijen.'],
+    vt: ['De tabel', 'schriften | 3 | 1 | 8\neuro | 7,50 | [?] | [?]', 'Twee rijen, de vakjes gescheiden door |. Wat de leerling invult, zet je tussen [haken]: [2,50]. Met [?] rekent de site het vakje zelf uit.'],
+    tabel: ['De tabel', ' | enkelvoud | meervoud\nhet boek | boek | [boeken]\nhet museum | museum | [musea/museums]', 'Een rij per regel, de vakjes gescheiden door |. Wat de leerling invult, zet je tussen [haken]; meer goede antwoorden met een /.'],
+    kruis: ['De ouders', 'Aa × aa', 'Twee letters per ouder. De site vult het schema in als antwoord; Aa en aA tellen allebei goed.'],
+    lijn: ['', '', 'De leerling leest af welk getal bij elke pijl hoort.']
+  };
+  function schemaVelden(x){
+    var soort = x.soort || 'dhte', hulp = SCHEMAHULP[soort], l = x.lijn || {};
+    var kies = '<select class="veld" data-v="soort">' + SCHEMA.SOORTEN.map(function(o){ return '<option value="' + o.id + '"' + (o.id === soort ? ' selected' : '') + '>' + schoon(o.naam + ' · ' + o.kort) + '</option>'; }).join('') + '</select>';
+    var bron = soort === 'lijn'
+      ? '<div class="lijnvelden">' + [['lvan', 'Begin', l.van != null ? l.van : 0], ['ltot', 'Eind', l.tot != null ? l.tot : 100], ['lstap', 'Streepje per', l.stap || 10], ['lpijlen', 'Pijlen bij', (l.pijlen || []).join('; ') || '35; 72']].map(function(f){
+          return label(f[1], '<input class="veld" data-v="' + f[0] + '" value="' + schoon(f[2]) + '">'); }).join('') + '</div>'
+      : label(hulp[0], veld('bron', x.bron, hulp[1], soort === 'vt' || soort === 'tabel'));
+    var vink = function(n, tekst, aan){ return '<label class="vink"><input type="checkbox" data-v="' + n + '"' + (aan ? ' checked' : '') + '> ' + tekst + '</label>'; };
+    return label('Soort schema', kies) + bron + '<p class="tip">' + schoon(hulp[2]) + '</p>' +
+      label('Opdracht' + (soort === 'tabel' || soort === 'vt' ? '' : MAG), kortVak('vraag', x.vraag, soort === 'tabel' || soort === 'vt' ? 'bijv. Vul de tabel in.' : 'leeg: de site maakt de opdracht')) +
+      '<div class="vinken">' +
+        (soort === 'dhte' || soort === 'onder' ? vink('onth', 'De leerling vult ook de onthoudcijfers in (bij +)', x.onth) : '') +
+        (soort === 'onder' ? vink('tussen', 'Bij een keersom de tussenrijen laten invullen', x.tussen !== false) : '') +
+        vink('alles', 'Punten alleen als alles goed is (anders telt elk goed vakje)', x.alles) + '</div>';
+  }
+  /* een andere soort schema: de velden opnieuw, de opdracht blijft */
+  $('items').addEventListener('change', function(e){
+    var it = e.target.closest('.item[data-vorm="schema"]'); if (!it || e.target.getAttribute('data-v') !== 'soort') return;
+    var x = lees(it), i = [].indexOf.call($('items').children, it);
+    it.insertAdjacentHTML('afterend', itemHtml({ vorm: 'schema', soort: e.target.value, vraag: '', uitleg: x.uitleg, punten: x.punten, alles: x.alles }));
+    it.remove(); zetVies(true); nummer(); kies(i);
+  });
   /* Een vraag op een kaart van topografie: de kaart, de plek en hoe je het vraagt.
      De vraag zelf maakt topo-eigen.js, zodat hij altijd bij de plek past. */
   function kaartOpties(gekozen){
@@ -1666,6 +1706,8 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
       h = (beeld ? '<div class="aanwijs"><div class="beeld"><img alt="" src="' + schoon(beeld) + '">' + x.plekken.map(function(p, i){ return '<span class="stip" style="left:' + Number(p.x) + '%;top:' + Number(p.y) + '%">' + (i + 1) + '</span>'; }).join('') + '</div></div>' : '') +
         tegels(door(it, x.plekken.map(function(p){ return p.naam; }).filter(Boolean).concat(x.extra))) +
         '<div class="koppels">' + x.plekken.map(function(p, i){ return '<div class="koppel nr"><span class="links"><i>' + (i + 1) + '</i></span><span class="plek">' + leeg + '</span></div>'; }).join('') + '</div>';
+    } else if (v === 'schema'){
+      h = x.schemaFout ? '<p class="tip">' + schoon(x.schemaFout.charAt(0).toUpperCase() + x.schemaFout.slice(1)) + '</p>' : SCHEMA.html(x, { modus: 'model' }) + '<p class="tip">In blauw de antwoorden; de leerling ziet lege vakjes.</p>';
     } else if (v === 'topo'){
       h = '<p class="tip">' + (x.wijze === 'kies' ? 'Op de kaart is de plek gekleurd; de leerling kiest uit vier namen.' : x.wijze === 'typ' ? 'Op de kaart is de plek gekleurd; de leerling typt de naam.' : 'De leerling wijst de plek aan op de kaart.') + '</p>';
     }
@@ -1724,6 +1766,17 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
     if (v === 'volgorde') x.stappen = regels(w('stappen'));
     if (v === 'groepen') x.groepen = regels(w('groepen')).map(function(r){ var i = r.indexOf(':'); return i < 0 ? null : { naam: r.slice(0, i).trim(), dingen: r.slice(i + 1).split(/[,;]/).map(function(y){ return y.trim(); }).filter(Boolean) }; }).filter(Boolean);
     if (v === 'gaten'){ x.tekst = w('tekst').trim(); x.extra = regels(w('extra')); }
+    if (v === 'schema'){
+      /* het schema zelf maakt schema.js uit wat er is ingetypt */
+      var aan = function(n){ var el = it.querySelector('[data-v="' + n + '"]'); return !!(el && el.checked); };
+      x.soort = w('soort') || 'dhte';
+      x.bron = x.soort === 'lijn' ? [w('lvan'), w('ltot'), w('lstap'), w('lpijlen')].join(' | ') : w('bron').trim();
+      x.onth = aan('onth'); x.alles = aan('alles');
+      var tu = it.querySelector('[data-v="tussen"]'); x.tussen = tu ? tu.checked : true;
+      var b = SCHEMA.bouw(x.soort, x.bron, { onth: x.onth, tussen: x.tussen });
+      if (b.fout) x.schemaFout = b.fout;
+      else { x.kop = b.kop; x.rijen = b.rijen; if (b.lijn) x.lijn = b.lijn; if (!x.vraag && b.vraag) x.vraag = b.vraag; }
+    }
     if (v === 'aanwijzen'){
       x.plekken = [].map.call(it.querySelectorAll('.stip'), function(m){ return { x: parseFloat(m.style.left), y: parseFloat(m.style.top), naam: (m.getAttribute('data-naam') || '').trim() }; });
       x.extra = regels(w('extra'));
@@ -1776,6 +1829,10 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
     if (x.vorm === 'groepen' && x.groepen.length < 2) return uit('zet minstens twee groepen neer, zoals zoogdier: hond, walvis.', veldVan('groepen'));
     if (x.vorm === 'gaten' && !/\[[^\]]+\]/.test(x.tekst)) return uit('zet de woorden die weg moeten tussen [haken].', veldVan('tekst'));
     if (x.vorm === 'topo' && !x.plek) return uit('kies een plek op de kaart.', veldVan('plek'));
+    if (x.vorm === 'schema'){
+      if (x.schemaFout) return uit(x.schemaFout, veldVan('bron') || veldVan('lvan'));
+      if (!x.vraag) return uit('vul de opdracht in, bijvoorbeeld: Vul de tabel in.', veldVan('vraag'));
+    }
     if (x.vorm === 'aanwijzen'){
       if (!x.afb && !x.afbData) return uit('kies eerst een plaatje.', it.querySelector('.afbkies'));
       if (x.plekken.length < 2) return uit('zet minstens twee nummers op het plaatje.', it.querySelector('.afbvoor'));

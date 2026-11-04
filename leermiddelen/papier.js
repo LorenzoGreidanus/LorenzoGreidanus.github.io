@@ -151,17 +151,20 @@ var PAPIER = (function(){
   function wat(it){ var m = window.KAARTEN && KAARTEN[it.kaart]; return m && m.soort === 'gemengd' && it.wat ? ' (' + schoon(it.wat) + ')' : ''; }
   function opKaart(kn, it){ return kn.n > 1 ? ' op kaart ' + kn.per[it.kaart].volgnr : ' op de kaart'; }
   /* wat een vraag op papier is, en het antwoord in het nakijkmodel */
-  function vraag(it, code, versie, kn, hulp){
+  function vraag(it, code, versie, kn, hulp, klad){
     var z = zaadVan(code, it), v = it.vorm, h = '', ant = '';
     var beeld = it.afb && v !== 'aanwijzen' ? '<div class="beeld"><img alt="" src="' + schoon(afbAdres(code, it.afb)) + '"></div>' : '';
     var tekst = '<span class="vr">' + schoon(it.vraag) + '</span>';
     if (v === 'mk'){
       var o = perVersie([it.goed].concat(it.fout || []), z, versie);
-      h = tekst + beeld + '<div class="opties">' + o.map(function(w, i){ return '<span><b>' + LETTERS[i] + '</b>' + schoon(w) + '</span>'; }).join('') + '</div>';
+      var keus = '<div class="opties">' + o.map(function(w, i){ return '<span><b>' + LETTERS[i] + '</b>' + schoon(w) + '</span>'; }).join('') + '</div>';
+      /* een rekenvraag (of kladruimte bij elke vraag): de keuzes met een vak met ruitjes ernaast */
+      var mkKlad = window.OPENPAPIER && klad && (klad === 'ruim' || (klad !== 'geen' && OPENPAPIER.isReken(it)));
+      h = tekst + beeld + (mkKlad ? '<div class="op-mkklad">' + keus + OPENPAPIER.klad('mk') + '</div>' : keus);
       ant = LETTERS[o.indexOf(it.goed)] + ': ' + schoon(it.goed);
     } else if (v === 'open'){
       /* de ruimte past bij het antwoord: een vak, een regel of een regel per punt (open-papier.js) */
-      h = window.OPENPAPIER ? OPENPAPIER.open(it, { kop:'<span class="vr">' + OPENPAPIER.vraagHtml(it.vraag) + '</span>', beeld:beeld, hulp:hulp })
+      h = window.OPENPAPIER ? OPENPAPIER.open(it, { kop:'<span class="vr">' + OPENPAPIER.vraagHtml(it.vraag) + '</span>', beeld:beeld, hulp:hulp, klad:klad || 'reken' })
         : tekst + beeld + regels((it.punten || 1) >= 4 ? 5 : (it.punten || 1) >= 2 ? 3 : 2);
       ant = (it.antwoorden || []).length ? (it.antwoorden || []).map(schoon).join(' <i>of</i> ') : '<i>Geen antwoord opgegeven: zelf beoordelen.</i>';
     } else if (v === 'koppel'){
@@ -192,6 +195,10 @@ var PAPIER = (function(){
         '<ol class="aanwijslijnen">' + it.plekken.map(function(p, i){ return '<li><b>' + (i + 1) + '</b><span class="lijn"></span></li>'; }).join('') + '</ol>' +
         kiesuit(perVersie(it.plekken.map(function(p){ return p.naam; }).concat(it.extra || []), z, versie));
       ant = it.plekken.map(function(p, i){ return (i + 1) + ' ' + schoon(p.naam); }).join(' · ');
+    } else if (v === 'schema' && window.SCHEMA){
+      /* een invulschema: dezelfde vakjes als op het scherm, leeg; het nakijkmodel vult ze in */
+      h = tekst + beeld + SCHEMA.html(it, { modus: 'leeg' });
+      ant = SCHEMA.html(it, { modus: 'model' });
     } else if (v === 'topo'){
       var kaart = kn.per[it.kaart], nr = kaart && landVan(it) ? kaart.nr[it.plek] : null;
       if (!nr){
@@ -266,7 +273,7 @@ var PAPIER = (function(){
           li.push('<li class="kaartblok"><span class="odkop">' + (kn.n > 1 ? 'Kaart ' + kaart.volgnr + ': ' : 'Kaart: ') + schoon(km.naam) + ', bij ' + welke + '</span>' + kaartSvg(km, mee) + '</li>');
         }
       }
-      var x = vraag(it, code, versie, kn, hulp);
+      var x = vraag(it, code, versie, kn, hulp, o.klad || 'reken');
       li.push('<li><span class="ptvak"><i></i>/ ' + (it.punten || 1) + '</span>' + x.html + '</li>');
     });
     return '<article class="blad toetsblad" data-versie="' + versie + '" aria-label="Toets, versie ' + versie + '">' +
@@ -275,17 +282,29 @@ var PAPIER = (function(){
       '<div class="invul"><span>Naam</span><span></span><span>Klas</span><span></span><span>Datum</span><span></span></div>' +
       '<p class="bladintro">' + (heeftMk ? 'Omcirkel bij meerkeuze de letter van het goede antwoord. ' : '') + 'Rechts naast elke vraag staat hoeveel punten hij waard is.</p>' +
       '<ol class="pv">' + li.join('') + '</ol>' +
-      '<p class="voet">' + schoon(m.naam) + ' · versie ' + versie + ' · meneergreidanus.nl</p></article>';
+      '<p class="voet">' + schoon(m.naam) + ' · versie ' + versie + ' · meneergreidanus.nl</p></article>' +
+      (o.kladblad ? kladblad(m, versie, op.length) : '');
+  }
+  /* Een kladblad achter de toets: een vak per vraag (het nummer schrijft de leerling erbij) en vrij kladpapier */
+  function kladblad(m, versie, n){
+    var vakken = '';
+    for (var i = 0; i < Math.min(4, Math.max(2, n)); i++) vakken += '<span class="op-klad"><small>Vraag <span class="kb-nr"></span></small></span>';
+    return '<article class="blad kladblad" data-versie="' + versie + '" aria-label="Kladpapier, versie ' + versie + '">' +
+      '<div class="bkop"><div class="bkoptekst"><p class="bovenkop">Kladpapier</p><h2>' + schoon(m.naam) + '</h2><p class="sub">Versie ' + versie + '</p></div>' +
+        '<div class="invul" style="min-width:220px"><span>Naam</span><span></span></div></div>' +
+      '<p class="bladintro">Reken hier uit wat niet in het vak bij de vraag past. Zet het nummer van de vraag erbij en lever dit blad in met je toets.</p>' +
+      '<div class="kb-vakken">' + vakken + '<span class="op-klad kb-vrij"><small>Vrij kladpapier</small></span></div>' +
+      '<p class="voet">' + schoon(m.naam) + ' · kladpapier · versie ' + versie + '</p></article>';
   }
   function model(m, code, versie){
     var items = m.items || [], orde = volgorde(items, code, versie, getrokken(code, versie, items.length, m.trek)), kn = kaartNummers(items, orde, code, versie);
     var anders = versie === 'B' || orde.some(function(i, k){ return i !== k; });
     var op = orde.map(function(i){ return items[i]; });
-    var deels = op.some(function(it){ return /^(koppel|volgorde|groepen|gaten|aanwijzen)$/.test(it.vorm); });
+    var deels = op.some(function(it){ return /^(koppel|volgorde|groepen|gaten|aanwijzen|schema)$/.test(it.vorm); });
     var stempel = window.NAGEKEKEN && NAGEKEKEN.stempel ? '<span class="stempel" aria-hidden="true">' + NAGEKEKEN.stempel({ maat: 74 }) + '</span>' : '';
     return '<article class="blad modelblad" data-versie="' + versie + '" aria-label="Nakijkmodel, versie ' + versie + '">' +
       '<div class="bkop"><div class="bkoptekst"><h2>Nakijkmodel: ' + schoon(m.naam) + '</h2><p class="sub">Versie ' + versie + ' · ' + pt(puntenVan(op)) + '</p></div>' + stempel + '</div>' +
-      (deels ? '<p class="bladintro">Bij koppelen, volgorde, groepen, gatenteksten en aanwijzen telt elk goed deel even zwaar, net als in de site.</p>' : '') +
+      (deels ? '<p class="bladintro">Bij koppelen, volgorde, groepen, gatenteksten, aanwijzen en schema’s telt elk goed deel even zwaar, net als in de site.</p>' : '') +
       '<ol class="pv antw">' + tabelStukken(items, orde).map(function(st){
         /* woordjes die op het blad een tabel zijn, staan hier ook zo: woord en antwoord */
         if (st.tabel) return OPENPAPIER.modelTabel(st.tabel.map(function(i){ return items[i]; }), function(it){ return vraag(it, code, versie, kn).ant; });

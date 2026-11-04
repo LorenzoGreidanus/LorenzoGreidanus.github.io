@@ -117,6 +117,7 @@
 <script src="klas.js"></script>
 <script src="eigen.js"></script>
 <script src="open-papier.js"></script>
+<script src="schema.js"></script>
 <script src="voorbeeldtoetsen.js"></script>
 <script src="topo-eigen.js"></script>
 <script>
@@ -262,7 +263,7 @@
     /* een woordvraag zet het woord in de kijker (open-papier.js) */
     if (it.vorm === 'open') $('vraagtekst').innerHTML = OPENPAPIER.vraagHtml(it.vraag || '');
     else $('vraagtekst').textContent = it.vraag || '';
-    $('hoe').textContent = (it.vorm === 'topo' ? TOPOHOE[it.wijze] : HOE[it.vorm]) || '';
+    $('hoe').textContent = (it.vorm === 'topo' ? TOPOHOE[it.wijze] : it.vorm === 'schema' ? schemaHoe(it) : HOE[it.vorm]) || '';
     $('terug').className = 'terug hide'; $('terug').innerHTML = '';
     $('veld').innerHTML = '';
     /* een plaatje bij de vraag; bij aanwijzen tekent de vorm het zelf, met de nummers erop */
@@ -417,7 +418,31 @@
      naar de docent gaat) en nakijken(toon) met { punt: 0 tot 1 of null als de
      docent nakijkt, juist: het goede antwoord als tekst }. Bij een toets zijn
      de antwoorden er niet (verborgen); dan wordt er alleen ingeleverd. */
+  /* bij een schema: hoe je het invult, per soort (schema.js) */
+  function schemaHoe(it){ var s = window.SCHEMA && SCHEMA.SOORTEN.filter(function(x){ return x.id === it.soort; })[0]; return s ? s.hoe + (it.onth ? ' Wat je onthoudt, schrijf je in de kleine vakjes bovenaan.' : '') : ''; }
   var VORM = {
+    /* Een invulschema: de vakjes zijn gewone invulvelden. Bij een som springt het volgende vakje
+       naar links (je rekent van rechts naar links), bij een getal naar rechts. */
+    schema: function(it, veld, veranderd, verborgen){
+      veld.innerHTML = SCHEMA.html(it, { modus: 'invul' });
+      var som = (it.rijen || []).length > 1;
+      veld.addEventListener('input', function(e){
+        var x = e.target; if (!x.matches || !x.matches('.sc input[data-i]')) return;
+        if (x.maxLength === 1 && x.value.length === 1){
+          var i = +x.getAttribute('data-i'), rij = x.closest('tr'), volg = rij && rij.querySelector('input[data-i="' + (som ? i - 1 : i + 1) + '"]');
+          if (volg) volg.focus();
+        }
+        veranderd();
+      });
+      veld.addEventListener('keydown', function(e){ if (e.key === 'Enter' && SCHEMA.klaar(veld)){ e.preventDefault(); $('nakijk').click(); } });
+      return { klaar: function(){ return SCHEMA.klaar(veld); }, antwoord: function(){ return SCHEMA.lees(veld); },
+        nakijken: function(toon){
+          var a = SCHEMA.lees(veld), u = toon ? SCHEMA.toon(veld, it, a) : SCHEMA.nakijk(it, a);
+          /* niet alles goed: de uitleg van de som, stap voor stap */
+          if (toon && u.punt < 1){ var l = SCHEMA.uitleg(it); if (l) veld.insertAdjacentHTML('beforeend', l); }
+          return { punt: u.punt, juist: u.juist };
+        } };
+    },
     mk: function(it, veld, veranderd, verborgen){
       var gekozen = null, knoppen = [];
       var box = document.createElement('div'); box.className = 'keuzes'; veld.appendChild(box);

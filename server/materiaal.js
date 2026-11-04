@@ -48,7 +48,10 @@ const MAX_JSON = 80000;                           /* een stuk hoogstens zoveel t
 const MAX_ITEMS = 300;   /* een woordenlijst van een hele methode-unit past erin (november 2026) */
 const MAX_UITSLAGEN = 400;                        /* inleveringen per stuk */
 const SOORTEN = { lijst: 1, oefening: 1, dictee: 1, topo: 1 };
-const VORMEN = { mk: 1, open: 1, koppel: 1, volgorde: 1, groepen: 1, gaten: 1, aanwijzen: 1, topo: 1 };
+const VORMEN = { mk: 1, open: 1, koppel: 1, volgorde: 1, groepen: 1, gaten: 1, aanwijzen: 1, topo: 1, schema: 1 };
+/* Een invulschema (leermiddelen/schema.js): rijen met vakjes; een vakje is tekst die er al staat,
+   of { a: [goede antwoorden] } om in te vullen (m: mag leeg blijven, zoals een onthoudvakje). */
+const SCHEMA_SOORT = { dhte: 1, onder: 1, vt: 1, lijn: 1, kruis: 1, tabel: 1 };
 /* De kaarten van topografie (leermiddelen/topo-kaarten.js). Een topografieset is
    { kaart, plekken: [namen] }: welke plekken leerlingen moeten kennen. Op de gemengde
    kaart staat bij een naam wat het is, "Groningen (stad)", want daar is Groningen
@@ -70,6 +73,72 @@ function willekeurig(n, tekens){ const r = crypto.getRandomValues(new Uint8Array
 function schud(a){ a = a.slice(); for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 /* hoofdletters, spaties en een punt aan het eind tellen niet mee */
 function gelijk(a, b){ const n = x => String(x || "").toLowerCase().replace(/\s+/g, " ").replace(/[.!?,;:]+$/, "").trim(); return n(a) === n(b); }
+/* een getal: 7,50 = 7.5; een punt per duizend mag */
+function getalVan(x){
+  let s = String(x == null ? "" : x).replace(/\s+/g, "").replace(/€|euro$/i, "").replace(/−/g, "-");
+  if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) s = s.replace(/\./g, "");
+  s = s.replace(",", ".");
+  return /^-?\d+(\.\d+)?$/.test(s) ? Number(s) : null;
+}
+/* een vakje van een schema: zoals gelijk, en een getal mag met een komma of een punt */
+function gelijkVak(a, b){
+  const n = x => String(x == null ? "" : x).toLowerCase().replace(/\s+/g, "").replace(/[.!?;:]+$/, "");
+  if (n(a) === n(b)) return true;
+  const x = getalVan(a), y = getalVan(b);
+  return x !== null && y !== null && Math.abs(x - y) < 1e-9;
+}
+function schemaCellen(it){ const l = []; (it.rijen || []).forEach(r => (r.c || []).forEach(c => { if (c && typeof c === "object") l.push(c); })); return l; }
+function schemaItem(x, v, met){
+  if (!SCHEMA_SOORT[x.soort]) return null;
+  let kapot = false;
+  const cel = c => {
+    if (c && typeof c === "object"){
+      const a = (Array.isArray(c.a) ? c.a : []).slice(0, 4).map(y => t(y, 40)).filter((y, i) => y || i === 0);
+      if (!a.length || (!a[0] && !c.m)) { kapot = true; return ""; }
+      return c.m ? { a, m: 1 } : { a };
+    }
+    return t(c, 40);
+  };
+  const rijen = (Array.isArray(x.rijen) ? x.rijen : []).slice(0, 14).map(r => {
+    const o = { c: (Array.isArray(r && r.c) ? r.c : []).slice(0, 10).map(cel) };
+    if (r && r.l) o.l = 1; if (r && r.k) o.k = 1;
+    return o;
+  });
+  const n = schemaCellen({ rijen }).length;
+  if (kapot || !n || n > 60) return null;
+  const uit = { vorm: "schema", vraag: v, soort: x.soort, rijen, kop: (Array.isArray(x.kop) ? x.kop : []).slice(0, 10).map(y => t(y, 20)), bron: t(x.bron, 600) };
+  if (x.alles === true) uit.alles = true;
+  if (x.onth === true) uit.onth = true;
+  if (x.tussen === false) uit.tussen = false;
+  if (x.soort === "lijn"){
+    const l = x.lijn || {}, g = y => Math.max(-1e6, Math.min(1e6, Number(y) || 0));
+    const lijn = { van: g(l.van), tot: g(l.tot), stap: g(l.stap), pijlen: (Array.isArray(l.pijlen) ? l.pijlen : []).slice(0, 6).map(g) };
+    if (!(lijn.tot > lijn.van) || !(lijn.stap > 0) || (lijn.tot - lijn.van) / lijn.stap > 40 || !lijn.pijlen.length) return null;
+    uit.lijn = lijn;
+  }
+  return met(uit);
+}
+/* de score van een schema: elk vakje even zwaar; een vakje dat leeg mag en leeg is, telt niet mee */
+function schemaScore(it, a){
+  let n = 0, goed = 0;
+  schemaCellen(it).forEach((c, i) => {
+    const w = (a || [])[i] == null ? "" : String(a[i]);
+    const ok = c.a.some(x => gelijkVak(w, x));
+    if (c.m && !w && ok) return;
+    n++; if (ok) goed++;
+  });
+  if (!n) return 1;
+  return it.alles ? (goed === n ? 1 : 0) : goed / n;
+}
+function schemaJuist(it){
+  const cijf = it.soort === "dhte" || it.soort === "onder";
+  return (it.rijen || []).map(r => {
+    const l = (r.c || []).filter(c => c && typeof c === "object").map(c => c.a[0] || "");
+    if (!l.length) return "";
+    if (r.k) return l.some(Boolean) ? "onthouden: " + l.filter(Boolean).join(", ") : "";
+    return cijf ? l.join("") : l.join(", ");
+  }).filter(Boolean).join(" · ");
+}
 function gatenVan(tekst){ return (String(tekst || "").match(/\[([^\]]+)\]/g) || []).map(x => x.slice(1, -1).trim()); }
 /* Elke leerling een deel van de vragen: welke vragen, vast per leerling. Het zaad is
    FNV-1a van code + ":" + wie (het kenmerk van de leerling, of "versieA" en "versieB"
@@ -237,6 +306,7 @@ function item(x){
       const plekken = (Array.isArray(x.plekken) ? x.plekken : []).map(p => ({ x: proc(p && p.x), y: proc(p && p.y), naam: t(p && p.naam, 80) })).filter(p => p.naam).slice(0, 12);
       return plekken.length >= 2 ? met({ vorm: "aanwijzen", vraag: v, plekken, extra: lijstVan(x.extra, 6, 80) }) : null;
     }
+    case "schema": return schemaItem(x, v, met);
     case "topo": {
       /* een plek op een kaart van topografie: aanwijzen, de naam typen of kiezen uit vier.
          x en y zijn het middelpunt op de kaart: daarmee kleurt de leerling de goede plek
@@ -268,6 +338,11 @@ function verborgen(it){
     case "groepen": b.groepen = it.groepen.map(g => g.naam); b.dingen = schud([].concat(...it.groepen.map(g => g.dingen))); break;
     case "gaten": b.delen = String(it.tekst).split(/\[[^\]]+\]/); b.woorden = schud(gatenVan(it.tekst).concat(it.extra || [])); break;
     case "aanwijzen": b.plekken = it.plekken.map(p => ({ x: p.x, y: p.y })); b.woorden = schud(it.plekken.map(p => p.naam).concat(it.extra || [])); break;
+    case "schema":
+      /* de vakjes zonder antwoord; de bron (de som of de tabel van de docent) gaat niet mee */
+      b.soort = it.soort; b.kop = it.kop || []; if (it.lijn) b.lijn = it.lijn;
+      b.rijen = (it.rijen || []).map(r => Object.assign({}, r, { c: r.c.map(c => c && typeof c === "object" ? (c.m ? { i: 1, m: 1 } : { i: 1 }) : c) }));
+      break;
     case "topo":
       /* aanwijzen: de naam staat al in de vraag. Typen of kiezen: alleen waar de plek ligt */
       b.kaart = it.kaart; b.wijze = it.wijze; b.wat = it.wat || "";
@@ -288,6 +363,7 @@ function antwoordVan(it, a){
     case "groepen": return (Array.isArray(a) ? a : []).slice(0, 40).map(p => [t(p && p[0], 80), t(p && p[1], 40)]);
     case "gaten": return lijst(a, 30, 40);
     case "aanwijzen": return lijst(a, 12, 80);
+    case "schema": return lijst(a, 60, 40);
     case "topo": return t(a, 80);
   }
   return "";
@@ -307,6 +383,7 @@ function scoor(it, a){
     }
     case "gaten": { const g = gatenVan(it.tekst); const n = g.filter((w, i) => gelijk((a || [])[i], w)).length; return n / g.length; }
     case "aanwijzen": { const n = it.plekken.filter((p, i) => gelijk((a || [])[i], p.naam)).length; return n / it.plekken.length; }
+    case "schema": return schemaScore(it, a);
     case "topo":
       if (it.wijze === "typ") return topoGoed(a, it.namen && it.namen.length ? it.namen : [it.naam]) ? 1 : 0;
       if (it.wijze === "kies") return a === it.naam ? 1 : 0;
@@ -324,6 +401,7 @@ function juistVan(it){
     case "groepen": return it.groepen.map(g => g.naam + ": " + g.dingen.join(", ")).join("; ");
     case "gaten": return String(it.tekst).replace(/\[([^\]]+)\]/g, "$1");
     case "aanwijzen": return it.plekken.map((p, i) => (i + 1) + ": " + p.naam).join("; ");
+    case "schema": return schemaJuist(it);
     case "topo": return it.naam;
   }
   return "";

@@ -747,6 +747,19 @@ window.KIEZER = (function(){
     /* alleen een gewoon woord krijgt een hoofdletter; een formule als x + 3 = 7 niet */
     return a + (/[.?!]$/.test(a) ? ' ' : '. ') + (/^[a-zà-ÿ]{3,}[\s:,]/.test(b) ? b.charAt(0).toUpperCase() + b.slice(1) : b);
   }
+  /* cijferend rekenen uit de leerroute: dat wordt een invulschema onder elkaar (schema.js) */
+  var SCHEMADOEL = { 'cijf-cijferplus':1, 'cijf-cijfermin':1, 'cijf-cijfer1':1, 'cijf-cijfer2':1 };
+  function alsSchema(x, op){
+    var som = SCHEMA.leesSom(op.vraag);
+    if (!som || som.getal !== undefined) return null;
+    var bron = String(op.vraag).replace(/\s+/g, ' ').trim(), b = SCHEMA.bouw('onder', bron, { onth: som.op === '+', tussen: true });
+    if (b.fout) return null;
+    Object.assign(x, { vorm:'schema', soort:'onder', bron:bron, onth:som.op === '+', tussen:true, kop:b.kop, rijen:b.rijen, vraag:b.vraag, punten:2 });
+    x.goed = SCHEMA.juist({ soort:'onder', rijen:b.rijen });
+    x.sl = String(op.vraag) + '|schema';
+    x.info = 'invulschema · antwoord ' + x.goed.split(' · ').pop();
+    return check(x);
+  }
   function alsToets(o, vak, par){
     var B = OPDRACHTENBOEK, x = { id:'b' + (++bTeller), vak:vak, par:par, punten:1, svg:'', reden:'', o:o };
     if (o.soort === 'bank'){
@@ -758,6 +771,7 @@ window.KIEZER = (function(){
       return check(x);
     }
     var op = o.op, kz = B.keuzes(op), b = B.beeld(op, 0);
+    if (window.SCHEMA && o.doel && SCHEMADOEL[o.doel.id] && !BLAD){ var sx = alsSchema(x, op); if (sx){ sx.uitleg = kortUitleg('Zo: ' + B.echteStappen(op).map(function(s){ var t = kaal(s.tekst), a = kaal(B.stapAntwoord(s)); return t + (a ? ' ' + a : ''); }).join('; ').replace(/[.!?]$/, '') + '.'); return sx; } }
     var ctx = kaal(op.context || ''), v = kaal(B.vraagHtml(op));
     var vraag = ctx && v.indexOf(ctx) < 0 ? zinnen(ctx, v) : v;
     if (kz && kz.uitStap) vraag = zinnen(vraag, kaal(kz.tekst));
@@ -808,7 +822,7 @@ window.KIEZER = (function(){
     return '<label class="kzb-vr' + (aan ? ' aan' : '') + (kan && !al ? '' : ' kan-niet') + '"><input type="checkbox" data-bid="' + x.id + '"' + (aan ? ' checked' : '') + (kan && !al ? '' : ' disabled') + '>' +
       '<span class="kzb-vrt"><b>' + schoon(x.vraag) + '</b>' + (x.svg ? '<img alt="De figuur bij deze opgave" src="data:image/svg+xml;charset=utf-8,' + encodeURIComponent(x.svg) + '">' : '') +
       '<span class="' + (reden ? '' : 'kzb-goed') + '">' + schoon(meta.join(' · ')) + '</span></span>' +
-      '<span class="kzb-soort">' + (x.vorm === 'mk' ? 'meerkeuze' : 'open') + (BLAD ? '' : ' · ' + x.punten + ' p') + '</span></label>';
+      '<span class="kzb-soort">' + (x.vorm === 'mk' ? 'meerkeuze' : x.vorm === 'schema' ? 'invulschema' : 'open') + (BLAD ? '' : ' · ' + x.punten + ' p') + '</span></label>';
   }
   function boekPast(x){
     if (BLAD) return '';
@@ -839,6 +853,7 @@ window.KIEZER = (function(){
     boekMelding(lijst.some(function(x){ return x.svg; }) ? 'De figuren klaarmaken…' : '');
     Promise.all(lijst.map(function(x){
       var it = x.vorm === 'mk' ? { vorm:'mk', vraag:x.vraag, goed:x.goed, fout:schud(x.fout), uitleg:uitleg ? x.uitleg : '', punten:x.punten }
+        : x.vorm === 'schema' ? { vorm:'schema', soort:x.soort, bron:x.bron, onth:x.onth, tussen:x.tussen, kop:x.kop, rijen:x.rijen, vraag:x.vraag, uitleg:uitleg ? x.uitleg : '', punten:x.punten }
         : { vorm:'open', vraag:x.vraag, antwoorden:x.antwoorden, uitleg:uitleg ? x.uitleg : '', punten:x.punten };
       if (!x.svg) return Promise.resolve(it);
       return plaatje({ svg:x.svg }).then(function(data){ it.afbData = data; return it; }, function(){ return null; });
@@ -868,7 +883,7 @@ window.KIEZER = (function(){
   /* een opgave uit het boek als toetsvraag, zonder de opgave zelf (die kan niet in localStorage) */
   function toetsVan(x){
     var t = { vorm:x.vorm, vraag:x.vraag, goed:x.goed, uitleg:x.uitleg, punten:x.punten };
-    if (x.vorm === 'mk') t.fout = x.fout.slice(); else t.antwoorden = (x.antwoorden || []).slice();
+    if (x.vorm === 'mk') t.fout = x.fout.slice(); else if (x.vorm === 'schema') ['soort', 'bron', 'onth', 'tussen', 'kop', 'rijen'].forEach(function(n){ t[n] = x[n]; }); else t.antwoorden = (x.antwoorden || []).slice();
     if (x.svg) t.svg = x.svg;
     if (x.reden) t.reden = x.reden;
     return t;

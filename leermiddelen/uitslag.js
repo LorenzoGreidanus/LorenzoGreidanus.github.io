@@ -22,7 +22,7 @@ var UITSLAG = (function(){
   function getal(x){ x = Math.round(x * 100) / 100; return komma(x, x % 1 ? (Math.round(x * 10) === x * 10 ? 1 : 2) : 0); }
   function pct(w){ return w == null ? 'nog niet nagekeken' : Math.round(w * 100) + '%'; }
   function meer(n, een, veel){ return n + ' ' + (n === 1 ? een : veel); }
-  var VORMNAAM = { mk: 'Meerkeuze', open: 'Open', koppel: 'Koppelen', volgorde: 'Volgorde', groepen: 'Groepen', gaten: 'Gatentekst', aanwijzen: 'Aanwijzen',
+  var VORMNAAM = { mk: 'Meerkeuze', open: 'Open', koppel: 'Koppelen', volgorde: 'Volgorde', groepen: 'Groepen', gaten: 'Gatentekst', aanwijzen: 'Aanwijzen', schema: 'Schema',
     topo: 'Topografie', 'topo-wijs': 'Kaart: aanwijzen', 'topo-typ': 'Kaart: typen', 'topo-kies': 'Kaart: kiezen' };
   /* topografie telt per manier van vragen: aanwijzen, typen of kiezen */
   function soortVan(it){ return it.vorm === 'topo' ? 'topo-' + (it.wijze || 'wijs') : it.vorm; }
@@ -64,6 +64,7 @@ var UITSLAG = (function(){
       case 'gaten': { var i = 0; return String(it.tekst).replace(/\[[^\]]+\]/g, function(){ return '[' + (a[i++] || '…') + ']'; }); }
       case 'aanwijzen': return it.plekken.map(function(p, k){ return (k + 1) + ': ' + (a[k] || '—'); }).join('; ');
       case 'topo': return it.wijze === 'wijs' ? 'wees ' + a + ' aan' : String(a);
+      case 'schema': return window.SCHEMA ? SCHEMA.antwoordTekst(it, a) : [].concat(a).join(' · ');
     }
     return String(a);
   }

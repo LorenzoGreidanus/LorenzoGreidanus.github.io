@@ -8,7 +8,10 @@
      OPENPAPIER.maakVraag(stijl, woord, o) -> de vraag in die stijl; o: { naar, zin }
      OPENPAPIER.woord(vraag)               -> een woordvraag herkennen: { stijl, woord, naar, zin } of null
      OPENPAPIER.vraagHtml(vraag)           -> de vraag met het woord vet (en groot bij de stijl groot)
-     OPENPAPIER.open(it, o)                -> een open vraag op papier; o: { kop, beeld, hulp }
+     OPENPAPIER.open(it, o)                -> een open vraag op papier; o: { kop, beeld, hulp, klad }
+                                              klad: 'reken' (standaard: bij rekenvragen), 'ruim' (bij elke vraag) of 'geen'
+     OPENPAPIER.klad(soort)                -> een vak met ruitjes; soort: '' (gewoon), 'hoog', 'blok' (over de hele breedte), 'mk' (naast meerkeuze)
+     OPENPAPIER.isReken(it)                -> is dit een rekenvraag (dan hoort er kladruimte bij)
      OPENPAPIER.kanTabel(it)               -> mag deze vraag in een woordentabel
      OPENPAPIER.tabel(lijst, hulp, bank)   -> woordvragen als tabel; bank: de woorden om uit te kiezen
      OPENPAPIER.modelTabel(lijst, ant)     -> dezelfde tabel in het nakijkmodel; ant(it): het antwoord (html)
@@ -95,8 +98,25 @@ var OPENPAPIER = (function(){
   function naast(kop, beeld, plek){ return beeld ? kop + beeld + '<div class="op-rekenrij">' + plek + '</div>' : '<div class="op-kort"><div class="op-kop">' + kop + '</div>' + plek + '</div>'; }
   function langste(l){ return l.reduce(function(n, x){ return Math.max(n, x.length); }, 0); }
   /* kop: de vraag zoals hij er al staat (html); beeld: een plaatje eronder (html) */
+  /* een vak met ruitjes om in te rekenen */
+  function klad(soort){ return '<span class="op-klad' + (soort ? ' op-' + soort : '') + '"><small>Kladruimte</small></span>'; }
+  /* een rekenvraag: het woord staat erin, of de antwoorden (of keuzes) zijn getallen en de vraag heeft er ook een */
+  function isReken(it){
+    var vraag = String(it.vraag || ''), l = it.vorm === 'mk' ? [it.goed].concat(it.fout || []) : (it.antwoorden || []);
+    if (KLAD.test(vraag)) return true;
+    l = l.map(function(x){ return String(x).trim(); }).filter(Boolean);
+    return l.length > 0 && /\d/.test(vraag) && l.every(function(a){ return GETAL.test(a) || MET_EENHEID.test(a); });
+  }
+  /* Bij 'ruim' krijgt elke open vraag kladruimte: een getal in het rekenvak, een woord of
+     een zin eerst een vak met ruitjes en dan de lijnen of het vak. */
   function open(it, o){
     o = o || {};
+    var r = openKern(it, o);
+    if (o.klad !== 'ruim' || r.indexOf('op-klad') >= 0) return r;
+    var i = r.indexOf('<span class="op-regel');
+    return i >= 0 ? r.slice(0, i) + klad('blok') + r.slice(i) : r + klad('blok');
+  }
+  function openKern(it, o){
     var ants = (it.antwoorden || []).map(function(x){ return String(x).trim(); }).filter(Boolean), pt = it.punten || 1;
     var kop = o.kop || '', beeld = o.beeld || '', vraag = String(it.vraag || '');
     /* een getal, eventueel met een eenheid: een antwoordvak, en kladruimte als er gerekend wordt */
@@ -106,19 +126,19 @@ var OPENPAPIER = (function(){
       var zelf = eenheid && vraag.toLowerCase().indexOf(eenheid.toLowerCase()) < 0;
       if (zelf) eenheid = '';
       var cijfers = ants.map(function(a){ return (a.match(MET_EENHEID) || [0, a])[1].replace(/\s/g, ''); });
-      var klad = !it.afb && !beeld && (pt >= 2 || KLAD.test(vraag));
+      var metKlad = o.klad === 'ruim' || (o.klad !== 'geen' && !it.afb && !beeld && (pt >= 2 || KLAD.test(vraag)));
       /* schrijft de leerling de eenheid zelf, dan past die ook in het vak */
       var breed = Math.max(76, Math.min(220, 26 + langste(zelf ? ants : cijfers) * 13));
       /* een getal in het DHTE-schema: een hokje per cijfer, met de punt waar hij hoort */
       var d = cijfers[0].replace(/\D/g, '');
-      if (/DHTE|HTE-schema/.test(vraag) && !klad && !eenheid && !it.afb && !beeld && /^\d{2,5}$/.test(d) && cijfers.every(function(c){ return c.replace(/\D/g, '') === d; }))
+      if (/DHTE|HTE-schema/.test(vraag) && !metKlad && !eenheid && !it.afb && !beeld && /^\d{2,5}$/.test(d) && cijfers.every(function(c){ return c.replace(/\D/g, '') === d; }))
         return kop + beeld + '<div class="op-rekenrij"><span class="op-vak"><small>Antwoord</small><span class="op-cijfers">' + d.split('').map(function(c, i){
           return (d.length >= 4 && i === d.length - 3 ? '<b class="op-punt">.</b>' : '') + '<i class="op-l op-cijfer"></i>'; }).join('') + '</span></span><span class="op-tip">één cijfer per hokje</span></div>';
       var antw = '<span class="op-antw"><small>Antwoord</small><span class="op-box" style="width:' + breed + 'px"></span>' +
         (eenheid ? '<span class="op-eenheid">' + schoon(eenheid) + '</span>' : '') + '</span>';
       /* zonder kladruimte alleen het vak, met de eenheid erachter */
-      if (!klad) return naast(kop, beeld, vak('', breed) + (eenheid ? '<span class="op-eenheid">' + schoon(eenheid) + '</span>' : ''));
-      return kop + beeld + '<div class="op-reken"><span class="op-klad' + (pt >= 2 ? ' op-hoog' : '') + '"><small>Kladruimte</small></span>' +
+      if (!metKlad) return naast(kop, beeld, vak('', breed) + (eenheid ? '<span class="op-eenheid">' + schoon(eenheid) + '</span>' : ''));
+      return kop + beeld + '<div class="op-reken">' + klad(pt >= 2 || o.klad === 'ruim' ? 'hoog' : '') +
         '<span class="op-antwkant">' + antw + (pt === 2 ? '<small class="op-tip">1 punt voor de berekening, 1 voor het antwoord</small>' : '') + '</span></div>';
     }
     /* een woord of een paar woorden: een vak achter de vraag, zo breed als het antwoord */
@@ -172,6 +192,6 @@ var OPENPAPIER = (function(){
     }).join('') + '</div></li>';
   }
 
-  return { STIJLEN:STIJLEN, maakVraag:maakVraag, woord:woord, vraagHtml:vraagHtml, open:open, kanTabel:kanTabel, tabel:tabel, modelTabel:modelTabel };
+  return { STIJLEN:STIJLEN, maakVraag:maakVraag, woord:woord, vraagHtml:vraagHtml, open:open, kanTabel:kanTabel, tabel:tabel, modelTabel:modelTabel, klad:klad, isReken:isReken };
 })();
 if (typeof module !== 'undefined') module.exports = OPENPAPIER;
