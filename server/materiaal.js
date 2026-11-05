@@ -68,6 +68,24 @@ function json(obj, status){
 }
 /* tekst zonder stuurtekens, ingekort */
 function t(x, max){ return String(x == null ? "" : x).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, "").replace(/\s+/g, " ").trim().slice(0, max); }
+/* een tekst met alinea's: lege regels tussen de alinea's blijven staan */
+function alineas(x, max){ return String(x == null ? "" : x).replace(/\r\n?/g, "\n").replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, "").split(/\n\s*\n/).map(a => a.replace(/\s+/g, " ").trim()).filter(Boolean).join("\n\n").slice(0, max); }
+/* De teksten van een leestoets: hoogstens zes, met de letters A tot en met F. Een tekst uit de
+   leesbank (leermiddelen/leesteksten.js) staat er met zijn id in, een eigen tekst helemaal.
+   Geeft de teksten en hoe de letters van de docent naar de nieuwe letters gaan. */
+function tekstenVan(x){
+  const naar = {}, uit = [];
+  (Array.isArray(x) ? x : []).slice(0, 6).forEach(tk => {
+    if (!tk || typeof tk !== "object") return;
+    const bank = /^[a-z0-9-]{3,60}$/.test(String(tk.bank || "")) ? String(tk.bank) : "";
+    const tekst = bank ? "" : alineas(tk.tekst, 6000);
+    if (!bank && !tekst) return;
+    const id = "ABCDEF"[uit.length];
+    if (/^[A-F]$/.test(String(tk.id || ""))) naar[tk.id] = id;
+    uit.push(Object.assign({ id, titel: t(tk.titel, 120) }, bank ? { bank } : { tekst }));
+  });
+  return { teksten: uit, naar };
+}
 function lijstVan(x, max, len){ return (Array.isArray(x) ? x : []).map(y => t(y, len)).filter(Boolean).slice(0, max); }
 function willekeurig(n, tekens){ const r = crypto.getRandomValues(new Uint8Array(n)); return Array.from(r, b => tekens[b % tekens.length]).join(""); }
 function schud(a){ a = a.slice(); for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
@@ -257,10 +275,15 @@ function netjes(inz){
     /* elke leerling de vragen in een eigen volgorde; de antwoorden komen in de vaste volgorde terug */
     if (inz.husselen === true) uit.husselen = true;
     uit.items = (Array.isArray(inz.items) ? inz.items : []).map(item).filter(Boolean).slice(0, MAX_ITEMS);
+    /* de teksten van een leestoets; een vraag die naar een tekst wijst die er niet is, hoort nergens bij */
+    const tk = tekstenVan(inz.teksten);
+    if (tk.teksten.length) uit.teksten = tk.teksten;
+    uit.items.forEach(it => { if (it.tekst){ if (tk.naar[it.tekst]) it.tekst = tk.naar[it.tekst]; else delete it.tekst; } });
     if (!uit.items.length) return { fout: "een oefening heeft minstens een vraag nodig" };
     /* elke leerling zoveel vragen uit alle vragen: van 2 tot een minder dan alles; 0 is alles */
     const trek = Math.floor(Number(inz.trek)) || 0;
-    if (trek > 0 && uit.items.length > 2) uit.trek = Math.max(2, Math.min(uit.items.length - 1, trek));
+    /* met teksten geen deel van de vragen: dan zou een tekst zonder vragen kunnen staan */
+    if (trek > 0 && uit.items.length > 2 && !uit.teksten) uit.trek = Math.max(2, Math.min(uit.items.length - 1, trek));
   }
   if (JSON.stringify(uit).length > MAX_JSON) return { fout: "dit is te groot; maak er twee van" };
   return uit;
@@ -269,7 +292,8 @@ function item(x){
   if (!x || !VORMEN[x.vorm]) return null;
   const v = t(x.vraag, 300), u = t(x.uitleg, 300);
   const punten = Math.max(1, Math.min(10, Math.round(Number(x.punten) || 1)));
-  const met = o => Object.assign(o, { uitleg: u, punten, afb: AFB_ID.test(String(x.afb || "")) ? String(x.afb) : "" });
+  const met = o => Object.assign(o, { uitleg: u, punten, afb: AFB_ID.test(String(x.afb || "")) ? String(x.afb) : "" },
+    /^[A-F]$/.test(String(x.tekst || "")) ? { tekst: x.tekst } : {}, /^[a-z]{3,12}$/.test(String(x.doel || "")) ? { doel: x.doel } : {});
   switch (x.vorm){
     case "mk": {
       const goed = t(x.goed, 150), fout = lijstVan(x.fout, 5, 150);
@@ -326,6 +350,7 @@ function item(x){
 /* Een toets zonder antwoorden: wat de leerling nodig heeft om te antwoorden, meer niet. */
 function verborgen(it){
   const b = { vorm: it.vorm, vraag: it.vraag, punten: it.punten, afb: it.afb || "" };
+  if (it.tekst) b.tekst = it.tekst;
   switch (it.vorm){
     case "open": if (it.begin) b.begin = it.begin; break;
     case "mk": b.opties = schud([it.goed].concat(it.fout)); break;
@@ -554,6 +579,8 @@ export class Materiaal extends DurableObject {
     else if (m.soort === "topo") Object.assign(uit, { kaart: m.kaart, plekken: m.plekken });
     else if (m.modus === "toets") Object.assign(uit, { modus: "toets", verborgen: true, husselen: !!m.husselen, items: m.items.map(verborgen) });
     else Object.assign(uit, { modus: m.modus, husselen: !!m.husselen, items: m.items });
+    /* de teksten van een leestoets: geen antwoorden, dus ook in een toets */
+    if (m.soort === "oefening" && m.teksten) uit.teksten = m.teksten;
     if (m.soort === "oefening" && m.trek) uit.trek = m.trek;
     return json(uit);
   }

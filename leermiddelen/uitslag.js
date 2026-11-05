@@ -110,7 +110,7 @@ var UITSLAG = (function(){
     opbouw(); teken();
   }
   function opbouw(){
-    var topo = u.items.some(function(it){ return it.vorm === 'topo'; });
+    var topo = u.items.some(function(it){ return it.vorm === 'topo'; }), vaard = u.items.some(function(it){ return it.doel; });
     $('uitslagInhoud').innerHTML =
       '<div class="rsklassen" id="rsKlassen" role="group" aria-label="Klas"></div>' +
       '<div id="rsOproep"></div>' +
@@ -133,6 +133,8 @@ var UITSLAG = (function(){
         '</aside>' +
       '</div>' +
       (topo ? '<section class="paneel rsplek" aria-labelledby="rsPlekKop"><h3 class="kopje" id="rsPlekKop">Per plek</h3><p class="tip">Welk deel van de klas elke plek goed had, over alle vragen erover. De lastigste staan bovenaan.</p><div class="perplek" id="perPlek"></div></section>' : '') +
+      (vaard ? '<section class="paneel rsplek" aria-labelledby="rsVaKop"><h3 class="kopje" id="rsVaKop">Per leesvaardigheid</h3><p class="tip">Welk deel van de punten de klas haalde bij elke vaardigheid. De lastigste staan bovenaan; daar zit je volgende les.</p>' +
+        '<div class="perplek" id="perVaard"></div><div class="rsvtabel" id="perVaardLl"></div></section>' : '') +
       '<section class="paneel rsvragen" aria-labelledby="rsVrKop"><div class="rspkop"><h3 class="kopje" id="rsVrKop">Per vraag</h3><span class="tip">hoeveel er goed hadden, en of de vraag de sterke en zwakke leerlingen uit elkaar haalt</span></div><div id="rsVragen"></div></section>' +
       (u.modus === 'toets' ? '<section class="paneel rsterug" id="rsTerug" aria-label="Wat leerlingen terugzien"></section>' : '');
     zetNormKeuze(); tekenNormRegel();
@@ -215,6 +217,7 @@ var UITSLAG = (function(){
     $('verdeling').innerHTML = ver.map(function(n, i){ return '<div class="' + (i < 5 ? 'onv' : '') + '"><span>' + (n || '') + '</span><i style="height:' + Math.round(n / hoog * 100) + '%"></i><b>' + (i + 1) + '</b></div>'; }).join('');
     tekenTabel(rijen); tekenVragen(rijen);
     if ($('perPlek')) tekenPerPlek(rijen);
+    if ($('perVaard')) tekenPerVaardigheid(rijen);
     if ($('rsTerug')) $('rsTerug').innerHTML = '<div class="rsterugtekst"><b>' + (u.terugzien ? 'Leerlingen zien hun score en de goede antwoorden' : 'Leerlingen zien alleen hun score') + '</b>' +
       '<span>' + (u.terugzien ? 'Zet het uit als de toets nog in een andere klas komt.' : 'Zet de goede antwoorden aan als alle klassen de toets gemaakt hebben.') + '</span></div>' +
       '<button class="knop stil" type="button" id="terugzienWissel">' + (u.terugzien ? 'Alleen de score laten zien' : 'Goede antwoorden laten zien') + '</button><p class="melding" id="terugMelding" role="status" aria-live="polite"></p>';
@@ -279,6 +282,35 @@ var UITSLAG = (function(){
           '<span class="vractie">' + actie + '</span></div>';
       }).join('') +
       (kort ? '<button class="linkknop vralle" type="button" id="alleVragen">Alle ' + l.length + ' vragen</button>' : '');
+  }
+  /* Een leestoets: per leesvaardigheid (item.doel) het deel van de punten, voor de klas en per leerling */
+  function doelNaam(d){ return (window.LEESTOETS && LEESTOETS.DOELNAAM[d]) || d; }
+  function tekenPerVaardigheid(rijen){
+    var per = {}, volg = [];
+    u.items.forEach(function(it, i){
+      if (!it.doel || !telt(i)) return;
+      if (!per[it.doel]){ per[it.doel] = { goed: 0, max: 0, ll: {} }; volg.push(it.doel); }
+      rijen.forEach(function(r){
+        var w = NAKIJK.waarde(r.rij, i), x = per[it.doel].ll[r.sid] = per[it.doel].ll[r.sid] || { goed: 0, max: 0, open: 0 };
+        if (w == null){ x.open++; return; }
+        per[it.doel].goed += w * ptn(it); per[it.doel].max += ptn(it); x.goed += w * ptn(it); x.max += ptn(it);
+      });
+    });
+    var l = volg.filter(function(d){ return per[d].max; }).sort(function(a, c){ return per[a].goed / per[a].max - per[c].goed / per[c].max; });
+    $('perVaard').innerHTML = l.length ? l.map(function(d){
+      var pc = Math.round(per[d].goed / per[d].max * 100);
+      return '<div class="' + (pc < 55 ? 'onv' : '') + '"><b>' + schoon(doelNaam(d)) + '</b><span class="pbalk"><i style="width:' + pc + '%"></i></span><span class="getal">' + pc + '%</span></div>';
+    }).join('') : '<p class="tip">Nog niets om te laten zien.</p>';
+    var kol = volg;
+    $('perVaardLl').innerHTML = rijen.length && kol.length ? '<table><thead><tr><th>Naam</th>' + kol.map(function(d){ return '<th>' + schoon(doelNaam(d)) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+      rijen.slice().sort(function(a, c){ return String(a.naam).localeCompare(String(c.naam), 'nl'); }).map(function(r){
+        return '<tr><td>' + schoon(r.naam) + '</td>' + kol.map(function(d){
+          var x = per[d].ll[r.sid]; if (!x || (!x.max && !x.open)) return '<td>–</td>';
+          if (!x.max) return '<td class="open">open</td>';
+          var pc = x.goed / x.max;
+          return '<td class="' + (pc >= 0.8 ? 'hoog' : pc < 0.55 ? 'laag' : '') + '">' + komma(x.goed, 1).replace(/,0$/, '') + '/' + x.max + (x.open ? ' <small>+ open</small>' : '') + '</td>';
+        }).join('') + '</tr>';
+      }).join('') + '</tbody></table>' : '';
   }
   /* Topografie: per plek hoe vaak het goed ging, over alle vragen over die plek */
   function tekenPerPlek(rijen){

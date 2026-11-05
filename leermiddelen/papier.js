@@ -63,7 +63,11 @@ var PAPIER = (function(){
     var bl = [], perKaart = {};
     (k || items.map(function(x, i){ return i; })).forEach(function(i){
       var it = items[i];
-      if (it.vorm === 'topo'){
+      /* een leestoets: alle vragen bij een tekst vormen samen een blok */
+      if (it.tekst){
+        if (!perKaart['t' + it.tekst]){ perKaart['t' + it.tekst] = { tekst: it.tekst, l: [] }; bl.push(perKaart['t' + it.tekst]); }
+        perKaart['t' + it.tekst].l.push(i);
+      } else if (it.vorm === 'topo'){
         if (!perKaart[it.kaart]){ perKaart[it.kaart] = { kaart: it.kaart, l: [] }; bl.push(perKaart[it.kaart]); }
         perKaart[it.kaart].l.push(i);
       } else bl.push({ l: [i] });
@@ -73,7 +77,9 @@ var PAPIER = (function(){
   /* k: alleen deze vragen (bij trek), op volgorde */
   function volgorde(items, code, versie, k){
     var bl = blokken(items || [], k);
-    if (versie === 'B'){
+    /* met teksten: de teksten in dezelfde volgorde, de vragen bij elke tekst door elkaar */
+    if (versie === 'B' && bl.some(function(b){ return b.tekst; })) bl = bl.map(function(b){ return b.tekst && b.l.length > 1 ? { tekst: b.tekst, l: door(b.l, code + '|tekst|B|' + b.tekst) } : b; });
+    else if (versie === 'B'){
       var nieuw = door(bl, code + '|volgorde|B|' + items.length);
       bl = nieuw.map(function(b){ return b.kaart ? { kaart: b.kaart, l: door(b.l, code + '|kaart|B|' + b.kaart) } : b; });
     }
@@ -258,8 +264,15 @@ var PAPIER = (function(){
     var items = m.items || [], orde = volgorde(items, code, versie, getrokken(code, versie, items.length, m.trek)), kn = kaartNummers(items, orde, code, versie), getekend = {};
     var op = orde.map(function(i){ return items[i]; }), hulp = hulpVan(o, versie);
     var heeftMk = op.some(function(it){ return it.vorm === 'mk' || (it.vorm === 'topo' && it.wijze === 'kies'); });
-    var li = [];
+    var li = [], tekstGezet = {};
     tabelStukken(items, orde).forEach(function(st, k){
+      /* een leestoets: de tekst een keer, vlak voor de eerste vraag erover */
+      var eerste = items[st.tabel ? st.tabel[0] : st.i], tk = eerste && eerste.tekst && (m.teksten || []).filter(function(t){ return t.id === eerste.tekst; })[0];
+      if (tk && !tekstGezet[tk.id] && window.LEESTOETS){
+        tekstGezet[tk.id] = true;
+        var nrs = orde.map(function(j, x){ return items[j].tekst === tk.id ? x + 1 : 0; }).filter(Boolean);
+        li.push('<li class="lb-li tekstblok"><span class="odkop">Tekst ' + schoon(tk.id) + ', bij ' + (nrs.length > 1 ? 'vraag ' + nrs[0] + ' tot en met ' + nrs[nrs.length - 1] : 'vraag ' + nrs[0]) + '</span>' + LEESTOETS.html(tk) + '</li>');
+      }
       if (st.tabel){ li.push(OPENPAPIER.tabel(st.tabel.map(function(i){ return items[i]; }), hulp, hulp === 'bank' ? woordbank(items, orde, st.tabel, code + '|bank|' + versie + '|' + k) : null)); return; }
       var i = st.i, it = items[i];
       /* de kaart staat een keer, boven de eerste vraag erover */

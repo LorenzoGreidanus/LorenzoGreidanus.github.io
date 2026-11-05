@@ -366,6 +366,19 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
 @media (max-width:560px){.lijnvelden{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .item .vinken{display:grid;gap:8px;margin-top:4px}
 .voorbeeldvak .sc-wrap{margin-top:6px}
+/* leestekst toevoegen: de vaardigheden als vinkjes, de teksten uit de leesbank als lijst */
+.ltdoelen{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}
+.chipvink{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border:1.5px solid var(--rand2);border-radius:999px;font-size:.84rem;cursor:pointer}
+.chipvink:has(input:checked){border-color:var(--ocean);background:var(--kaart2)}
+.ltteksten{display:grid;gap:6px;max-height:340px;overflow:auto;margin-top:8px}
+.lttekst{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:8px 10px;border:1.5px solid var(--rand);border-radius:12px;cursor:pointer}
+.lttekst small{display:block;color:var(--muted);font-size:.78rem}
+.lttekst:has(input:checked){border-color:var(--ocean)}
+.ltlijst{list-style:none;margin:6px 0;padding:0;display:grid;gap:6px}
+.ltlijst li{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline;padding:8px 10px;border-radius:10px;background:var(--kaart2)}
+.ltlijst small{color:var(--muted)}
+.ltlijst .linkknop{margin-left:auto}
+.ltkeuze{margin-bottom:4px}
 .voorbeeldvak .gat{min-width:80px}
 .voorbeeldvak .open .nepveld{flex:1 1 200px;color:var(--muted);display:flex;align-items:center}
 .voorbeeldvak .vraagafb img{max-height:220px}
@@ -557,6 +570,25 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
             <textarea class="veld" id="wpTekst" rows="7" placeholder="braces = beugel&#10;to describe = omschrijven&#10;slightly = (een) beetje"></textarea>
             <div class="rij" style="margin-top:8px"><button class="knop stil klein" id="wpZet" type="button">Zet erbij</button><span class="tip" id="wpUit" role="status" aria-live="polite"></span></div>
           </details>
+          <details class="woordplak" id="leesPlak" style="margin-top:10px">
+            <summary style="min-height:44px;display:flex;align-items:center;cursor:pointer;font-weight:600">Leestekst toevoegen (leestoets)</summary>
+            <div id="ltLijst"></div>
+            <div class="seg" role="radiogroup" aria-label="Waar komt de tekst vandaan" style="margin:8px 0">
+              <label><input type="radio" name="ltBron" value="bank" checked><span>Uit de leesbank</span></label>
+              <label><input type="radio" name="ltBron" value="eigen"><span>Eigen tekst</span></label>
+            </div>
+            <div id="ltBank">
+              <span class="veldnaam">Wat toets je <span class="mag">niets aangevinkt: alles bij de tekst</span></span>
+              <div class="ltdoelen" id="ltDoelen"></div>
+              <label class="veldnaam"><span>Niveau</span><select class="veld" id="ltNiv"><option value="">alle niveaus</option><option value="1F">1F</option><option value="2F" selected>2F</option><option value="3F">3F</option></select></label>
+              <div class="ltteksten" id="ltTeksten"><p class="tip">De leesbank laden…</p></div>
+            </div>
+            <div id="ltEigen" class="hide">
+              <label class="veldnaam"><span>Titel</span><input class="veld" id="ltTitel" maxlength="120" placeholder="bijv. Spierpijn: wat er echt gebeurt"></label>
+              <label class="veldnaam"><span>De tekst <span class="mag">een lege regel tussen de alinea’s; ze krijgen een nummer</span></span><textarea class="veld" id="ltTekst" rows="8" maxlength="6000"></textarea></label>
+            </div>
+            <div class="rij" style="margin-top:8px"><button class="knop stil klein" id="ltZet" type="button">Zet in de toets</button><span class="tip" id="ltUit" role="status" aria-live="polite"></span></div>
+          </details>
         </nav>
         <section class="paneel vraagpaneel" id="vraagpaneel" aria-label="De vraag die je bewerkt">
           <div class="items" id="items"></div>
@@ -706,6 +738,7 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
 <script src="nakijk.js"></script>
 <script src="open-papier.js"></script>
 <script src="schema.js"></script>
+<script src="leestoets.js"></script>
 <script src="papier.js"></script>
 <script src="uitslag.js"></script>
 <script src="topo-eigen.js"></script>
@@ -1157,6 +1190,15 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
   $('vergelijkKnop').addEventListener('click', function(){ zetStand(''); UITSLAG.vergelijk({ terug: naarLijst, bewerk: vanUitslagBewerken }); });
   $('terugNaarLijst').addEventListener('click', sluit);
   $('nieuwLijst').addEventListener('click', function(){ vulLijst({ naam:'', vak:'', kopA:'', kopB:'', paren:[] }); open('lijst'); });
+  /* maken.html?leestoets=<id>: een kant-en-klare leestoets (leestoets.js) in de editor; bewaren doet de docent */
+  (function(){
+    var id = new URLSearchParams(location.search).get('leestoets'); if (!id || !LEESTOETS.KLAAR[id]) return;
+    LEESTOETS.laad(true).then(function(){
+      var k = LEESTOETS.klaar(id); if (!k) return;
+      plaatjesCode = ''; vulOef(k); open('oefening'); zetVies(true);
+      melding($('bewaarMelding'), 'Een kant-en-klare leestoets met ' + k.items.length + ' vragen bij ' + k.teksten.length + ' teksten. Bekijk hem, pas aan wat je wilt en klik op Bewaren.', 'goed');
+    });
+  })();
   $('nieuwOef').addEventListener('click', function(){ plaatjesCode = ''; vulOef({ naam:'', vak:'', modus:'oefenen', items:[] }); open('oefening'); });
   /* Een woordenlijst klaarzetten vanuit een link: #import=toets of #import=lijst, met naam, vak en de
      woorden (w, base64 van de tekst: een woord per regel, zoals bij Woordjes plakken). De woorden staan
@@ -1458,6 +1500,7 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
     } else if (v === 'schema'){
       h = schemaVelden(x);
     }
+    if (teksten.length || x.tekst || x.doel) h = ltKeuze(x) + h;
     var uitleg = label('Uitleg na de vraag' + MAG, kortVak('uitleg', x.uitleg, 'bijv. waarom dit het antwoord is'));
     h += v !== 'aanwijzen' && v !== 'topo' ? '<div class="tweekolom">' + afbRij(x, false) + uitleg + '</div>' : uitleg;
     return '<div class="item" data-vorm="' + v + '"' + (v === 'topo' ? ' data-fout="' + schoon(JSON.stringify(x.fout || [])) + '"' : '') + '>' +
@@ -1498,6 +1541,85 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
     var x = lees(it), i = [].indexOf.call($('items').children, it);
     it.insertAdjacentHTML('afterend', itemHtml({ vorm: 'schema', soort: e.target.value, vraag: '', uitleg: x.uitleg, punten: x.punten, alles: x.alles }));
     it.remove(); zetVies(true); nummer(); kies(i);
+  });
+  /* ---------- de leestoets: teksten in de toets (leestoets.js) ----------
+     teksten: [{ id:'A', titel, bank } of { id, titel, tekst }]; een vraag wijst met tekst naar zijn tekst. */
+  var teksten = [];
+  function ltKeuze(x){
+    var tk = '<select class="veld" data-v="tekst"><option value="">geen tekst</option>' + teksten.map(function(t){ return '<option value="' + t.id + '"' + (t.id === x.tekst ? ' selected' : '') + '>Tekst ' + t.id + ': ' + schoon(t.titel) + '</option>'; }).join('') + '</select>';
+    var dl = '<select class="veld" data-v="doel"><option value="">geen</option>' + Object.keys(LEESTOETS.DOELNAAM).map(function(d){ return '<option value="' + d + '"' + (d === x.doel ? ' selected' : '') + '>' + schoon(LEESTOETS.DOELNAAM[d]) + '</option>'; }).join('') + '</select>';
+    return '<div class="tweekolom ltkeuze">' + label('Bij tekst', tk) + label('Leesvaardigheid' + MAG, dl) + '</div>';
+  }
+  /* de keuze Bij tekst in elke vraag bijwerken als er een tekst bij komt of af gaat */
+  function zetTekstKeuzes(){
+    [].forEach.call($('items').children, function(it){
+      var oud = it.querySelector('.ltkeuze'), x = { tekst: oud ? oud.querySelector('[data-v="tekst"]').value : '', doel: oud ? oud.querySelector('[data-v="doel"]').value : '' };
+      if (x.tekst && !teksten.some(function(t){ return t.id === x.tekst; })) x.tekst = '';
+      var nieuw = teksten.length || x.doel ? ltKeuze(x) : '';
+      if (oud) oud.outerHTML = nieuw; else if (nieuw) it.querySelector('.velden2').insertAdjacentHTML('afterbegin', nieuw);
+    });
+  }
+  function tekenLtLijst(){
+    $('ltLijst').innerHTML = teksten.length ? '<ul class="ltlijst">' + teksten.map(function(t){
+      var n = [].filter.call($('items').children, function(it){ var k = it.querySelector('[data-v="tekst"]'); return k && k.value === t.id; }).length;
+      return '<li><b>Tekst ' + t.id + '</b> ' + schoon(t.titel) + ' <small>' + (t.bank ? 'leesbank' : 'eigen tekst') + ' · ' + n + (n === 1 ? ' vraag' : ' vragen') + '</small><button class="linkknop" type="button" data-ltweg="' + t.id + '">Weghalen</button></li>';
+    }).join('') + '</ul>' : '';
+  }
+  function ltVrijeLetter(){ var l = 'ABCDEF'.split('').filter(function(c){ return !teksten.some(function(t){ return t.id === c; }); }); return l[0] || ''; }
+  function ltDoelenNu(){ return [].map.call($('ltDoelen').querySelectorAll('input:checked'), function(i){ return i.value; }); }
+  /* de lijst met teksten uit de leesbank, met het aantal vragen bij de gekozen vaardigheden */
+  function tekenLtTeksten(){
+    if (!window.LEESBANK || !LEESBANK.TEKSTEN.length) return;
+    var d = ltDoelenNu(), niv = $('ltNiv').value;
+    var l = LEESBANK.TEKSTEN.filter(function(t){ return (!niv || t.niv === niv) && (!d.length || d.some(function(x){ return (t.taken[x] || []).length; })); });
+    var al = {}; teksten.forEach(function(t){ if (t.bank) al[t.bank] = 1; });
+    $('ltTeksten').innerHTML = l.length ? l.map(function(t){
+      var n = LEESTOETS.vragen(t, d).length, wat = Object.keys(t.taken).map(function(x){ return (LEESTOETS.DOELNAAM[x] || x).toLowerCase(); }).join(', ');
+      return '<label class="lttekst"><input type="checkbox" value="' + schoon(t.id) + '"' + (al[t.id] ? ' disabled' : '') + '><span><b>' + schoon(t.titel) + '</b><small>' + schoon((LEESBANK.VORMEN[t.vorm] || t.vorm) + ' · ' + t.niv + ' · ' + wat) + '</small></span><span class="tip">' + (al[t.id] ? 'staat erin' : n + (n === 1 ? ' vraag' : ' vragen')) + '</span></label>';
+    }).join('') : '<p class="tip">Geen tekst met deze vaardigheden op dit niveau. Kies een ander niveau of minder vaardigheden.</p>';
+  }
+  $('leesPlak').addEventListener('toggle', function(){
+    if (!$('leesPlak').open) return;
+    if (!$('ltDoelen').children.length) $('ltDoelen').innerHTML = Object.keys(LEESTOETS.DOELNAAM).map(function(d){ return '<label class="chipvink"><input type="checkbox" value="' + d + '"><span>' + schoon(LEESTOETS.DOELNAAM[d]) + '</span></label>'; }).join('');
+    tekenLtLijst();
+    LEESTOETS.laad(true).then(tekenLtTeksten, function(){ $('ltTeksten').innerHTML = '<p class="tip">De leesbank laden lukte niet. Probeer het opnieuw.</p>'; });
+  });
+  $('leesPlak').addEventListener('change', function(e){
+    if (e.target.name === 'ltBron'){ var bank = e.target.value === 'bank'; $('ltBank').classList.toggle('hide', !bank); $('ltEigen').classList.toggle('hide', bank); }
+    if (e.target.closest('#ltDoelen') || e.target.id === 'ltNiv') tekenLtTeksten();
+  });
+  $('leesPlak').addEventListener('click', function(e){
+    var b = e.target.closest('[data-ltweg]'); if (!b) return;
+    var id = b.getAttribute('data-ltweg');
+    if (!confirm('Tekst ' + id + ' weghalen? De vragen blijven staan, maar horen dan bij geen tekst meer.')) return;
+    teksten = teksten.filter(function(t){ return t.id !== id; });
+    zetTekstKeuzes(); tekenLtLijst(); tekenLtTeksten(); zetVies(true);
+  });
+  $('ltZet').addEventListener('click', function(){
+    var bank = document.querySelector('input[name="ltBron"]:checked').value === 'bank', nieuw = [], eerst = $('items').children.length;
+    if (bank){
+      var ids = [].map.call($('ltTeksten').querySelectorAll('input:checked'), function(i){ return i.value; }), d = ltDoelenNu();
+      if (!ids.length){ melding($('ltUit'), 'Vink een of meer teksten aan.', 'fout'); return; }
+      ids.forEach(function(tid){
+        var t = LEESBANK.tekst(tid), id = ltVrijeLetter(); if (!t || !id) return;
+        teksten.push({ id: id, titel: t.titel, bank: t.id });
+        LEESTOETS.vragen(t, d).forEach(function(v){ v.tekst = id; nieuw.push(v); });
+      });
+    } else {
+      var tekst = $('ltTekst').value.trim(), titel = $('ltTitel').value.trim(), id = ltVrijeLetter();
+      if (!tekst){ melding($('ltUit'), 'Plak eerst de tekst.', 'fout'); $('ltTekst').focus(); return; }
+      if (!id){ melding($('ltUit'), 'Een toets heeft hoogstens zes teksten.', 'fout'); return; }
+      teksten.push({ id: id, titel: titel || 'Tekst ' + id, tekst: tekst });
+      nieuw.push({ vorm: 'open', vraag: '', antwoorden: [], punten: 1, tekst: id });
+      $('ltTekst').value = ''; $('ltTitel').value = '';
+    }
+    if (!nieuw.length && bank){ melding($('ltUit'), 'Hoogstens zes teksten per toets.', 'fout'); return; }
+    nieuw = nieuw.slice(0, Math.max(0, 300 - eerst));
+    /* de keuze Bij tekst ook bij de vragen die er al stonden */
+    zetTekstKeuzes();
+    $('items').insertAdjacentHTML('beforeend', nieuw.map(itemHtml).join(''));
+    nummer(); zetVies(true); kies(eerst, true); tekenLtLijst(); tekenLtTeksten();
+    melding($('ltUit'), bank ? nieuw.length + ' vragen bij de tekst erbij gezet. Bekijk ze en pas aan wat je anders wilt.' : 'Tekst ' + teksten[teksten.length - 1].id + ' staat erin, met een lege vraag erbij. Maak de vragen en kies bij elke vraag Bij tekst ' + teksten[teksten.length - 1].id + '.', 'goed');
   });
   /* Een vraag op een kaart van topografie: de kaart, de plek en hoe je het vraagt.
      De vraag zelf maakt topo-eigen.js, zodat hij altijd bij de plek past. */
@@ -1748,13 +1870,17 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
     terugzienToets = m.modus === 'toets' && (m.terugzien === undefined ? !!m.code : !!m.terugzien);
     $('husselen').checked = !!m.husselen;
     $('trek').checked = !!m.trek; $('trekAantal').value = m.trek || '';
+    teksten = (m.teksten || []).map(function(t){ return Object.assign({}, t); });
     $('items').innerHTML = (m.items || []).map(itemHtml).join('');
-    actief = 0; nummer(); toonTerugzien();
+    actief = 0; nummer(); toonTerugzien(); tekenLtLijst();
   }
   function regels(t){ return String(t || '').split(/\r?\n/).map(function(x){ return x.trim(); }).filter(Boolean); }
   function lees(it){
     var v = it.getAttribute('data-vorm'), w = function(n){ var el = it.querySelector('[data-v="' + n + '"]'); return el ? el.value : ''; };
     var x = { vorm: v, vraag: w('vraag').replace(/\s+/g, ' ').trim(), uitleg: w('uitleg').replace(/\s+/g, ' ').trim(), punten: Math.max(1, Math.min(10, Math.round(Number(w('punten')) || 1))) };
+    /* een leestoets: bij welke tekst en welke vaardigheid */
+    if (w('tekst')) x.tekst = w('tekst');
+    if (w('doel')) x.doel = w('doel');
     if (v === 'mk'){
       /* het antwoord met Goed is goed, de andere ingevulde zijn fout: zo bewaart de server het al */
       var rijen = [].slice.call(it.querySelectorAll('.ant:not(.nieuw)')), g = it.querySelector('.ant.goed:not(.nieuw)');
@@ -2021,6 +2147,8 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
       m.terugzien = m.modus === 'toets' ? $('terugzien').checked : true;
       m.husselen = $('husselen').checked;
       m.trek = trekNu();
+      /* een leestoets: de teksten mee; elke leerling een deel van de vragen kan dan niet */
+      if (teksten.length){ m.teksten = teksten; m.trek = 0; }
       if (m.trek < 0){ toonTrek(); melding($('bewaarMelding'), 'Kies bij Elke leerling een deel van de vragen een aantal van 2 tot ' + ($('items').children.length - 1) + '.', 'fout'); $('trekAantal').focus(); return; }
       m.items = [].map.call($('items').children, lees);
       if (!m.items.length){ melding($('bewaarMelding'), 'Zet er minstens een vraag in: kies + Vraag erbij.', 'fout'); $('vraagErbij').focus(); return; }

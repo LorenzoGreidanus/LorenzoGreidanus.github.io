@@ -57,6 +57,7 @@ window.LEESBLAD = (function(){
     '.lb-blok th,.lb-blok td{text-align:left}.lb-blok td{padding:3px 6px;border-bottom:1px solid var(--lb-rand)}' +
     '.lb-lijst{display:grid;grid-template-columns:1fr auto;gap:2px 12px;font-size:.86rem}' +
     '.lb-lijst span{padding:2px 0;border-bottom:1px dotted var(--lb-rand)}.lb-lijst span:nth-child(even){font-weight:600;text-align:right}' +
+    '.lb-lijst.lang{grid-template-columns:minmax(6em,max-content) minmax(0,1fr)}.lb-lijst.lang span:nth-child(odd){font-weight:600}.lb-lijst.lang span:nth-child(even){font-weight:400;text-align:left}' +
     '@media (max-width:600px){.lb-blokken{grid-template-columns:1fr}.lb-blok table{display:block;overflow-x:auto}}' +
     '.lb-bronnen{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}' +
     '.lb-br{border:1.5px solid var(--lb-ink);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;break-inside:avoid}' +
@@ -141,7 +142,8 @@ window.LEESBLAD = (function(){
     var h = b.kop ? '<h4>' + opmaak(b.kop) + '</h4>' : '';
     if (b.tabel) return '<div class="lb-blok breed">' + h + '<table><thead><tr>' + b.tabel[0].map(function(c){ return '<th>' + opmaak(c) + '</th>'; }).join('') + '</tr></thead><tbody>' +
       b.tabel.slice(1).map(function(r){ return '<tr>' + r.map(function(c){ return '<td>' + opmaak(c) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>';
-    if (b.lijst) return '<div class="lb-blok">' + h + '<div class="lb-lijst">' + b.lijst.map(function(r){ return '<span>' + opmaak(r[0]) + '</span><span>' + opmaak(r[1]) + '</span>'; }).join('') + '</div></div>';
+    /* een lijst met lange zinnen rechts (huisregels): links een smalle kop, rechts de zin over de rest van de breedte */
+    if (b.lijst) return '<div class="lb-blok' + (b.lijst.some(function(x){ return String(x[1]).length > 24; }) ? ' breed' : '') + '">' + h + '<div class="lb-lijst' + (b.lijst.some(function(x){ return String(x[1]).length > 24; }) ? ' lang' : '') + '">' + b.lijst.map(function(r){ return '<span>' + opmaak(r[0]) + '</span><span>' + opmaak(r[1]) + '</span>'; }).join('') + '</div></div>';
     return '<div class="lb-blok' + (String(b.tekst || '').length > 260 ? ' breed' : '') + '">' + h + '<p>' + opmaak(b.tekst) + '</p></div>';
   }
   function bronHtml(b, i){

@@ -78,6 +78,8 @@
       <b id="speelNaam"></b><span class="tip" id="teller"></span>
     </div>
     <div class="voortgang" aria-hidden="true"><i id="balk" style="width:0"></i></div>
+    <div class="speelgrid">
+    <details class="leestekst hide" id="leestekst" open><summary id="leestekstKop"></summary><div id="leestekstIn"></div></details>
     <div class="kaart">
       <p class="vraagtekst" id="vraagtekst" tabindex="-1"></p>
       <p class="tip" id="hoe" style="margin:-6px 0 12px"></p>
@@ -88,6 +90,7 @@
         <button class="knop" id="nakijk" type="button">Nakijken</button>
         <button class="knop hide" id="verder" type="button">Volgende</button>
       </div>
+    </div>
     </div>
   </section>
 
@@ -118,6 +121,7 @@
 <script src="eigen.js"></script>
 <script src="open-papier.js"></script>
 <script src="schema.js"></script>
+<script src="leestoets.js"></script>
 <script src="voorbeeldtoetsen.js"></script>
 <script src="topo-eigen.js"></script>
 <script>
@@ -157,7 +161,9 @@
       code = String(c).toUpperCase().replace(/[^A-Z0-9]/g, ''); mat = m;
       history.replaceState(null, '', location.pathname + '?code=' + code);
       /* vragen op een kaart: eerst de kaarten erbij */
-      if ((m.items || []).some(function(it){ return it.vorm === 'topo'; })) TOPO.laad(toonBegin); else toonBegin();
+      /* een leestoets: eerst de teksten (en de leesbank) erbij */
+      var klaar = (m.teksten || []).length ? function(){ LEESTOETS.laad(m).then(toonBegin, toonBegin); } : toonBegin;
+      if ((m.items || []).some(function(it){ return it.vorm === 'topo'; })) TOPO.laad(klaar); else klaar();
     }).catch(function(f){
       $('codeKnop').disabled = false; $('codeKnop').removeAttribute('aria-busy');
       scherm('codeScherm'); $('codeIn').value = String(c || '').toUpperCase();
@@ -244,6 +250,8 @@
     var k = getrokken();
     if (k) volg = mat.husselen ? k : k.slice().sort(function(x, y){ return x - y; });
     else if (mat.soort !== 'lijst' && mat.husselen) volg = schud(volg);
+    /* een leestoets: de vragen bij een tekst blijven bij elkaar, husselen gaat binnen een tekst */
+    if ((mat.teksten || []).length) volg = LEESTOETS.volgorde(oef.items, volg.slice().sort(function(x, y){ return x - y; }), mat.husselen ? schud : null);
     oef = Object.assign({}, oef, { items: volg.map(function(i){ return oef.items[i]; }) });
     nr = 0; uitslag = []; antwoorden = [];
     $('speelNaam').textContent = mat.naam;
@@ -258,7 +266,8 @@
   function afbAdres(id){ return EIGEN.afbAdres(code, id); }
   function toonVraag(){
     var it = oef.items[nr];
-    $('teller').textContent = 'Vraag ' + (nr + 1) + ' van ' + oef.items.length + (it.punten > 1 ? ' · ' + it.punten + ' punten' : '');
+    $('teller').textContent = 'Vraag ' + (nr + 1) + ' van ' + oef.items.length + (it.tekst ? ' · bij tekst ' + it.tekst : '') + (it.punten > 1 ? ' · ' + it.punten + ' punten' : '');
+    toonTekst(it);
     $('balk').style.width = (nr / oef.items.length * 100) + '%';
     /* een woordvraag zet het woord in de kijker (open-papier.js) */
     if (it.vorm === 'open') $('vraagtekst').innerHTML = OPENPAPIER.vraagHtml(it.vraag || '');
@@ -275,7 +284,19 @@
     $('verder').classList.add('hide');
     $('vraagtekst').focus({ preventScroll: true });
   }
-  function klaarVoorNakijken(){ $('nakijk').disabled = !huidig.klaar(); }
+  /* De tekst bij de vraag: links naast de vraag, op een telefoon erboven (in te klappen).
+     Dezelfde tekst als bij de vorige vraag blijft staan, ook waar je naartoe gescrold was. */
+  var tekstNu = null;
+  function toonTekst(it){
+    var tk = it.tekst && (mat.teksten || []).filter(function(t){ return t.id === it.tekst; })[0];
+    $('leestekst').classList.toggle('hide', !tk); $('speelScherm').classList.toggle('mettekst', !!tk); $('main').classList.toggle('breed', !!tk);
+    if (!tk){ tekstNu = null; return; }
+    if (tekstNu === tk.id) return;
+    tekstNu = tk.id;
+    $('leestekstKop').innerHTML = '<span>Tekst ' + schoon(tk.id) + '</span><span class="lt-klap">tekst inklappen</span>';
+    $('leestekstIn').innerHTML = LEESTOETS.html(tk); $('leestekstIn').scrollTop = 0;
+  }
+  function klaarVoorNakijken(){ if (huidig) $('nakijk').disabled = !huidig.klaar(); }
   $('nakijk').addEventListener('click', function(){ if (!huidig.klaar()) return; nakijken(); });
   function nakijken(){
     var it = oef.items[nr];
