@@ -1195,8 +1195,10 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
     var id = new URLSearchParams(location.search).get('leestoets'); if (!id || !LEESTOETS.KLAAR[id]) return;
     LEESTOETS.laad(true).then(function(){
       var k = LEESTOETS.klaar(id); if (!k) return;
-      plaatjesCode = ''; vulOef(k); open('oefening'); zetVies(true);
-      melding($('bewaarMelding'), 'Een kant-en-klare leestoets met ' + k.items.length + ' vragen bij ' + k.teksten.length + ' teksten. Bekijk hem, pas aan wat je wilt en klik op Bewaren.', 'goed');
+      return LEESTOETS.metPlaatjes(k).then(function(){
+        plaatjesCode = ''; vulOef(k); open('oefening'); zetVies(true);
+        melding($('bewaarMelding'), 'Een kant-en-klare ' + (k.modus === 'oefenen' ? 'oefentoets' : 'leestoets') + ' met ' + k.items.length + ' vragen bij ' + k.teksten.length + ' teksten. Bekijk hem, pas aan wat je wilt en klik op Bewaren.', 'goed');
+      });
     });
   })();
   $('nieuwOef').addEventListener('click', function(){ plaatjesCode = ''; vulOef({ naam:'', vak:'', modus:'oefenen', items:[] }); open('oefening'); });
@@ -1365,7 +1367,7 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
     KIEZER.open({
       knop: this, vak: $('vak').value,
       al: function(){ return [].map.call($('items').children, function(it){ var x = lees(it); return KIEZER.sleutel(x.vraag, x.vorm === 'mk' ? x.goed : x.vorm === 'open' ? (x.antwoorden || [])[0] : ''); }); },
-      plaatjesVrij: function(){ return Math.max(0, 12 - $('items').querySelectorAll('.afbvak.heeft').length); },
+      plaatjesVrij: function(){ return Math.max(0, 30 - $('items').querySelectorAll('.afbvak.heeft').length); },
       ruimte: function(){ return Math.max(0, 300 - $('items').children.length); },
       klaar: function(items, info){
         var mis = info.mislukt ? ' ' + (info.mislukt === 1 ? 'Een vraag kon niet mee' : info.mislukt + ' vragen konden niet mee') + ', omdat het plaatje niet lukte.' : '';

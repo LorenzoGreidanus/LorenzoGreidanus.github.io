@@ -790,7 +790,7 @@ window.SAMEN = (function(){
         /* het plaatje: een eigen plaatje, een vlag, een figuur uit het boek, of de figuur zoals hij op het blad staat */
         var beeld = t.plaatje ? { data:t.plaatje } : t.beeld && t.beeld.vlag ? t.beeld : t.svg ? { svg:t.svg } : (t.beeld && t.beeld.svg) || t.figuur ? { svg:figuurVan(i) } : null;
         if (beeld && beeld.svg !== undefined && !beeld.svg) return weg.push({ nr:nr, reden:'de figuur kan niet mee in een toets' });
-        if (beeld && plaatjes >= 12) return weg.push({ nr:nr, reden:'een toets heeft hoogstens 12 plaatjes' });
+        if (beeld && plaatjes >= 30) return weg.push({ nr:nr, reden:'een toets heeft hoogstens 30 plaatjes' });
         if (beeld) plaatjes++;
         var x = t.vorm === 'mk' ? { vorm:'mk', vraag:t.vraag, goed:t.goed, fout:t.fout.slice(0, 5), uitleg:t.uitleg || '', punten:t.punten || 1 }
           : t.vorm === 'schema' ? { vorm:'schema', soort:t.soort, bron:t.bron, onth:t.onth, tussen:t.tussen, kop:t.kop, rijen:t.rijen, vraag:t.vraag, uitleg:t.uitleg || '', punten:t.punten || 1 }

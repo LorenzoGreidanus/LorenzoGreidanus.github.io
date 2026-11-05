@@ -59,7 +59,7 @@ const SCHEMA_SOORT = { dhte: 1, onder: 1, vt: 1, lijn: 1, kruis: 1, tabel: 1 };
 const TOPO_KAARTEN = { nlp: 1, nlw: 1, nlh: 1, nlr: 1, nla: 1, eu: 1, euh: 1, wl: 1, wlh: 1 };
 const TOPO_WIJZE = { wijs: 1, typ: 1, kies: 1 };
 const TOPO_MAX = 250;
-const MAX_AFB = 12, AFB_BYTES = 400 * 1024, STUK = 96000;
+const MAX_AFB = 30, AFB_BYTES = 400 * 1024, STUK = 96000;
 const AFB_ID = /^[A-Z0-9]{8}$/;
 
 function json(obj, status){

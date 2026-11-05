@@ -29,7 +29,7 @@
    Werkblad maken (werkblad-samen.js) gebruikt hetzelfde venster als "Vraag
    toevoegen", met blad: true bij de eerste keer openen. Dan zijn er drie tabs
    (Uit het boek, Uit de vragenbank, Zelf schrijven), gelden de grenzen van een
-   toets niet (200 vragen, 12 plaatjes, een figuur die niet als plaatje kan) en
+   toets niet (200 vragen, 30 plaatjes, een figuur die niet als plaatje kan) en
    krijgt klaar() de vragen zoals ze op het blad komen:
        { bron:'bank', vorm, vraag, goed, fout, antwoorden, uitleg, beeld, vak, t }
        { bron:'boek', o, pvak, par, toets }   o is de opgave zelf, met de figuur
@@ -268,7 +268,7 @@ window.KIEZER = (function(){
     if (BLAD) return '';
     var alles = volgorde.concat(nieuw);
     if (alles.length > opt.ruimte()) return 'Een toets heeft hoogstens 200 vragen; er kunnen er nog ' + opt.ruimte() + ' bij.';
-    if (plaatjesGekozen(alles) > opt.plaatjesVrij()) return 'Een toets heeft hoogstens 12 plaatjes; er kunnen er nog ' + opt.plaatjesVrij() + ' bij. Kies een vraag zonder plaatje.';
+    if (plaatjesGekozen(alles) > opt.plaatjesVrij()) return 'Een toets heeft hoogstens 30 plaatjes; er kunnen er nog ' + opt.plaatjesVrij() + ' bij. Kies een vraag zonder plaatje.';
     return '';
   }
   function alInToets(x){
@@ -827,7 +827,7 @@ window.KIEZER = (function(){
   function boekPast(x){
     if (BLAD) return '';
     if (bVolg.length + 1 > opt.ruimte()) return 'Een toets heeft hoogstens 200 vragen; er kunnen er nog ' + opt.ruimte() + ' bij.';
-    if (x.svg && bVolg.filter(function(id){ return bGekozen[id].svg; }).length + 1 > opt.plaatjesVrij()) return 'Een toets heeft hoogstens 12 plaatjes; er kunnen er nog ' + opt.plaatjesVrij() + ' bij. Kies een opgave zonder figuur.';
+    if (x.svg && bVolg.filter(function(id){ return bGekozen[id].svg; }).length + 1 > opt.plaatjesVrij()) return 'Een toets heeft hoogstens 30 plaatjes; er kunnen er nog ' + opt.plaatjesVrij() + ' bij. Kies een opgave zonder figuur.';
     return '';
   }
   function boekStand(){
@@ -948,7 +948,7 @@ window.KIEZER = (function(){
     bouw();
     opt.alSet = {}; (opt.al ? opt.al() : []).forEach(function(s){ opt.alSet[s] = true; });
     opt.ruimte = opt.ruimte || function(){ return 200; };
-    opt.plaatjesVrij = opt.plaatjesVrij || function(){ return 12; };
+    opt.plaatjesVrij = opt.plaatjesVrij || function(){ return 30; };
     var d = $('kiezer');
     melding('');
     document.documentElement.classList.add('kzopen');
