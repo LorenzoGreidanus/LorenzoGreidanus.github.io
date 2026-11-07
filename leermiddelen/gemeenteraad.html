@@ -1643,7 +1643,8 @@ var VOORSTELLEN = [
   function naarFormatie(){
     S.fase = 'formatie'; R = null; klokStop();
     bewaarNu();
-    teken(); stuurAlle();
+    /* de rolkaart meteen: tijdens de formatie moet je al weten in welke fractie je zit */
+    teken(); stuurRollen(); stuurAlle();
   }
   function formatieKlaar(){
     if (coalitieZetels() < NODIG) return;
@@ -1901,7 +1902,9 @@ var VOORSTELLEN = [
     }
     var f = fractie(r); if (!f) return null;
     var status = S && !S.eerste ? (inCoalitie(f.id) ? 'coalitie' : 'oppositie') : '';
-    return { soort:'rol', rol:f.id, titel:f.naam, onder:f.letters + ' · raadslid · ' + f.zetels + ' van de 21 zetels' + (status ? ' · ' + status : ''), tekst:f.waar,
+    /* wie er nog meer in je fractie zitten: dan vind je elkaar in de klas */
+    var maten = spelers.filter(function(s){ return s.sid !== pid && rollen[s.sid] === f.id; }).map(function(s){ return s.naam; });
+    return { soort:'rol', rol:f.id, titel:f.naam, punten:[maten.length ? 'In jouw fractie: ' + opsomming(maten) + '.' : 'Jij bent de enige leerling in deze fractie.'], onder:f.letters + ' · raadslid · ' + f.zetels + ' van de 21 zetels' + (status ? ' · ' + status : ''), tekst:f.waar,
       doel:status === 'coalitie' ? 'Jullie zitten in de coalitie en leveren wethouder ' + wethouderVan(f.id) + '. Steun het college, of maak de voorstellen beter met een amendement.'
         : status === 'oppositie' ? 'Jullie zitten in de oppositie. Controleer het college en probeer voorstellen te veranderen met amendementen en moties.'
         : 'Samen minstens 11 van de 21 zetels is een meerderheid. Met welke fracties kunnen jullie samen een coalitie vormen?', kleur:f.kleur };
@@ -1912,8 +1915,8 @@ var VOORSTELLEN = [
     var inw = r === 'inwoner', id = S.id + '-' + S.vi;
     if (S.fase === 'formatie'){
       return inw ? { soort:'wacht', titel:'formatie', tekst:'De fracties vormen een coalitie. Jij bent inwoner: bij elk voorstel krijg je een nieuwe rol met een eigen belang.' }
-        : { soort:'uitslag', kop:'formatie', titel:'Welke fracties gaan samen?', tekst:'Samen minstens 11 van de 21 zetels: dat is een meerderheid. Met welke fracties kan jouw fractie goed samenwerken? Zeg het tegen je docent.',
-            regels:FRACTIES.map(function(f){ return f.naam + ': ' + f.zetels + ' zetels'; }) };
+        : { soort:'uitslag', kop:'formatie', titel:'Met wie gaat ' + fractie(r).naam + ' samen?', tekst:'Jij zit in de fractie van ' + fractie(r).naam + '. Samen minstens 11 van de 21 zetels is een meerderheid. Met welke fracties kan jouw fractie goed samenwerken? Praat met de andere fracties en zeg het tegen je docent.',
+            regels:FRACTIES.map(function(f){ return f.naam + ': ' + f.zetels + ' zetels' + (f.id === r ? ' (jouw fractie)' : ''); }) };
     }
     var v = R.v;
     if (S.fase === 'voorstel'){
