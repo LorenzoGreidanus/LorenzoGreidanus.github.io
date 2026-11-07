@@ -211,6 +211,22 @@ body.racebord .wrap{width:min(100% - 28px,1880px)}
 .rtellers b{font-size:clamp(1.8rem,3.2vw,3.2rem);font-variant-numeric:tabular-nums}
 .rtellers span{font-size:clamp(.85rem,1.1vw,1.2rem);color:var(--muted)}
 #h-race .rcode{padding:8px 18px;border-radius:18px}
+/* Dijkbouwers: de scène (dijk-bord.html) vult het bord */
+#h-dijk .dvak{position:relative;border-radius:20px;overflow:hidden;background:#07102A;height:min(calc(100svh - 150px), calc((min(100vw, 1100px) - 24px) * .5622));min-height:320px}
+body.bord.dijkbord #h-dijk .dvak{height:calc(100svh - 110px)}
+#h-dijk iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
+.dijkuit{display:flex;flex-direction:column;gap:18px;margin-top:14px}
+.dijkuit .groot{font-size:clamp(1.6rem,3vw,2.4rem);font-weight:600;line-height:1.15}
+.dijkuit .tellers{display:flex;gap:12px;flex-wrap:wrap}
+.dijkuit .tellers div{background:var(--kaart);border:1px solid var(--rand2);border-radius:16px;padding:10px 18px;min-width:140px}
+.dijkuit .tellers b{display:block;font-size:1.6rem;font-weight:600}
+.dijkuit .tellers span{color:var(--muted);font-size:.9rem}
+.dijkuit table{width:100%;border-collapse:collapse;background:var(--kaart);border:1px solid var(--rand);border-radius:16px;overflow:hidden}
+.dijkuit th,.dijkuit td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--rand);vertical-align:top;font-size:.95rem}
+.dijkuit th{font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.dijkuit td.n{white-space:nowrap;font-weight:600}
+.dijkuit .fbalk{display:inline-block;width:70px;height:8px;border-radius:999px;background:var(--rand2);overflow:hidden;vertical-align:middle;margin-right:8px}
+.dijkuit .fbalk i{display:block;height:100%;background:var(--crab)}
 #h-race .rcode b{font-size:clamp(1.8rem,3.2vw,3.6rem)}
 #h-race .rcode small{font-size:clamp(.78rem,1vw,1.05rem)}
 .rvak{display:grid;grid-template-columns:minmax(0,1fr) clamp(250px,24vw,440px);gap:clamp(10px,1.4vw,20px);margin-top:12px;
@@ -336,7 +352,8 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
   <p style="margin-top:8px;max-width:62ch">Iedereen speelt Torenverdediging of Zwaardvechter op zijn eigen scherm. De docent start
     iedereen tegelijk, de stand staat live op het digibord, en wie vijf vragen op rij goed heeft stuurt
     extra fouten naar de anderen. Wie het langst overleeft wint. Of kies Poortrace: een race over vijftien
-    poorten, en wie het eerst over de finish komt wint. Of Poortrace Oneindig: iedereen rijdt tot zijn tank leeg is, en wie de meeste kilometers rijdt wint.</p>
+    poorten, en wie het eerst over de finish komt wint. Of Poortrace Oneindig: iedereen rijdt tot zijn tank leeg is, en wie de meeste kilometers rijdt wint.
+    Of Dijkbouwers: de klas bouwt samen een dijk, en elk goed antwoord is een zandzak. Daar is geen winnaar, alleen een doel voor de hele klas.</p>
   <div class="twee">
     <div class="kaart">
       <p class="eyebrow">meedoen</p>
@@ -355,9 +372,10 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
       <h2>Open een kamer</h2>
       <div class="stap"><b>Spel</b><div class="spelkeuze" id="spellen"></div></div>
       <div class="stap"><b>Vak</b><div class="chips" id="vakken"></div></div>
-      <div class="stap hide" id="lijstStap"><b>Welke woordenlijst?</b><div id="lijstKiezer"></div><p class="tip" style="margin-top:6px">De spelers krijgen de lijst als vak in hun spel: meerkeuze, heen en terug. Een lijst maak je bij <a href="maken.html?nieuw=lijst">Eigen materiaal</a>.</p></div>
+      <div class="stap hide" id="lijstStap"><b id="lijstKop">Welke woordenlijst?</b><div id="lijstKiezer"></div><p class="tip" style="margin-top:6px">De spelers krijgen de lijst als vak in hun spel: meerkeuze, heen en terug. Een lijst maak je bij <a href="maken.html?nieuw=lijst">Eigen materiaal</a>.</p></div>
       <div class="stap"><b>Niveau</b><div class="chips" id="niveaus"></div></div>
       <div class="stap hide" id="raceStap"><b>Soort race</b><div class="chips" id="raceSoort"></div><p class="tip" id="raceSoortUit" style="margin-top:6px"></p></div>
+      <div class="stap hide" id="dijkStap"><b>Hoe lang?</b><div class="chips" id="dijkDuur"></div><p class="tip" style="margin-top:6px">Het doel is twaalf zandzakken per leerling. Het water stijgt met de tijd, en sneller bij fouten.</p></div>
       <div class="stap">
         <button class="knop crab groot" id="openBtn" type="button">Kamer openen</button>
         <p class="fout-melding" id="openFout"></p>
@@ -427,10 +445,19 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
       <button class="knop stil" id="hStopR" type="button">Stop en toon de eindstand</button>
     </div>
   </div>
+  <!-- Dijkbouwers: de dijk van de klas op het bord (dijk-bord.html) -->
+  <div id="h-dijk" class="hide">
+    <div class="dvak"><iframe id="dBord" title="De dijk van de klas" src="about:blank"></iframe></div>
+    <div class="hostknoppen">
+      <button class="knop stil bordknop" type="button" aria-pressed="false">Digibord</button>
+      <button class="knop stil" id="hStopD" type="button">Stop en bespreek</button>
+    </div>
+  </div>
   <div id="h-einde" class="hide">
     <p class="eyebrow">eindstand</p>
     <h1 id="hEindKop">Dat was de Klasstrijd</h1>
     <div id="hPodium"></div>
+    <div id="hDijkUit" class="dijkuit hide"></div>
     <table class="stand" id="hEindTabel"><thead><tr><th>#</th><th>naam</th><th>ronde</th><th>punten</th><th>aanvallen</th></tr></thead><tbody></tbody></table>
     <div class="hostknoppen">
       <button class="knop stil" id="hTerug" type="button">Terug naar het begin</button>
@@ -468,10 +495,14 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
     { id:'zwaard', naam:'Zwaardvechter', uit:'loop, sla en overleef in de arena', kleur:'#14224C',
       ico:'<path d="M5 19 15 9M15 9l3-3-2-2-3 3M5 19l-2 2 2 0 0-2zM12 13 7 8M7 8 5 10"/>' },
     { id:'poortrace', naam:'Poortrace', uit:'een race: wie is het eerst over de finish', kleur:'#204ECF',
-      ico:'<path d="M5 21 9 6M19 21 15 6"/><rect x="7" y="3" width="10" height="4" rx="1"/><path d="M12 11v2M12 16v3"/>' }
+      ico:'<path d="M5 21 9 6M19 21 15 6"/><rect x="7" y="3" width="10" height="4" rx="1"/><path d="M12 11v2M12 16v3"/>' },
+    { id:'dijk', naam:'Dijkbouwers', uit:'samen een dijk bouwen: elk goed antwoord is een zandzak', kleur:'#EA9836',
+      ico:'<path d="M2 20c2-1.5 4-1.5 6 0s4 1.5 6 0 4-1.5 6 0"/><path d="M4 16 8 10h8l4 6"/><path d="M9 10V7.5a3 1.5 0 0 1 6 0V10"/>' }
   ];
   /* Poortrace is een race: de stand is wie het verst is, en wie binnen is staat op tijd */
   function isRace(h){ return !!h && h.game === 'poortrace'; }
+  function isDijk(h){ return !!h && h.game === 'dijk'; }
+  var DUREN = [{ id:'5', naam:'5 minuten' }, { id:'8', naam:'8 minuten' }, { id:'12', naam:'12 minuten' }];
   function tijdTekst(ms){ var s = (ms || 0) / 1000, m = Math.floor(s / 60), r = s - m * 60; return m + ':' + (r < 10 ? '0' : '') + r.toFixed(1).replace('.', ','); }
   var VAKKEN = [
     { id:'reken', naam:'Rekenen' }, { id:'ned', naam:'Nederlands' }, { id:'eng', naam:'Engels' },
@@ -524,7 +555,7 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
   }
 
   /* ====================== start ====================== */
-  var spel = 'toren', vak = 'ges', niveau = 'kgt', raceSoort = 'finish';
+  var spel = 'toren', vak = 'ges', niveau = 'kgt', raceSoort = 'finish', dijkDuur = '8', kiezerSoort = '';
   function tekenChips(id, lijst, nu, zet){
     $(id).innerHTML = lijst.map(function(x){
       return '<button type="button" data-id="' + schoonHtml(x.id) + '"' + (x.id === nu ? ' class="on"' : '') + '>' + schoonHtml(x.naam) + '</button>';
@@ -541,13 +572,23 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
     $('raceStap').classList.toggle('hide', spel !== 'poortrace');
     tekenChips('raceSoort', SOORTEN, raceSoort, function(id){ raceSoort = id; tekenKeuze(); });
     $('raceSoortUit').textContent = naamVan(SOORTEN.map(function(x){ return { id:x.id, naam:x.uit }; }), raceSoort);
+    $('dijkStap').classList.toggle('hide', spel !== 'dijk');
+    tekenChips('dijkDuur', DUREN, dijkDuur, function(id){ dijkDuur = id; tekenKeuze(); });
     $('lijstStap').classList.toggle('hide', vak !== 'eigen');
-    if (vak === 'eigen' && !lijstKiezer && window.EIGEN) lijstKiezer = EIGEN.kiezer($('lijstKiezer'), { code: LIJSTCODE, gekozen: function(m){ lijstM = m; }, leeg: function(){ lijstM = null; } });
+    /* Dijkbouwers neemt ook een oefening van Eigen materiaal; de andere spellen alleen een woordenlijst */
+    var nodig = spel === 'dijk' ? 'set' : 'lijst';
+    $('lijstKop').textContent = spel === 'dijk' ? 'Welke woordenlijst of oefening?' : 'Welke woordenlijst?';
+    if (vak === 'eigen' && window.EIGEN && (!lijstKiezer || kiezerSoort !== nodig)){
+      var vorige = lijstKiezer ? lijstKiezer.code() : LIJSTCODE;
+      lijstM = null; kiezerSoort = nodig;
+      lijstKiezer = EIGEN.kiezer($('lijstKiezer'), { soort: nodig, code: vorige, gekozen: function(m){ lijstM = m; }, leeg: function(){ lijstM = null; } });
+    }
   }
   if (LIJSTCODE) vak = 'eigen';
   /* vanuit een spel: ?spel=poortrace&vak=ges&n=havo zet de keuze alvast klaar */
   (function(){
     var q = new URLSearchParams(location.search), sp = q.get('spel'), vk = q.get('vak'), nv = q.get('n');
+    if (DUREN.some(function(x){ return x.id === q.get('duur'); })) dijkDuur = q.get('duur');
     if (q.get('modus') === 'oneindig') raceSoort = 'oneindig';
     if (SPELLEN.some(function(x){ return x.id === sp; })) spel = sp;
     if (!LIJSTCODE && VAKKEN.some(function(x){ return x.id === vk && x.id !== 'eigen'; })) vak = vk;
@@ -562,12 +603,12 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
     $('openBtn').disabled = true; $('openBtn').setAttribute('aria-busy', 'true');
     /* bij een woordenlijst gaat de code mee als "deel": de spelers laden hem dan zelf */
     fetch('/api/kamer', { method:'POST', headers:{ 'content-type':'application/json' },
-      body: JSON.stringify({ spel:'strijd', game:spel, vak:vak, niveau:niveau, deel: vak === 'eigen' ? lijstKiezer.code() : '', modus: spel === 'poortrace' && raceSoort === 'oneindig' ? 'oneindig' : '' }) })
+      body: JSON.stringify({ spel:'strijd', game:spel, vak:vak, niveau:niveau, deel: vak === 'eigen' ? lijstKiezer.code() : '', modus: spel === 'poortrace' && raceSoort === 'oneindig' ? 'oneindig' : '', duur: spel === 'dijk' ? +dijkDuur : undefined }) })
     .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
     .then(function(x){
       $('openBtn').disabled = false; $('openBtn').removeAttribute('aria-busy');
       if (!x.ok){ $('openFout').textContent = x.j.fout || 'Het lukte niet om een kamer te openen.'; return; }
-      var host = { code:x.j.code, sleutel:x.j.sleutel, game:spel, vak:vak, niveau:niveau, lijstNaam: vak === 'eigen' && lijstM ? lijstM.naam : '', modus: spel === 'poortrace' && raceSoort === 'oneindig' ? 'oneindig' : '' };
+      var host = { code:x.j.code, sleutel:x.j.sleutel, game:spel, vak:vak, niveau:niveau, lijstNaam: vak === 'eigen' && lijstM ? lijstM.naam : '', modus: spel === 'poortrace' && raceSoort === 'oneindig' ? 'oneindig' : '', duur: spel === 'dijk' ? dijkDuur : '' };
       try { localStorage.setItem('lg-strijd-host', JSON.stringify(host)); } catch (e){}
       verhuis(host.code);
       wordHost(host);
@@ -636,8 +677,11 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
   function hostScherm(id){
     /* een Poortrace-race krijgt zijn eigen bord: de baan met iedereen erop */
     if (id === 'h-bezig' && isRace(host)) id = 'h-race';
-    ['h-lobby', 'h-bezig', 'h-race', 'h-einde'].forEach(function(x){ $(x).classList.toggle('hide', x !== id); });
+    if (id === 'h-bezig' && isDijk(host)) id = 'h-dijk';
+    ['h-lobby', 'h-bezig', 'h-race', 'h-dijk', 'h-einde'].forEach(function(x){ $(x).classList.toggle('hide', x !== id); });
     document.body.classList.toggle('racebord', id === 'h-race');
+    document.body.classList.toggle('dijkbord', id === 'h-dijk');
+    if (id === 'h-dijk') dijkBord.aan();
     if (id === 'h-race') raceBord.aan(); else raceBord.uit();
   }
   function opzetTekst(h){ return naamVan(SPELLEN, h.game) + (isOneindig(h) ? ' Oneindig' : '') + ' · ' + (h.vak === 'eigen' && h.lijstNaam ? h.lijstNaam : naamVan(VAKKEN, h.vak)) + ' · ' + naamVan(NIVEAUS, h.niveau); }
@@ -660,7 +704,7 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
     $('hLoopt').textContent = race ? 'De race loopt' : 'De strijd loopt';
     $('hBezigW').textContent = race ? 'nog onderweg' : 'nog in het spel';
     $('hAfW').textContent = eind ? 'tank leeg' : race ? 'binnen' : 'af';
-    $('hEindKop').textContent = race ? 'Dat was de race' : 'Dat was de Klasstrijd';
+    $('hEindKop').textContent = isDijk(h) ? 'Dat was Dijkbouwers' : race ? 'Dat was de race' : 'Dat was de Klasstrijd';
     $('hTabel').querySelector('thead').innerHTML = eind ? '<tr><th>#</th><th>naam</th><th>tank</th><th>km</th><th>poorten</th><th></th></tr>'
       : race ? '<tr><th>#</th><th>naam</th><th>baan</th><th>poort</th><th>goed</th><th></th></tr>'
       : '<tr><th>#</th><th>naam</th><th>ronde</th><th>levens</th><th>punten</th><th>aanvallen</th><th></th></tr>';
@@ -678,7 +722,7 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
       return;
     }
     if (m.t === 'spelers'){ tekenSpelers(m.spelers); return; }
-    if (m.t === 'stand'){ if (m.fase === 'bezig') hostScherm('h-bezig'); tekenStand(m); if (isRace(host)) raceBord.stand(m); return; }
+    if (m.t === 'stand'){ if (m.fase === 'bezig') hostScherm('h-bezig'); tekenStand(m); if (isRace(host)) raceBord.stand(m); if (isDijk(host)) dijkBord.zet(m); return; }
     /* in een race, tussen twee standen door: alleen de plekken, voor soepele gezichtjes */
     if (m.t === 'pos'){ if (isRace(host)) raceBord.pos(m); return; }
     if (m.t === 'einde'){ hostEinde(m); return; }
@@ -736,6 +780,8 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
   }
   function hostEinde(m){
     hostScherm('h-einde');
+    $('hDijkUit').classList.add('hide');
+    if (isDijk(host)) return dijkEinde(m);
     /* plek 3, plek 2, dan met zoeklichten de winnaar; de tabel verklapt het anders al */
     /* Wie even ver kwam (evenveel gehaald, evenveel punten) deelt de plek. Onder
        het podium de rest vanaf plek 4, net als bij de Klasquiz. */
@@ -975,6 +1021,49 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
       klok: function(g){ gestart = g; }
     };
   })();
+  /* ---------- Dijkbouwers: de dijk op het bord ----------
+     De scène staat in dijk-bord.html (een iframe, zodat zijn stijl en
+     animaties los staan van deze pagina). Elke stand gaat erheen; het bord
+     tekent de muur, het water en wie er een zak legde. */
+  var dijkBord = (function(){
+    var ifr = null, laatste = null, code = '';
+    function scene(){ try { return ifr && ifr.contentWindow && ifr.contentWindow.DIJKBORD; } catch (e){ return null; } }
+    function geef(){
+      var b = scene(); if (!b || !laatste) return;
+      b.zet({ code: host.code, set: (host.vak === 'eigen' && host.lijstNaam ? host.lijstNaam : naamVan(VAKKEN, host.vak)) + ' · ' + naamVan(NIVEAUS, host.niveau),
+              fase: laatste.fase, nu: laatste.dijk ? laatste.dijk.nu : Date.now(), spelers: laatste.spelers || [], dijk: laatste.dijk || null });
+    }
+    return {
+      aan: function(){
+        /* een nieuwe kamer (nog een keer met dezelfde klas): een vers bord */
+        if (ifr && code === host.code) return;
+        if (!ifr){ ifr = $('dBord'); ifr.addEventListener('load', geef); }
+        code = host.code; laatste = null;
+        ifr.setAttribute('src', 'dijk-bord.html?k=' + code);
+      },
+      zet: function(m){ laatste = m; geef(); }
+    };
+  })();
+  function dijkEinde(m){
+    var d = m.dijk || { zakken:0, doel:0, fouten:0, vragen:[] };
+    $('hPodium').innerHTML = ''; $('hEindTabel').classList.add('hide');
+    var gehaald = d.doel > 0 && d.zakken >= d.doel, mee = (m.stand || []).filter(function(s){ return (s.gehaald | 0) > 0; }).length;
+    var vragen = d.vragen || [];
+    $('hDijkUit').classList.remove('hide');
+    $('hDijkUit').innerHTML =
+      '<p class="groot">' + (gehaald ? 'De dijk houdt! ' + d.zakken + ' zandzakken samen.' : 'De dijk is nog niet dicht: ' + d.zakken + ' van de ' + d.doel + ' zandzakken.') + '</p>' +
+      '<div class="tellers"><div><b>' + d.zakken + '</b><span>goede antwoorden</span></div><div><b>' + d.fouten + '</b><span>fouten</span></div>' +
+        '<div><b>' + (d.zakken + d.fouten ? Math.round(d.zakken / (d.zakken + d.fouten) * 100) : 0) + '%</b><span>goed</span></div><div><b>' + mee + '</b><span>leerlingen bouwden mee</span></div></div>' +
+      (vragen.length
+        ? '<div><p class="eyebrow" style="margin-bottom:8px">om samen te bespreken: hier ging het vaakst mis</p><table><thead><tr><th>vraag</th><th>goed antwoord</th><th>fout</th></tr></thead><tbody>' +
+            vragen.map(function(q){
+              var n = q.f + q.g, deel = n ? q.f / n : 0;
+              return '<tr><td>' + schoonHtml(q.v) + (q.kop ? '<br><span class="tip">' + schoonHtml(q.kop) + '</span>' : '') + '</td><td>' + schoonHtml(q.goed) + '</td>' +
+                '<td class="n"><span class="fbalk"><i style="width:' + Math.round(deel * 100) + '%"></i></span>' + q.f + ' van ' + n + '</td></tr>';
+            }).join('') + '</tbody></table></div>'
+        : '<p class="tip">Er ging geen vraag vaker dan een keer mis.</p>');
+    try { localStorage.removeItem('lg-strijd-host'); } catch (e){}
+  }
   $('hStart').addEventListener('click', function(){ stuur({ t:'start' }); hostScherm('h-bezig'); });
   /* De bordstand staat nu in verbinding.js, voor alle klassenspellen: vanzelf
      groot op een breed scherm, en de knop Digibord maakt het beeldvullend. */
@@ -988,6 +1077,7 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
   });
   $('hStop').addEventListener('click', function(){ if (confirm('De strijd nu stoppen? De stand van dit moment wordt de eindstand.')) stuur({ t:'stop' }); });
   $('hStopR').addEventListener('click', function(){ if (confirm('De race nu stoppen? De stand van dit moment wordt de eindstand.')) stuur({ t:'stop' }); });
+  $('hStopD').addEventListener('click', function(){ if (confirm('Dijkbouwers nu stoppen? Daarna zie je welke vragen het vaakst fout gingen.')) stuur({ t:'stop' }); });
   $('hStop0').addEventListener('click', function(){ if (confirm('De kamer sluiten?')) stuur({ t:'stop' }); });
   $('hTerug').addEventListener('click', function(){ sluitVerbinding(); location.href = location.pathname; });
   /* Nog een strijd met dezelfde klas: dezelfde instellingen, een nieuwe kamer.
@@ -1005,7 +1095,7 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
   $('hNogeens').addEventListener('click', function(){
     if (verhuisVan && verhuisVan !== verb) verhuisVan.sluit();
     verhuisVan = verb; verb = null; bord.uit();
-    spel = host.game; vak = host.vak; niveau = host.niveau; raceSoort = isOneindig(host) ? 'oneindig' : 'finish'; tekenKeuze();
+    spel = host.game; vak = host.vak; niveau = host.niveau; raceSoort = isOneindig(host) ? 'oneindig' : 'finish'; if (host.duur) dijkDuur = String(host.duur); tekenKeuze();
     toon('s-start'); $('openBtn').click();
   });
 

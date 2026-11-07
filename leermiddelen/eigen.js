@@ -45,7 +45,7 @@ var EIGEN = (function(){
                  : vraag('/api/materiaal', 'POST', m);
     return p.then(function(j){
       var c = code || j.code, l = mijn().filter(function(x){ return x.code !== c; });
-      l.unshift({ code: c, sleutel: code ? eigen.sleutel : j.sleutel, naam: m.naam, soort: m.soort, gemaakt: eigen ? eigen.gemaakt : Date.now() });
+      l.unshift(Object.assign({ code: c, sleutel: code ? eigen.sleutel : j.sleutel, naam: m.naam, soort: m.soort, gemaakt: eigen ? eigen.gemaakt : Date.now() }, m.soort === 'oefening' && m.modus === 'toets' ? { modus: 'toets' } : {}));
       zetMijn(l);
       afstemmen();
       return { code: c };
@@ -194,19 +194,32 @@ var EIGEN = (function(){
      hij binnen is, opts.leeg() als er niets (meer) gekozen is, opts.code is
      een code om meteen mee te beginnen (uit het adres). */
   function htmlSchoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+  /* Hoeveel vragen een oefening in Dijkbouwers geeft: de meerkeuzevragen en de
+     paren van een koppelvraag, zonder leestekst of plaatje (zoals setVragen in server/kamer.js) */
+  function setTelt(m){
+    var n = 0;
+    (m && Array.isArray(m.items) ? m.items : []).forEach(function(it){
+      if (!it || it.tekst || it.afb) return;
+      if (it.vorm === 'mk' && it.goed && it.fout && it.fout.length) n++;
+      else if (it.vorm === 'koppel' && it.paren && it.paren.length >= 3) n += it.paren.length;
+    });
+    return n;
+  }
   function kiezer(el, opts){
     opts = opts || {};
-    var soort = opts.soort === 'dictee' ? 'dictee' : 'lijst', dictee = soort === 'dictee';
-    var lijsten = mijn().filter(function(m){ return m.soort === soort; }), gekozen = '', stand = '';
+    /* soort 'set': een woordenlijst of een oefening (geen toets), voor Dijkbouwers */
+    var soort = opts.soort === 'dictee' ? 'dictee' : opts.soort === 'set' ? 'set' : 'lijst', dictee = soort === 'dictee', set = soort === 'set';
+    var lijsten = mijn().filter(function(m){ return set ? (m.soort === 'lijst' || (m.soort === 'oefening' && m.modus !== 'toets')) : m.soort === soort; }), gekozen = '', stand = '';
     function teken(){
       el.innerHTML = (lijsten.length
         ? '<div class="chips" style="margin-bottom:8px">' + lijsten.map(function(m){
             return '<button type="button" data-code="' + htmlSchoon(m.code) + '"' + (m.code === gekozen ? ' class="on" aria-pressed="true"' : ' aria-pressed="false"') + '>' + htmlSchoon(m.naam) + '</button>';
           }).join('') + '</div>'
+        : set ? '<p class="tip" style="margin:0 0 8px">Op dit apparaat staan nog geen woordenlijsten of oefeningen. Maak er een bij <a href="maken.html">Eigen materiaal</a>, of vul hieronder de code in.</p>'
         : (dictee ? '<p class="tip" style="margin:0 0 8px">Op dit apparaat staan nog geen eigen dictees. Maak er een bij <a href="maken.html?nieuw=dictee">Eigen materiaal</a>, of vul hieronder de code van een dictee in.</p>'
                   : '<p class="tip" style="margin:0 0 8px">Op dit apparaat staan nog geen woordenlijsten. Maak er een bij <a href="maken.html?nieuw=lijst">Eigen materiaal</a>, of vul hieronder de code van een lijst in.</p>')) +
-        '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input class="veld" style="flex:0 1 14em;text-transform:uppercase;letter-spacing:.12em" maxlength="6" placeholder="code" aria-label="Code van ' + (dictee ? 'een dictee' : 'een woordenlijst') + '" autocapitalize="characters" autocomplete="off" spellcheck="false">' +
-        '<button type="button" class="knop">Haal op</button>' + (lijsten.length ? '<a class="tip" href="maken.html?nieuw=' + soort + '">' + (dictee ? 'nieuw dictee maken' : 'nieuwe lijst maken') + '</a>' : '') + '</div>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input class="veld" style="flex:0 1 14em;text-transform:uppercase;letter-spacing:.12em" maxlength="6" placeholder="code" aria-label="Code van ' + (dictee ? 'een dictee' : set ? 'een woordenlijst of oefening' : 'een woordenlijst') + '" autocapitalize="characters" autocomplete="off" spellcheck="false">' +
+        '<button type="button" class="knop">Haal op</button>' + (lijsten.length ? '<a class="tip" href="maken.html' + (set ? '' : '?nieuw=' + soort) + '">' + (dictee ? 'nieuw dictee maken' : set ? 'nieuwe set maken' : 'nieuwe lijst maken') + '</a>' : '') + '</div>' +
         '<p class="tip" role="status" style="margin:6px 0 0;min-height:1.2em">' + htmlSchoon(stand) + '</p>';
       Array.prototype.forEach.call(el.querySelectorAll('button[data-code]'), function(b){ b.addEventListener('click', function(){ laad(b.getAttribute('data-code')); }); });
       var inv = el.querySelector('input'), knop = el.querySelector('button.knop');
@@ -221,11 +234,16 @@ var EIGEN = (function(){
       var kn = el.querySelector('button.knop');
       if (kn){ kn.disabled = true; kn.setAttribute('aria-busy', 'true'); }
       haal(code).then(function(m){
-        if (!m || m.soort !== soort) throw new Error(dictee ? 'Deze code is geen dictee.' : 'Deze code is geen woordenlijst.');
+        if (set){
+          if (!m || (m.soort !== 'lijst' && m.soort !== 'oefening')) throw new Error('Deze code is geen woordenlijst of oefening.');
+          if (m.soort === 'oefening' && m.modus === 'toets') throw new Error('Een toets kan niet in het spel: dan zien leerlingen de antwoorden. Maak er een kopie van als oefening.');
+          if (m.soort === 'oefening' && setTelt(m) < 4) throw new Error('In deze oefening staan te weinig meerkeuzevragen voor het spel (minstens vier).');
+        } else if (!m || m.soort !== soort) throw new Error(dictee ? 'Deze code is geen dictee.' : 'Deze code is geen woordenlijst.');
         gekozen = code;
-        if (!lijsten.some(function(x){ return x.code === code; })) lijsten.push({ code: code, naam: m.naam, soort: soort });
+        if (!lijsten.some(function(x){ return x.code === code; })) lijsten.push({ code: code, naam: m.naam, soort: m.soort });
         stand = dictee ? m.naam + ': ' + (m.zinnen || []).length + ' zinnen.'
-                       : m.naam + ': ' + m.paren.length + ' paren' + (m.kopA && m.kopB ? ' (' + m.kopA + ' en ' + m.kopB + ')' : '') + '.';
+              : m.soort === 'oefening' ? m.naam + ': ' + setTelt(m) + ' vragen.'
+              : m.naam + ': ' + m.paren.length + ' paren' + (m.kopA && m.kopB ? ' (' + m.kopA + ' en ' + m.kopB + ')' : '') + '.';
         teken();
         if (opts.gekozen) opts.gekozen(m, code);
       }).catch(function(e){

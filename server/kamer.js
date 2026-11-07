@@ -41,7 +41,16 @@ const OPRUIMEN_NA = 3 * 60 * 60 * 1000;     /* een kamer leeft hoogstens drie uu
 const NA_EINDE = 30 * 60 * 1000;             /* na de eindstand nog een half uur te bekijken */
 /* wat een leerling hoort die de docent uit de klas haalde; klas.js herkent "uit de klas gehaald" */
 const WEG_FOUT = "je docent heeft je uit deze klas gehaald";
-const SPELLEN_STRIJD = { toren: "Torenverdediging", zwaard: "Zwaardvechter", poortrace: "Poortrace" };
+const SPELLEN_STRIJD = { toren: "Torenverdediging", zwaard: "Zwaardvechter", poortrace: "Poortrace", dijk: "Dijkbouwers" };
+/* Dijkbouwers: de hele klas bouwt samen een dijk. Iedereen beantwoordt op zijn
+   eigen laptop vragen uit dezelfde set (een vak, een woordenlijst of een
+   oefening van de docent); elk goed antwoord is een zandzak op de gezamenlijke
+   dijk, en het bord toont de dijk en het water. Er is geen ranglijst: de klas
+   haalt het doel samen of niet. De kamer kiest de vragen, kijkt na en telt.
+   Een antwoord telt pas na DIJK_DENK ms (gokken door snel te klikken loont
+   niet); na een fout komt daar DIJK_LEES bij, om de uitleg te lezen. Het doel
+   is DIJK_PER zakken per speler bij de start, minstens DIJK_MIN_DOEL. */
+const DIJK_DENK = 1500, DIJK_LEES = 2500, DIJK_PER = 12, DIJK_MIN_DOEL = 30, DIJK_DUUR = 8, DIJK_PER_VRAAG = 120;
 /* Poortrace als race: met vrienden tot acht in een kamer, of met de hele klas.
    Wie het eerst over de finish komt wint. De kamer is de baas over de race,
    zoals bij de Klasquiz: hij kiest de vraag van ieders volgende poort (uit
@@ -491,6 +500,46 @@ function lijstVragen(m){
   uit.delen = m.kopA && m.kopB ? { heen: m.kopA + " naar " + m.kopB, terug: m.kopB + " naar " + m.kopA } : {};
   return uit;
 }
+/* Een oefening van Eigen materiaal als vragen voor Dijkbouwers: de meerkeuzevragen,
+   en van een koppelvraag elk paar als vraag. Vragen bij een leestekst of een
+   plaatje laten we weg, want die ziet de leerling in het spel niet. */
+function setVragen(m){
+  const uit = [];
+  (Array.isArray(m && m.items) ? m.items : []).forEach(it => {
+    if (!it || it.tekst || it.afb) return;
+    if (it.vorm === "mk" && it.vraag && it.goed && Array.isArray(it.fout) && it.fout.length){
+      uit.push({ v: String(it.vraag), o: [String(it.goed)].concat(it.fout.map(String)), g: 0, u: String(it.uitleg || ""), t: "set", n: 1 });
+    } else if (it.vorm === "koppel" && Array.isArray(it.paren) && it.paren.length >= 3){
+      it.paren.forEach((p, i) => {
+        const anders = POORTREGELS.schud(it.paren.filter((x, j) => j !== i).map(x => String(x.b))).slice(0, 3);
+        uit.push({ v: "Wat hoort bij: " + p.a + "?", o: [String(p.b)].concat(anders), g: 0, u: p.a + " hoort bij " + p.b + ".", t: "set", n: 1 });
+      });
+    }
+  });
+  uit.delen = { set: String(m && m.naam || "eigen vragen") };
+  return uit;
+}
+/* Een vraag past in Dijkbouwers: tekst zonder plaatje, en naast het goede
+   antwoord minstens een ander antwoord. Langer dan in de Poortrace mag: op de
+   laptop staan de antwoorden als grote knoppen onder elkaar. */
+function dijkGeschikt(q){
+  if (!q || !q.v || !Array.isArray(q.o) || q.svg || q.beeld || String(q.v).length > 320) return false;
+  const g = String(q.o[q.g] == null ? "" : q.o[q.g]).trim();
+  if (!g || g.length > 140) return false;
+  return q.o.some((o, j) => j !== q.g && String(o == null ? "" : o).trim() && String(o).trim().toLowerCase() !== g.toLowerCase());
+}
+/* de stapel voor een speler: zoals in de Poortrace eerst rond het niveau, dan ruimer */
+function dijkStapel(b){
+  const alles = [];
+  b.bron.forEach((q, i) => { if (b.mag.indexOf(q.t) >= 0 && dijkGeschikt(q)) alles.push(i); });
+  let ids = alles.filter(i => (b.nivo[i] || 2) <= b.r && (b.nivo[i] || 2) >= b.r - 1);
+  if (ids.length < 20) ids = alles.filter(i => (b.nivo[i] || 2) <= b.r);
+  if (ids.length < 8) ids = alles.filter(i => (b.nivo[i] || 2) <= b.r + 1);
+  if (!ids.length) ids = alles;
+  const pot = ids.map(i => ({ s: "b", i }));
+  if (b.jaren.length && b.mag.indexOf("jaartallen") >= 0) b.jaren.forEach((x, j) => pot.push({ s: "j", i: j }));
+  return POORTREGELS.schud(pot);
+}
 /* als er helemaal geen vraag te vinden is: een tafelsom */
 function noodSom(r){
   const a = 2 + Math.floor(Math.random() * (4 + r * 2)), b = 2 + Math.floor(Math.random() * 8), goed = a * b;
@@ -559,6 +608,7 @@ export class Kamer extends DurableObject {
   get rollen(){ return !!this.stand && this.stand.spel === "rollen"; }
   get race(){ return this.strijd && this.stand.game === "poortrace"; }
   get oneindig(){ return this.race && this.stand.modus === "oneindig"; }
+  get dijk(){ return this.strijd && this.stand.game === "dijk"; }
 
   /* ---------- binnenkomend ---------- */
   async fetch(req){
@@ -616,6 +666,8 @@ export class Kamer extends DurableObject {
       this.stand = Object.assign(basis, { spel: "strijd", game, gestart: 0, duel: !!opzet.duel });
       /* Poortrace kan ook Oneindig: tot ieders tank leeg is */
       if (game === "poortrace" && opzet.modus === "oneindig") this.stand.modus = "oneindig";
+      /* Dijkbouwers: hoeveel minuten de klas heeft */
+      if (game === "dijk") this.stand.duur = Math.max(3, Math.min(20, Math.round(Number(opzet.duur) || DIJK_DUUR)));
     } else {
       const vragen = Array.isArray(opzet.vragen) ? opzet.vragen.slice(0, MAX_VRAGEN).map(q => q && typeof q === "object" ? ({
         v: schoon(q.v, 300),
@@ -632,7 +684,7 @@ export class Kamer extends DurableObject {
     }
     /* wat er nog aan oude sockets hangt, mag weg; en wat een vorige race in het geheugen had ook */
     this.ctx.getWebSockets().forEach(ws => { try { ws.close(1000, "nieuwe kamer"); } catch (e){} });
-    this.raceBankP = null; this.racePot = {}; this.raceNaFinish = {};
+    this.raceBankP = null; this.racePot = {}; this.raceNaFinish = {}; this.dijkPot = {};
     clearTimeout(this.raceTankKlok); this.raceTankKlok = null;
     Object.keys(this.raceWacht || {}).forEach(k => clearTimeout(this.raceWacht[k])); this.raceWacht = {};
     await this.zetAlarm({ wat: "opruimen" }, this.stand.spel === "klas" ? KLAS_SLAAPT : OPRUIMEN_NA);
@@ -726,6 +778,7 @@ export class Kamer extends DurableObject {
         if (this.motor) this.stuur(server, { t: "net", d: this.motor.pakket() });
         /* in een race: waar hij is, het oordeel over zijn laatste poort en de vraag van zijn volgende */
         if (this.race) this.ctx.waitUntil(this.raceHerstel(sid));
+        if (this.dijk) this.ctx.waitUntil(this.dijkHerstel(sid));
       }
       if (this.stand.fase === "einde") this.stuur(server, this.strijdEinde(rol === "speler" ? sid : null));
       else this.stuur(server, this.standBericht(rol === "speler" ? sid : null));
@@ -987,6 +1040,7 @@ export class Kamer extends DurableObject {
     if (a.wat === "sluit" && !this.strijd && this.stand.fase === "vraag" && a.i === this.stand.i) return this.sluitVraag();
     if (a.wat === "duelstart" && this.strijd && this.stand.fase === "aftellen") return this.strijdStart();
     if (a.wat === "raceslot" && this.race && this.stand.fase === "bezig") return this.strijdKlaar();
+    if (a.wat === "dijkslot" && this.dijk && this.stand.fase === "bezig") return this.strijdKlaar();
     if (a.wat === "opruimen"){
       this.motorStop();
       this.ctx.getWebSockets().forEach(ws => { try { ws.close(1000, "de kamer is gesloten"); } catch (e){} });
@@ -1018,7 +1072,12 @@ export class Kamer extends DurableObject {
   async strijdStart(){
     const st = this.stand;
     st.fase = "bezig"; st.gestart = Date.now();
-    await this.zetAlarm({ wat: "opruimen" }, OPRUIMEN_NA);
+    if (this.dijk){
+      /* het doel hangt af van hoeveel er meedoen; de tijd loopt vanaf nu */
+      const n = Object.keys(st.spelers).filter(s => !st.spelers[s].weg).length;
+      st.dijkSt = { zakken: 0, fouten: 0, doel: Math.max(DIJK_MIN_DOEL, Math.round(n * DIJK_PER / 10) * 10), dicht: 0, per: {} };
+      await this.zetAlarm({ wat: "dijkslot" }, (st.duur || DIJK_DUUR) * 60000);
+    } else await this.zetAlarm({ wat: "opruimen" }, OPRUIMEN_NA);
     await this.bewaar();
     if (st.duel && st.game === "zwaard") this.motorStart();
     if (this.motorSids && this.motorSpel === "zwaard"){
@@ -1027,6 +1086,7 @@ export class Kamer extends DurableObject {
     } else this.iedereen({ t: "start" });
     /* een race: iedereen krijgt de vraag van zijn eerste poort */
     if (this.race) Object.keys(st.spelers).forEach(sid => this.ctx.waitUntil(this.raceHerstel(sid)));
+    if (this.dijk) Object.keys(st.spelers).forEach(sid => this.ctx.waitUntil(this.dijkHerstel(sid)));
     this.planStand();
     if (st.duel && st.game === "toren"){
       /* het bord komt zodra de keuze van allebei binnen is, en anders na een korte wachttijd */
@@ -1301,6 +1361,7 @@ export class Kamer extends DurableObject {
     }
     if (st.fase !== "bezig") return;
     if (this.race) return this.raceBericht(wie.sid, sp, m);
+    if (this.dijk) return this.dijkBericht(wie.sid, sp, m);
     if (m.t === "stand"){
       const nu0 = Date.now();
       if (sp.standLaatst && nu0 - sp.standLaatst < 400) return;   /* vaker dan dit hoeft niet */
@@ -1448,7 +1509,107 @@ export class Kamer extends DurableObject {
     const r = await this.env.MATERIAAL.get(this.env.MATERIAAL.idFromName("materiaal")).fetch("https://materiaal/haal?code=" + code);
     if (!r.ok) return [];
     const m = await r.json();
-    return m && m.soort === "lijst" ? lijstVragen(m) : [];
+    if (m && m.soort === "lijst") return lijstVragen(m);
+    /* een oefening (geen toets: daarvan geeft de bak de antwoorden niet) kan alleen in Dijkbouwers */
+    if (m && m.soort === "oefening" && m.modus !== "toets" && this.dijk) return setVragen(m);
+    return [];
+  }
+  /* ---------- Dijkbouwers ---------- */
+  /* Een speler begint of komt terug: zijn rit klaarzetten, en hem het oordeel
+     over zijn laatste vraag en zijn volgende vraag sturen. */
+  async dijkHerstel(sid){
+    const st = this.stand;
+    if (!this.dijk || !st.spelers[sid] || st.fase !== "bezig") return;
+    const b = await this.raceBereid();
+    const sp = this.stand && this.stand.spelers[sid];
+    if (!sp || !this.dijk || this.stand.fase !== "bezig") return;
+    if (!sp.rit){ sp.rit = { reeks: 0, beste: 0, snel: 0, uit: [], gehad: [], vraag: null, laatste: null }; sp.ronde = 0; sp.gehaald = 0; sp.punten = 0; }
+    if (!sp.rit.vraag){ this.dijkVraag(sid, b, Date.now()); await this.bewaar(); }
+    if (sp.rit.laatste) this.naarSpeler(sid, sp.rit.laatste);
+    this.dijkZendVraag(sid);
+  }
+  /* de volgende vraag van een speler: tot vier antwoorden, geschud */
+  dijkVraag(sid, b, sinds){
+    const sp = this.stand.spelers[sid], rit = sp.rit;
+    this.dijkPot = this.dijkPot || {};
+    let pot = this.dijkPot[sid], q = null;
+    for (let poging = 0; poging < 40; poging++){
+      if (!pot || !pot.length) pot = this.dijkPot[sid] = dijkStapel(b);
+      if (!pot.length) break;
+      const x = pot.pop();
+      q = x.s === "j" ? POORTREGELS.jaarVraag(b.jaren, x.i, b.r, b.tvNamen) : b.bron[x.i];
+      if (!dijkGeschikt(q)){ q = null; continue; }
+      if (rit.gehad.indexOf(q.v) >= 0 && pot.length > 3){ q = null; continue; }
+      break;
+    }
+    if (!q) q = noodSom(b.r);
+    const goed = String(q.o[q.g]).trim(), gezien = [goed.toLowerCase()], fout = [];
+    POORTREGELS.schud(q.o.map((o, j) => j)).forEach(j => {
+      if (j === q.g) return;
+      const t = String(q.o[j] == null ? "" : q.o[j]).trim();
+      if (!t || t.length > 140 || gezien.indexOf(t.toLowerCase()) >= 0) return;
+      gezien.push(t.toLowerCase()); fout.push(t);
+    });
+    const opties = POORTREGELS.schud([goed].concat(fout.slice(0, 3)));
+    const naam = q.t === "jaartallen" ? "jaartallen" : b.vak === "eigen" ? (b.delen[q.t] || "eigen vragen") : (q.k || b.delen[q.t] || q.t || "vraag");
+    rit.vraag = { k: sp.ronde | 0, v: String(q.v).slice(0, 320), o: opties, g: opties.indexOf(goed), kop: String(naam).replace(/^tijdvak \d+ /, "tijdvak ").slice(0, 60),
+                  vlag: /^[a-z-]{2,8}$/.test(q.vlag || "") ? q.vlag : undefined, sinds, u: String(q.u || "").slice(0, 400) };
+    rit.gehad.push(q.v);
+    if (rit.gehad.length > 30) rit.gehad.shift();
+  }
+  dijkZendVraag(sid){
+    const sp = this.stand.spelers[sid], v = sp && sp.rit && sp.rit.vraag;
+    if (!v) return;
+    this.naarSpeler(sid, { t: "vraag", k: v.k, v: v.v, o: v.o, kop: v.kop, vlag: v.vlag });
+  }
+  /* Een antwoord. Alleen op de vraag die hij nu heeft, en niet sneller dan
+     DIJK_DENK na die vraag (na een fout DIJK_LEES later): dan wacht de kamer
+     tot het had gekund. Een antwoord op een vraag die al gehad is, krijgt het
+     oordeel van toen nog een keer. */
+  async dijkBericht(sid, sp, m){
+    if (m.t !== "antwoord") return;
+    const b = await this.raceBereid();
+    const st = this.stand, rit = sp.rit;
+    if (!rit || !this.dijk || st.fase !== "bezig" || !st.dijkSt) return;
+    this.dijkWacht = this.dijkWacht || {};
+    const k = Number(m.k), v = rit.vraag;
+    if (rit.laatste && k === rit.laatste.k && (!v || v.k !== k)){ this.naarSpeler(sid, rit.laatste); return; }
+    if (!v || k !== v.k || this.dijkWacht[sid]) return;
+    const keuze = Number(m.b);
+    if (!(keuze >= 0 && keuze < v.o.length) || keuze !== Math.floor(keuze)) return;
+    const nu = Date.now(), vroeg = v.sinds + DIJK_DENK + (v.k && rit.uit[v.k - 1] === false ? DIJK_LEES : 0) - nu;
+    if (vroeg > 0){
+      this.dijkWacht[sid] = setTimeout(() => {
+        delete this.dijkWacht[sid];
+        const sp2 = this.stand && this.stand.spelers[sid];
+        if (sp2) this.dijkBericht(sid, sp2, m).catch(e => console.error("dijkantwoord", e && e.stack || e));
+      }, Math.ceil(vroeg));
+      return;
+    }
+    const goed = keuze === v.g, d = st.dijkSt;
+    rit.uit[v.k] = goed; sp.ronde = v.k + 1; sp.laatst = nu;
+    if (goed){
+      sp.gehaald = (sp.gehaald | 0) + 1; rit.reeks++; rit.beste = Math.max(rit.beste, rit.reeks); d.zakken++;
+      if (!d.dicht && d.zakken >= d.doel) d.dicht = nu;
+    } else { rit.reeks = 0; d.fouten++; }
+    /* per vraag: hoe vaak goed en fout, voor de docent na afloop */
+    const sl = v.v.slice(0, 140);
+    let p = d.per[sl];
+    if (!p && Object.keys(d.per).length < DIJK_PER_VRAAG) p = d.per[sl] = { kop: v.kop, goed: String(v.o[v.g]).slice(0, 80), g: 0, f: 0 };
+    if (p){ if (goed) p.g++; else p.f++; }
+    rit.laatste = { t: "uitslag", k: v.k, goed, g: v.g, u: v.u, gelegd: sp.gehaald, reeks: rit.reeks, beste: rit.beste, zakken: d.zakken, doel: d.doel };
+    rit.vraag = null;
+    this.dijkVraag(sid, b, nu);
+    await this.bewaar();
+    this.naarSpeler(sid, rit.laatste);
+    this.dijkZendVraag(sid);
+    this.planStand();
+  }
+  /* de stand van de dijk voor het bord en de spelers */
+  dijkStand(){
+    const st = this.stand, d = st.dijkSt;
+    if (!this.dijk || !d) return undefined;
+    return { zakken: d.zakken, doel: d.doel, fouten: d.fouten, dicht: d.dicht || 0, gestart: st.gestart, eind: st.gestart + (st.duur || DIJK_DUUR) * 60000, nu: Date.now() };
   }
   /* de vraag van de volgende poort van een speler, zoals de pagina hem alleen ook kiest */
   raceVraag(sid, b, sinds){
@@ -1744,7 +1905,7 @@ export class Kamer extends DurableObject {
     const bezig = lijst.filter(r => !r.af).length;
     const kop = lijst[0] ? { naam: lijst[0].naam, ronde: lijst[0].ronde } : null;
     /* het bord: ook de klok van de kamer en het startschot, voor de tijd van de race */
-    if (!sid) return { t: "stand", spelers: lijst, bezig, fase: this.stand.fase, modus: this.stand.modus || undefined, nu: this.race ? Date.now() : undefined, gestart: this.race ? this.stand.gestart : undefined };
+    if (!sid) return { t: "stand", spelers: lijst, bezig, fase: this.stand.fase, modus: this.stand.modus || undefined, nu: this.race ? Date.now() : undefined, gestart: this.race ? this.stand.gestart : undefined, dijk: this.dijkStand(), duur: this.dijk ? this.stand.duur : undefined };
     const pid = this.pid(sid);
     const mij = lijst.filter(r => r.sid === pid)[0];
     const tegen = this.stand.duel ? (lijst.filter(r => r.sid !== pid)[0] || null) : null;
@@ -1757,7 +1918,9 @@ export class Kamer extends DurableObject {
     const doelen = (mij && mij.af) ? lijst.filter(r => !r.af && r.aan && r.sid !== pid).map(r => ({ sid: r.sid, naam: r.naam, av: r.av || "", ronde: r.ronde })) : undefined;
     /* in een race ziet iedereen iedereen: waar ze op de baan zijn, en wie er al binnen is */
     const rijders = this.race ? lijst.map(r => ({ sid: r.sid, naam: r.naam, av: r.av || "", voort: r.voort, plek: r.plek, vs: r.vs, oud: r.oud, tank: r.tank, km: r.km, ronde: r.ronde, af: r.af, tijd: r.tijd, rang: r.rang, weg: r.weg, aan: r.aan, bij: r.bij })) : undefined;
-    return { t: "stand", modus: this.stand.modus || undefined, jouw: mij ? { rang: mij.rang, van: lijst.length, af: !!mij.af } : null, bezig, koploper: kop, fase: this.stand.fase, maten, doelen, rijders, max: this.stand.duel ? this.samenMax() : undefined,
+    const dijk = this.dijkStand();
+    if (dijk && mij) dijk.gelegd = mij.gehaald | 0;
+    return { t: "stand", dijk, modus: this.stand.modus || undefined, jouw: mij ? { rang: mij.rang, van: lijst.length, af: !!mij.af } : null, bezig, koploper: kop, fase: this.stand.fase, maten, doelen, rijders, max: this.stand.duel ? this.samenMax() : undefined,
              tegen: tegen ? { naam: tegen.naam, av: tegen.av || "", ronde: tegen.ronde, leven: tegen.leven, punten: tegen.punten, af: tegen.af, aan: tegen.aan } : null };
   }
   stuurStand(){
@@ -1774,13 +1937,22 @@ export class Kamer extends DurableObject {
     const lijst = this.strijdLijst();
     const pid = sid ? this.pid(sid) : null;
     const mij = pid ? lijst.filter(r => r.sid === pid)[0] : null;
-    return { t: "einde", stand: lijst, jouw: mij ? { rang: mij.rang, van: lijst.length, naam: mij.naam } : null };
+    const uit = { t: "einde", stand: lijst, jouw: mij ? { rang: mij.rang, van: lijst.length, naam: mij.naam } : null };
+    const d = this.dijk && this.stand.dijkSt;
+    if (d){
+      uit.dijk = { zakken: d.zakken, doel: d.doel, fouten: d.fouten, dicht: d.dicht || 0, gestart: this.stand.gestart };
+      if (mij){ const sp = this.stand.spelers[sid]; uit.dijk.gelegd = mij.gehaald | 0; uit.dijk.beste = sp && sp.rit ? sp.rit.beste | 0 : 0; }
+      else uit.dijk.vragen = Object.keys(d.per).map(v => Object.assign({ v }, d.per[v])).filter(x => x.f > 0)
+        .sort((a, b) => b.f - a.f || b.f / (b.f + b.g) - a.f / (a.f + a.g)).slice(0, 10);
+    }
+    return uit;
   }
   async strijdKlaar(){
     this.motorStop();
     clearTimeout(this.raceTankKlok); this.raceTankKlok = null;
     /* Oneindig: de tanks staan stil op het moment dat de race klaar is */
     this.stand.eindT = Date.now();
+    Object.keys(this.dijkWacht || {}).forEach(k => clearTimeout(this.dijkWacht[k])); this.dijkWacht = {};
     this.stand.fase = "einde";
     await this.zetAlarm({ wat: "opruimen" }, NA_EINDE);
     await this.bewaar();
