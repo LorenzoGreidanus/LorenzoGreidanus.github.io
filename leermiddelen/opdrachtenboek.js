@@ -1,5 +1,5 @@
 /* Het opdrachtenboek: de leerroute als een echt boek, met thema's, hoofdstukken
-   en paragrafen, voor rekenen, Nederlands en wiskunde.
+   en paragrafen, voor rekenen, Nederlands, wiskunde, economie en Engels.
 
    Een paragraaf bundelt doelen uit de leerroute (leerroute.js met de inhoud in
    leerroute/<vak>-*.js) en voor Nederlands soms een onderdeel uit de
@@ -13,7 +13,9 @@
    BOEK[vak] = [ thema, ... ]
      thema:      { naam, hoofdstukken:[ hoofdstuk, ... ] }
      hoofdstuk:  { naam, verdieping (mag weg), paragrafen:[ paragraaf, ... ] }
-     paragraaf:  { id, naam, niveau, doelen:[doel-id, ...], bank:[{ t, zoek }] (mag weg), verdieping (mag weg) }
+     paragraaf:  { id, naam, niveau, doelen:[doel-id, ...], bank:[{ t, zoek, nivo }] (mag weg), verdieping (mag weg) }
+                 bank: vragen uit de vragenbank van het vak (BANKVAK); t het onderdeel (weg = alle),
+                 zoek een stukje van de vraag, nivo precies die niveaus van de bank (1 tot 4)
                  of een leesblad: { id, naam, niveau, doelen:[], lezen:'zoekend' } met een hele tekst uit
                  de leesbank (leesbank.js, leesteksten.js, leesblad.js); opgaven geeft dan { soort:'lezen', prep }
    Het id van een paragraaf staat in de link van een werkblad (deel=...): verander
@@ -25,7 +27,7 @@
    ook welke doelen nog nergens staan.
 
    ---------- de motor ----------
-     OPDRACHTENBOEK.vakken                        ['rekenen', 'nederlands', 'wiskunde']
+     OPDRACHTENBOEK.vakken                        ['rekenen', 'nederlands', 'wiskunde', 'economie', 'engels']
      OPDRACHTENBOEK.boek(vak)                     de thema's
      OPDRACHTENBOEK.paragraaf(vak, id)            { p, thema, hoofdstuk, nummer:'2.3', ti, hi }
      OPDRACHTENBOEK.paragrafen(vak)               alles plat, in boekvolgorde
@@ -1041,24 +1043,32 @@ window.OPDRACHTENBOEK = (function(){
           { id:"wva-toets-hyp", naam:"Hypothesen toetsen", niveau:"vwo A", doelen:["wva-toets-hyp", "wva-toets-besl", "wva-toets-kritiek", "wva-toets-bi"] }
         ] }
       ] }
-    ]
+    ],
+    /* economie: de leerroute (rekenen met geld, bedrijf, markt) en de vragenbank (bank-eco.js) per onderwerp */
+    economie:[{"naam":"Geld en consumptie","hoofdstukken":[{"naam":"Kiezen en betalen","paragrafen":[{"id":"ec-schaarste","naam":"Behoeften, schaarste en keuzes","niveau":"onderbouw","doelen":[],"bank":[{"zoek":"schaarste|behoefte|goed en een dienst|gebruiksgoed|opoffering|opportuniteit|levensbehoefte|impuls|consument\\?|veel meer kopen|keuze je"}]},{"id":"ec-betalen","naam":"Geld en betalen","niveau":"onderbouw","doelen":[],"bank":[{"zoek":"functies heeft geld|chartaal|giraal|ruil|rood|incasso|creditcard|phishing|bankafschrift|bank met het geld|wisselgeld|Hoeveel wis"}]},{"id":"ec-korting-btw","naam":"Korting en btw","niveau":"onderbouw","doelen":["ec-korting-stap","ec-korting-factor","ec-btw-erbij","ec-btw-factor","ec-btw-eraf-tabel","ec-btw-eraf-factor","ec-btw-bedrag","ec-btw-kies"],"bank":[{"zoek":"korting|btw"}]},{"id":"ec-vergelijken","naam":"Prijzen vergelijken","niveau":"onderbouw","doelen":[],"bank":[{"zoek":"per kilo|100 gram|goedkoopst|halen|sixpack|multipack|per stuk|per keer|per jaar\\?|abonnement|gaat 4 jaar mee|yoghurt|per maand of"}]}]},{"naam":"Budget, sparen en lenen","paragrafen":[{"id":"ec-budget","naam":"Budget en huishoudboekje","niveau":"onderbouw","doelen":["ec-vaste-lasten","ec-budget-per","ec-budget-over","ec-budget-saldo","ec-budget-post","ec-budget-sparen"],"bank":[{"zoek":"budget|begroting|vaste last|huishoud|zakgeld|inkomst|uitgave|variabele last|krijgt en waaraan"}]},{"id":"ec-sparen","naam":"Sparen en rente","niveau":"onderbouw","doelen":["ec-rente-jaar","ec-rente-enkel","ec-rente-samen"],"bank":[{"zoek":"spaar|sparen|rente"}]},{"id":"ec-lenen","naam":"Lenen en schulden","niveau":"onderbouw","doelen":["ec-afbetaling"],"bank":[{"zoek":"leen|lenen|afbetaling|schuld|BKR|aanmaning|hypotheek|later betalen|termijn|achterstand|betaalt hem af|daarna 24"}]},{"id":"ec-verzekeren","naam":"Verzekeren","niveau":"onderbouw","doelen":[],"bank":[{"zoek":"verzeker|premie|eigen risico|moreel risico|averechtse"}]}]},{"naam":"De consument","paragrafen":[{"id":"ec-reclame","naam":"Reclame, merken en slim kopen","niveau":"onderbouw","doelen":[],"bank":[{"zoek":"reclame|merk|influencer|limited|marketing|Consumentenbond|garantie|afzien|keurmerk|Nog maar|9,99|2 halen|webshops|koptelefoon kopen|kledingapp|gratis game"}]}]}]},{"naam":"Arbeid en productie","hoofdstukken":[{"naam":"Werken","paragrafen":[{"id":"ec-loon","naam":"Inkomen, loon en de loonstrook","niveau":"onderbouw","doelen":[],"bank":[{"zoek":"inkomen|loon|loonstrook|vakantiegeld|loonheffing|cao|verdien|bruto|netto|piloot"}]},{"id":"ec-werk","naam":"Werk en werkloosheid","niveau":"onderbouw/bovenbouw","doelen":[],"bank":[{"zoek":"werkloos|beroepsbevolking|arbeidsmarkt|vakbond|staking|uitzend|contract|zzp|ondernemingsraad|arbeidsovereenkomst"}]}]},{"naam":"Het bedrijf","paragrafen":[{"id":"ec-winst","naam":"Omzet, kosten en winst","niveau":"onderbouw","doelen":["ec-vast-variabel","ec-omzet","ec-kosten","ec-winst"],"bank":[{"zoek":"omzet|winst|kosten|kraam|inkoop|materiaal"}]},{"id":"ec-breakeven","naam":"Gemiddelde kosten en break-even","niveau":"bovenbouw","doelen":["ec-gem-kosten","ec-breakeven","ec-doelwinst","ec-breakeven-grafiek"],"bank":[{"zoek":"break-even|vaste kosten|goedkoper produceren|maximale winst|Bij hoev"}]},{"id":"ec-productie","naam":"Productie en ondernemingen","niveau":"onderbouw/bovenbouw","doelen":[],"bank":[{"zoek":"productiefactor|bedrijfskolom|toegevoegde|arbeidsproductiviteit|arbeidsdeling|automatisering|eenmanszaak|bv |franchise|multinational|failliet|sector|investe|terugverdien|kapper alleen knipt|pizzeria maakt|buitenland\\?|aandeel\\?|beleggen"}]}]}]},{"naam":"Markt en prijs","hoofdstukken":[{"naam":"Vraag en aanbod","paragrafen":[{"id":"ec-markt","naam":"Vraag, aanbod en de evenwichtsprijs","niveau":"onderbouw","doelen":["ec-evenwicht-tabel","ec-tekort-overschot"],"bank":[{"zoek":"vraag|aanbod|evenwicht|kaartjes|hittegolf|kersen|broden over|markt in de economie|klokveiling|gevraagde hoeveelheid|pakje melk|willen kopers"}]},{"id":"ec-markt-bb","naam":"Maximumprijs, minimumprijs en marktaandeel","niveau":"bovenbouw","doelen":["ec-evenwicht-lijnen","ec-maxprijs","ec-marktaandeel"],"bank":[{"zoek":"maximumprijs|minimumprijs|marktaandeel|elasticiteit|oligopolie|marktvorm|Qv"}]},{"id":"ec-concurrentie","naam":"Concurrentie en marktvormen","niveau":"onderbouw/bovenbouw","doelen":[],"bank":[{"zoek":"concurrent|supermarkt, zonder|spreken af|toezicht op eerlijke|complementair|substitutie|thee duurder|spelcomputer wordt|zout|consumentensurplus|voordeel \\(consumenten"}]}]}]},{"naam":"De overheid","hoofdstukken":[{"naam":"Belasting en uitgaven","paragrafen":[{"id":"ec-belasting","naam":"Belastingen en heffingen","niveau":"onderbouw/bovenbouw","doelen":[],"bank":[{"zoek":"belasting|accijns|ozb|vennootschap|invoerrecht|importheffing"}]},{"id":"ec-sociaal","naam":"Sociale zekerheid en toeslagen","niveau":"onderbouw/bovenbouw","doelen":[],"bank":[{"zoek":"AOW|WW |bijstand|uitkering|toeslag|sociale|vergrijzing|nivellering|werknemersverzekering|verplicht hebben|minimumloon"}]},{"id":"ec-rijksbegroting","naam":"De begroting van het Rijk","niveau":"bovenbouw","doelen":[],"bank":[{"zoek":"miljoenennota|begrotingst|begrotingso|staatsschuld|collectiev|subsidie|anticyclisch|stabilisator|geeft € 400|betaalt mee"}]}]},{"naam":"Inflatie en conjunctuur","paragrafen":[{"id":"ec-index","naam":"Indexcijfers en koopkracht","niveau":"bovenbouw","doelen":["ec-procverand","ec-groeifactor","ec-index-reken","ec-index-terug","ec-index-verand","ec-koopkracht"],"bank":[{"zoek":"index|procent gestegen|Hoeveel procent is de prijs|inflatie|koopkracht|prijzen stijgen|achter elkaar"}]},{"id":"ec-conjunctuur","naam":"Conjunctuur en de centrale bank","niveau":"bovenbouw","doelen":[],"bank":[{"zoek":"conjunctuur|recessie|bbp|reële groei|ECB|centrale bank|Nederlandsche|rente en investeren|loonstijging"}]}]}]},{"naam":"Wereld en milieu","hoofdstukken":[{"naam":"Internationale handel","paragrafen":[{"id":"ec-handel","naam":"Import, export en de wisselkoers","niveau":"onderbouw/bovenbouw","doelen":[],"bank":[{"zoek":"export|import|wisselkoers|dollar|yen|vrijhandel|protectionisme|handelsbalans|betalingsbalans|interne markt|haven|bananen|koffie|tomaten|lagelonen|Land A|euro voor Nederland"}]},{"id":"ec-ontwikkeling","naam":"Arme en rijke landen, eerlijke handel","niveau":"onderbouw","doelen":[],"bank":[{"zoek":"ontwikkeling|fairtrade|bananen|koffie|lagelonen|keurmerk|duurzaam geproduceerd"}]}]},{"naam":"Duurzaam","paragrafen":[{"id":"ec-milieu","naam":"Milieu en duurzaamheid","niveau":"onderbouw/bovenbouw","doelen":[],"bank":[{"zoek":"duurza|milieu|extern effect|vervuiler|CO2|recycl|statiegeld|circulair|zonnepanelen|dijken|Roken kost"}]}]}]}],
+    /* Engels: de leerroute (grammatica, woorden, lezen, schrijven) en de vragenbank (bank-eng.js) */
+    engels:[{"naam":"Tijden","hoofdstukken":[{"naam":"Het heden","paragrafen":[{"id":"en-a1-ww","naam":"To be, have got en de present simple","niveau":"A1","doelen":["en-to-be","en-have-got","en-ps-s","en-ps-spelling"]},{"id":"en-heden","naam":"Vragen, ontkenningen en de present continuous","niveau":"A1/A2","doelen":["en-pres-cont","en-do-does","en-ps-of-pc"]}]},{"naam":"Het verleden","paragrafen":[{"id":"en-past","naam":"De past simple","niveau":"A2","doelen":["en-was-were","en-past-regelmatig","en-past-onregelmatig","en-did"]},{"id":"en-irregular","naam":"Onregelmatige werkwoorden","niveau":"A2/B1","doelen":[],"bank":[{"t":"irregular verbs"}]},{"id":"en-perfect","naam":"De present perfect en de past continuous","niveau":"B1","doelen":["en-pres-perfect","en-since-for","en-past-of-perfect","en-past-cont"]}]},{"naam":"De toekomst","paragrafen":[{"id":"en-toekomst","naam":"Will en going to","niveau":"B1","doelen":["en-will","en-going-to","en-will-of-going-to"]}]}]},{"naam":"Zinnen bouwen","hoofdstukken":[{"naam":"Woordvolgorde en vergelijken","paragrafen":[{"id":"en-zin","naam":"Woordvolgorde, some en any, much en many","niveau":"A2","doelen":["en-woordvolgorde","en-some-any","en-much-many"]},{"id":"en-vergelijken","naam":"Vergelijken en bijwoorden","niveau":"A2","doelen":["en-vergrotend","en-overtreffend","en-bijwoord"]}]},{"naam":"Lastige zinnen","paragrafen":[{"id":"en-if","naam":"If-zinnen","niveau":"B1/B2","doelen":["en-if-1","en-if-2","en-if-3"]},{"id":"en-passief","naam":"De passieve vorm en who, which en whose","niveau":"B1","doelen":["en-passief","en-who-which-whose"]},{"id":"en-b2","naam":"Indirecte rede en question tags","niveau":"B2","doelen":["en-indirecte-rede","en-question-tags"]}]},{"naam":"Alles door elkaar","paragrafen":[{"id":"en-gram-a1","naam":"Grammatica gemengd A1","niveau":"A1","doelen":[],"bank":[{"t":"grammatica","nivo":[1]}]},{"id":"en-gram-a2","naam":"Grammatica gemengd A2","niveau":"A2","doelen":[],"bank":[{"t":"grammatica","nivo":[2]}]},{"id":"en-gram-b1","naam":"Grammatica gemengd B1","niveau":"B1","doelen":[],"bank":[{"t":"grammatica","nivo":[3]}]},{"id":"en-gram-b2","naam":"Grammatica gemengd B2","niveau":"B2","doelen":[],"bank":[{"t":"grammatica","nivo":[4]}]}]}]},{"naam":"Woorden","hoofdstukken":[{"naam":"Spelling","paragrafen":[{"id":"en-spelling","naam":"Meervoud, hoofdletters en bezit","niveau":"A1/A2","doelen":["en-meervoud","en-hoofdletters","en-bezit"]},{"id":"en-getallen","naam":"Getallen en data","niveau":"A1","doelen":["en-getallen","en-rangtelwoorden"]}]},{"naam":"Woorden maken","paragrafen":[{"id":"en-woordvorming","naam":"Voorvoegsels en achtervoegsels","niveau":"A2","doelen":["en-voorvoegsels","en-ness-ment","en-ful-less"]}]},{"naam":"Woordenschat","paragrafen":[{"id":"en-woordjes-a","naam":"Woordjes A1 en A2","niveau":"A1/A2","doelen":[],"bank":[{"t":"woordjes NL naar EN","nivo":[1,2]},{"t":"woordjes EN naar NL","nivo":[1,2]}]},{"id":"en-woordjes-b","naam":"Woordjes B1 en B2","niveau":"B1/B2","doelen":[],"bank":[{"t":"woordjes NL naar EN","nivo":[3,4]},{"t":"woordjes EN naar NL","nivo":[3,4]}]},{"id":"en-phrasal","naam":"Phrasal verbs","niveau":"A2/B1","doelen":[],"bank":[{"t":"voorzetselwerkwoorden"}]},{"id":"en-valse","naam":"Valse vrienden","niveau":"A2/B1","doelen":[],"bank":[{"t":"valse vrienden"}]}]}]},{"naam":"Lezen","hoofdstukken":[{"naam":"Gericht lezen","paragrafen":[{"id":"en-scannen","naam":"Scannen en verwijswoorden","niveau":"A2","doelen":["en-scannen","en-verwijswoord"]},{"id":"en-verbanden","naam":"Signaalwoorden en de hoofdgedachte","niveau":"B1","doelen":["en-verband","en-signaal-kiezen","en-hoofdgedachte"],"bank":[{"t":"examen-eng","zoek":"verband|Wat betekent"}]}]},{"naam":"Examenwoorden","paragrafen":[{"id":"en-examen-a","naam":"Examenwoorden A2 en B1","niveau":"A2/B1","doelen":[],"bank":[{"t":"examen-eng","nivo":[1,2]}]},{"id":"en-examen-b","naam":"Examenwoorden B1 en B2","niveau":"B1/B2","doelen":[],"bank":[{"t":"examen-eng","nivo":[3,4]}]}]}]},{"naam":"Schrijven","hoofdstukken":[{"naam":"Goed opschrijven","paragrafen":[{"id":"en-sch-zin","naam":"Hoofdletters, leestekens en samentrekkingen","niveau":"A1","doelen":["en-sch-zin-af","en-sch-apostrof"]},{"id":"en-sch-verwar","naam":"Woorden die je verwart","niveau":"A2","doelen":["en-sch-its","en-sch-your","en-sch-their","en-sch-to-too","en-sch-then-than","en-sch-whose"]}]},{"naam":"E-mails en brieven","paragrafen":[{"id":"en-sch-mail","naam":"Een e-mail beginnen en afsluiten","niveau":"A2","doelen":["en-sch-aanhef","en-sch-afsluiting","en-sch-datum"]},{"id":"en-sch-formeel","naam":"Formeel schrijven","niveau":"B2","doelen":["en-sch-voluit","en-sch-formeel-woord","en-sch-could-you","en-sch-grateful","en-sch-klacht"]}]},{"naam":"Zinnen verbinden","paragrafen":[{"id":"en-sch-verbind","naam":"And, but, because, however en although","niveau":"B1","doelen":["en-sch-samenvoegen","en-sch-however","en-sch-although","en-sch-verbind-kies"]}]}]}]
   };
 
-  var VAKNAAM = { rekenen:'Rekenen', nederlands:'Nederlands', wiskunde:'Wiskunde' };
+  var VAKNAAM = { rekenen:'Rekenen', nederlands:'Nederlands', wiskunde:'Wiskunde', economie:'Economie', engels:'Engels' };
   /* ---------- niveaus ----------
      Elke paragraaf heeft een niveau uit het boek (basis, 1F, 2F, 3F; bij wiskunde onderbouw,
      vmbo, havo, havo A, havo B, vwo A, vwo B), soms twee met een schuine streep ertussen.
      Een schoolniveau zet een paar daarvan aan; die kun je daarna nog los aan- of uitzetten.
      De keuze per vak blijft bewaard op dit apparaat (lg-boek-niv). */
   var SCHOOL = [{ id:'alles', naam:'Alles' }, { id:'bb', naam:'vmbo-bb' }, { id:'kgt', naam:'vmbo-kgt en tl' }, { id:'havo', naam:'havo' }, { id:'vwo', naam:'vwo' }];
-  var REF = { rekenen:['basis', '1F', '2F', '3F'], nederlands:['basis', '1F', '2F', '3F'], wiskunde:['onderbouw', 'vmbo', 'havo', 'havo A', 'havo B', 'vwo A', 'vwo B'] };
+  var REF = { rekenen:['basis', '1F', '2F', '3F'], nederlands:['basis', '1F', '2F', '3F'], wiskunde:['onderbouw', 'vmbo', 'havo', 'havo A', 'havo B', 'vwo A', 'vwo B'],
+    economie:['onderbouw', 'bovenbouw'], engels:['A1', 'A2', 'B1', 'B2'] };
   /* vmbo werkt naar 2F toe, havo en vwo naar 3F (met 2F in de onderbouw) */
   var PERSCHOOL = { taal:{ bb:['basis', '1F'], kgt:['1F', '2F'], havo:['2F', '3F'], vwo:['2F', '3F'] },
-    wiskunde:{ bb:['onderbouw', 'vmbo'], kgt:['onderbouw', 'vmbo'], havo:['onderbouw', 'havo', 'havo A', 'havo B'], vwo:['onderbouw', 'vwo A', 'vwo B'] } };
+    wiskunde:{ bb:['onderbouw', 'vmbo'], kgt:['onderbouw', 'vmbo'], havo:['onderbouw', 'havo', 'havo A', 'havo B'], vwo:['onderbouw', 'vwo A', 'vwo B'] },
+    /* economie heeft geen aparte stof per schoolsoort; Engels volgt het ERK: vmbo naar A2/B1, havo en vwo naar B1/B2 */
+    economie:{ bb:['onderbouw', 'bovenbouw'], kgt:['onderbouw', 'bovenbouw'], havo:['onderbouw', 'bovenbouw'], vwo:['onderbouw', 'bovenbouw'] },
+    engels:{ bb:['A1', 'A2'], kgt:['A2', 'B1'], havo:['B1', 'B2'], vwo:['B1', 'B2'] } };
   function refsVoor(vak, school){
     if (!REF[vak]) return [];
     if (!school || school === 'alles') return REF[vak].slice();
-    var t = (vak === 'wiskunde' ? PERSCHOOL.wiskunde : PERSCHOOL.taal)[school];
+    var t = (PERSCHOOL[vak] || PERSCHOOL.taal)[school];
     return t ? t.slice() : REF[vak].slice();
   }
   /* welk schoolniveau precies deze referentieniveaus aanzet, of '' als het een eigen keuze is */
@@ -1082,7 +1092,9 @@ window.OPDRACHTENBOEK = (function(){
   }
   var NIVEAU = { SCHOOL:SCHOOL, REF:REF, refsVoor:refsVoor, schoolVan:schoolVan, past:pastNiveau, lees:niveauLees, bewaar:niveauBewaar };
   /* het vak van de werkbladen en de toetsen (bank.js VAKKEN) naar het vak van het boek */
-  var VAN = { reken:'rekenen', ned:'nederlands', wis:'wiskunde' };
+  var VAN = { reken:'rekenen', ned:'nederlands', wis:'wiskunde', eco:'economie', eng:'engels' };
+  /* de vragenbank van een vak (bank.js): de code ervan */
+  var BANKVAK = { nederlands:'ned', economie:'eco', engels:'eng' };
 
   function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
   var ENT = { amp:'&', lt:'<', gt:'>', quot:'"', apos:"'", nbsp:' ', hellip:'…', minus:'−', times:'×', middot:'·', euro:'€' };
@@ -1130,7 +1142,7 @@ window.OPDRACHTENBOEK = (function(){
   function laad(vak){
     if (bezig[vak]) return bezig[vak];
     var v = window.LR_VERSIE || '3';
-    var bank = vak === 'nederlands' && window.BANK && BANK.zorg ? BANK.zorg('ned').catch(function(){}) : Promise.resolve();
+    var bank = BANKVAK[vak] && window.BANK && BANK.zorg ? BANK.zorg(BANKVAK[vak]).catch(function(){}) : Promise.resolve();
     var lr = heeftAl(vak) ? Promise.resolve() : (window.LEERROUTE ? Promise.resolve() : script('leerroute.js?v=' + v)).then(function(){
       return (LEERROUTE.BESTANDEN[vak] || []).reduce(function(p, f){ return p.then(function(){ return script('leerroute/' + f + '.js?v=' + v); }); }, Promise.resolve());
     }).then(function(){ DOEL = {}; if (LEERROUTE._mixen) LEERROUTE._mixen(); });
@@ -1185,12 +1197,20 @@ window.OPDRACHTENBOEK = (function(){
 
   /* ---------- opgaven maken voor een paragraaf ---------- */
   /* bij welk niveau van de vragenbank (1 bb, 2 kgt/tl, 3 havo, 4 vwo) een paragraaf hoogstens hoort */
-  function bankNivo(p){ return /3F/.test(p.niveau) ? 4 : /2F/.test(p.niveau) ? 3 : 2; }
-  function bankPot(p, b){
-    var bron = (window.BRONNEN && BRONNEN.ned) || [], nivo = (window.NIVOS && NIVOS.ned) || [], max = bankNivo(p), re = b.zoek ? new RegExp(b.zoek, 'i') : null;
+  function bankNivo(p){
+    var n = String(p.niveau || '');
+    if (/B2/.test(n)) return 4; if (/B1/.test(n)) return 3; if (/A2/.test(n)) return 2; if (/A1/.test(n)) return 1;
+    if (/bovenbouw/.test(n)) return 3;
+    return /3F/.test(n) ? 4 : /2F/.test(n) ? 3 : 2;
+  }
+  /* b: { t (het onderdeel; weg = elk onderdeel), zoek (in de vraag), nivo:[1, 2] (precies die niveaus) } */
+  function bankPot(p, b, vak){
+    var code = BANKVAK[vak] || 'ned';
+    var bron = (window.BRONNEN && BRONNEN[code]) || [], nivo = (window.NIVOS && NIVOS[code]) || [], max = bankNivo(p), re = b.zoek ? new RegExp(b.zoek, 'i') : null;
     var ids = bron.map(function(q, i){ return i; }).filter(function(i){
-      var q = bron[i]; return q && q.t === b.t && Array.isArray(q.o) && q.o[q.g] != null && (!re || re.test(q.v));
+      var q = bron[i]; return q && (!b.t || q.t === b.t) && Array.isArray(q.o) && q.o[q.g] != null && (!re || re.test(q.v)) && (!b.nivo || b.nivo.indexOf(nivo[i]) >= 0);
     });
+    if (b.nivo) return ids.map(function(i){ return bron[i]; });
     var passend = ids.filter(function(i){ return !nivo[i] || nivo[i] <= max; });
     return (passend.length >= 4 ? passend : ids).map(function(i){ return bron[i]; });
   }
@@ -1201,7 +1221,7 @@ window.OPDRACHTENBOEK = (function(){
     var p = x.p, R = window.LEERROUTE ? LEERROUTE.R : null;
     if (p.lezen) return leesOpgaven(vak, p);
     var bronnen = p.doelen.map(doel).filter(Boolean).map(function(d){ return { soort:'lr', doel:d, mis:0 }; });
-    (p.bank || []).forEach(function(b){ var pot = schud(bankPot(p, b)); if (pot.length) bronnen.push({ soort:'bank', pot:pot, mis:0 }); });
+    (p.bank || []).forEach(function(b){ var pot = schud(bankPot(p, b, vak)); if (pot.length) bronnen.push({ soort:'bank', pot:pot, mis:0 }); });
     var uit = [], gezien = {};
     bronnen = schud(bronnen);
     var ronde = 0;
@@ -1333,7 +1353,7 @@ window.OPDRACHTENBOEK = (function(){
     '.ob-blad .lr-tekst mark{background:#eef2fc;color:inherit;border-bottom:2px solid var(--lr-2)}' +
     '.ob-blad .lr-context,.ob-blad .lr-uitdoel{display:block;font-size:.86rem;color:#4a5270;margin-bottom:2px}';
 
-  return { vakken:['rekenen', 'nederlands', 'wiskunde'], VAKNAAM:VAKNAAM, VAN:VAN,
+  return { vakken:['rekenen', 'nederlands', 'wiskunde', 'economie', 'engels'], VAKNAAM:VAKNAAM, VAN:VAN,
     boek:boek, paragraaf:paragraaf, paragrafen:paragrafen, laad:laad, doel:doel,
     opgaven:opgaven, uitleg:uitleg, beeld:beeld, eind:eind, keuzes:keuzes, goedeAntwoorden:goedeAntwoorden, echteStappen:echteStappen, stapAntwoord:stapAntwoord,
     vraagHtml:vraagHtml, kaal:kaal, schoon:schoon, schud:schud, losseSvg:losseSvg, STIJL:STIJL, NIVEAU:NIVEAU };

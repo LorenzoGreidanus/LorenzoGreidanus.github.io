@@ -483,7 +483,7 @@ window.KIEZER = (function(){
      een getekende tabel. Een figuur die niet mee kan terwijl de vraag hem
      nodig heeft, of een tekst die te lang is voor een vraag: die opgave staat
      er wel, maar kun je niet aanvinken, met de reden erbij. */
-  var BOEKVAK = { reken:'rekenen', ned:'nederlands', wis:'wiskunde' }, TOETSVAK = { rekenen:'reken', nederlands:'ned', wiskunde:'wis' };
+  var BOEKVAK = { reken:'rekenen', ned:'nederlands', wis:'wiskunde', eco:'economie', eng:'engels' }, TOETSVAK = { rekenen:'reken', nederlands:'ned', wiskunde:'wis', economie:'eco', engels:'eng' };
   /* opgaven per paragraaf in beeld; Meer opgaven zet er BOEK_MEER bij */
   var BOEK_PER = 10, BOEK_MEER = 6;
   var boekAan = false, bVak = '', bPar = '', bLijst = [], bGekozen = {}, bVolg = [], bTeller = 0, bBezig = false;
@@ -507,8 +507,8 @@ window.KIEZER = (function(){
       '.kzboek{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}' +
       '.kzb-midden{flex:1 1 auto;min-height:0;display:grid;grid-template-columns:minmax(250px,320px) minmax(0,1fr)}' +
       '.kzb-nav{overflow:auto;overscroll-behavior:contain;border-right:1px solid var(--rand);padding:12px 14px 16px;display:grid;gap:6px;align-content:start}' +
-      '.kzb-vakken{display:flex;gap:4px;padding:4px;border-radius:12px;background:var(--kaart2)}' +
-      '.kzb-vakken button{flex:1 1 0;min-height:38px;border:0;border-radius:9px;background:transparent;font-size:.84rem;font-weight:500;color:var(--ink);padding:0 6px}' +
+      '.kzb-vakken{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:4px;padding:4px;border-radius:12px;background:var(--kaart2)}' +
+      '.kzb-vakken button{min-width:0;min-height:38px;border:0;border-radius:9px;background:transparent;font-size:.84rem;font-weight:500;color:var(--ink);padding:0 6px}' +
       '.kzb-vakken button[aria-pressed="true"]{background:var(--kaart);box-shadow:0 1px 3px rgba(20,34,76,.15);font-weight:600}' +
       '.kzb-zoek{display:flex;align-items:center;gap:8px;border:1.5px solid var(--rand2);border-radius:12px;padding:0 12px;min-height:44px;background:var(--kaart)}' +
       '.kzb-zoek:focus-within{border-color:var(--ocean)}' +
@@ -564,7 +564,7 @@ window.KIEZER = (function(){
     return '<div class="kzboek" id="kzBoek" role="tabpanel" aria-labelledby="kzTabBoek">' +
       '<div class="kzb-midden">' +
         '<nav class="kzb-nav" aria-label="Inhoud van het boek">' +
-          '<div class="kzb-vakken" role="group" aria-label="Vak van het boek">' + ['rekenen', 'nederlands', 'wiskunde'].map(function(v){ return '<button type="button" data-bvak="' + v + '" aria-pressed="false">' + { rekenen:'Rekenen', nederlands:'Nederlands', wiskunde:'Wiskunde' }[v] + '</button>'; }).join('') + '</div>' +
+          '<div class="kzb-vakken" role="group" aria-label="Vak van het boek">' + ['rekenen', 'nederlands', 'wiskunde', 'economie', 'engels'].map(function(v){ return '<button type="button" data-bvak="' + v + '" aria-pressed="false">' + { rekenen:'Rekenen', nederlands:'Nederlands', wiskunde:'Wiskunde', economie:'Economie', engels:'Engels' }[v] + '</button>'; }).join('') + '</div>' +
           '<label class="kzb-zoek">' + ZOEKIKOON + '<input type="search" id="kzbZoek" placeholder="Zoek een onderwerp" aria-label="Zoek een onderwerp in het boek" autocomplete="off"></label>' +
           '<div class="kzb-niv"><label class="kzb-nivkies">Niveau <select id="kzbSchool"></select></label>' +
             '<div class="kzb-refs" id="kzbRefs" role="group" aria-label="Niveaus in het boek"></div></div>' +

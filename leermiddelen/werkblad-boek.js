@@ -1,5 +1,5 @@
 /* Werkbladen uit het opdrachtenboek: kies paragrafen uit het boek van rekenen,
-   Nederlands of wiskunde, en je krijgt per paragraaf een kop met het nummer,
+   Nederlands, wiskunde, economie of Engels, en je krijgt per paragraaf een kop met het nummer,
    de uitleg met een voorbeeld en de opgaven, met figuren waar de leerroute ze
    tekent. Op het antwoordblad staat elk antwoord, met de stappen als uitleg.
 
@@ -14,7 +14,7 @@
 (function(){
   'use strict';
   if (!window.SPELBLAD) return;
-  var VAKKEN = { reken:'rekenen', ned:'nederlands', wis:'wiskunde' };
+  var VAKKEN = { reken:'rekenen', ned:'nederlands', wis:'wiskunde', eco:'economie', eng:'engels' };
   var LETTERS = 'abcdef';
   function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
   function plat(t){ return String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
