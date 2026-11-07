@@ -336,6 +336,11 @@ html[data-dag] .vraag{padding-top:clamp(96px,12vw,118px)}
 .codevorm button{min-height:50px;padding:0 22px;border-radius:999px;border:0;background:var(--navy);color:var(--cream);font:600 .95rem Poppins,system-ui,sans-serif;cursor:pointer}
 .codevorm .melding{flex:1 1 100%;font-size:.85rem;color:#A23A22;min-height:0}
 .codevorm .melding:empty{display:none}
+/* het hidden-attribuut wint anders niet van display:flex */
+.codevorm [hidden]{display:none !important}
+.codevorm .naamlabel input,.codevorm .naamlabel input::placeholder{letter-spacing:.02em;text-transform:none;font-size:1.15rem}
+.codevorm .gevonden{flex:1 1 100%;margin:0;font-size:.92rem;color:var(--navy)}
+.codevorm .gevonden b{font-weight:600}
 .snel{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
 .snel a{min-height:44px;padding:0 16px 0 7px;border-radius:999px;background:#fff;color:var(--navy);font-size:.88rem;font-weight:500;
   display:inline-flex;align-items:center;gap:8px;transition:transform .3s cubic-bezier(.16,1,.3,1)}
@@ -554,9 +559,12 @@ footer{padding:64px 0 40px}
     <a class="deurknop" href="leermiddelen/">Naar de leeromgeving <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
 
     <form class="codevorm" id="codeVorm" action="leermiddelen/" method="get" novalidate>
-      <label for="codeVeld">Heb je een code van je docent?
+      <label for="codeVeld">Doe mee met een spel of je klas
         <input id="codeVeld" name="koppel" maxlength="6" placeholder="ABCD" autocapitalize="characters" autocomplete="off" spellcheck="false" enterkeyhint="go"></label>
-      <button type="submit">Doe mee</button>
+      <p class="gevonden" id="codeGevonden" hidden></p>
+      <label for="naamVeld" class="naamlabel" hidden>Je bijnaam
+        <input id="naamVeld" maxlength="16" autocomplete="nickname" placeholder="bijnaam" spellcheck="false" enterkeyhint="go"></label>
+      <button type="submit" id="codeKnop">Doe mee</button>
       <p class="melding" id="codeMelding" role="status" aria-live="polite"></p>
     </form>
 
@@ -722,17 +730,57 @@ footer{padding:64px 0 40px}
   if (document.readyState === 'loading') addEventListener('DOMContentLoaded', start); else start();
 
   /* ---------- de code van je docent ----------
-     Vier letters is een klas of een spel op het bord: de leeromgeving vult hem in
-     en vraagt je bijnaam. Zes tekens is een oefening die de docent maakte. */
+     Zes tekens is een oefening die de docent maakte. Vier letters is een klas
+     of een spel op het bord; dat vraagt deze pagina aan de server. Een spel:
+     je kiest hier je bijnaam en gaat meteen het spel in, zoals op
+     meneergreidanus.nl/q (leermiddelen/mee.html). Een klas: de leeromgeving
+     koppelt je, daar staat ook je gezichtje. */
   var vorm = document.getElementById('codeVorm'), veld = document.getElementById('codeVeld'), melding = document.getElementById('codeMelding');
-  veld.addEventListener('input', function(){ melding.textContent = ''; });
+  var naamVeld = document.getElementById('naamVeld'), naamLabel = vorm.querySelector('.naamlabel'), gevonden = document.getElementById('codeGevonden'), knop = document.getElementById('codeKnop');
+  var spelNu = null;   /* { code, doel } zodra de code een spel blijkt */
+  var NAMEN = { toren:'Torenverdediging', zwaard:'Zwaardvechter', poortrace:'Poortrace', dijk:'Dijkbouwers', teken:'Tekenslag', crisis:'De crisis' };
+  function paginaVoorSpel(spel, game){
+    if (spel === 'rollen') return game === 'teken' ? 'tekenslag.html' : game === 'crisis' ? 'crisis-team.html' : 'rol.html';
+    return { strijd:'strijd.html', quiz:'klasquiz.html' }[spel] || '';
+  }
+  function geenSpel(){ spelNu = null; gevonden.hidden = true; naamLabel.hidden = true; knop.textContent = 'Doe mee'; }
+  veld.addEventListener('input', function(){ melding.textContent = ''; if (spelNu) geenSpel(); });
+  function bezig(aan){ knop.disabled = aan; if (aan) knop.setAttribute('aria-busy', 'true'); else knop.removeAttribute('aria-busy'); }
   vorm.addEventListener('submit', function(e){
     e.preventDefault();
+    melding.textContent = '';
+    /* stap 2: het spel is gevonden, nu met je bijnaam erin */
+    if (spelNu){
+      var naam = naamVeld.value.trim();
+      if (naam.length < 2){ melding.textContent = 'Vul een bijnaam in van minstens twee letters.'; naamVeld.focus(); return; }
+      try { localStorage.setItem('lg-quiz-naam', naam); } catch (e2){}
+      bezig(true); knop.textContent = 'Op naar het spel…';
+      location.href = 'leermiddelen/' + spelNu.doel + '?k=' + spelNu.code + '&ga=1';
+      return;
+    }
     var ruw = veld.value.toUpperCase().replace(/[^A-Z0-9]/g, ''), letters = ruw.replace(/[^A-Z]/g, '');
     if (ruw.length === 6){ location.href = 'leermiddelen/oefen.html?code=' + ruw; return; }
-    if (letters.length === 4 && ruw.length === 4){ location.href = 'leermiddelen/?koppel=' + letters; return; }
-    melding.textContent = 'Een code heeft vier letters (je klas of een spel op het bord) of zes tekens (een oefening).';
-    veld.focus();
+    if (!(letters.length === 4 && ruw.length === 4)){
+      melding.textContent = 'Een code heeft vier letters (je klas of een spel op het bord) of zes tekens (een oefening).';
+      veld.focus(); return;
+    }
+    bezig(true);
+    fetch('/api/kamer/' + letters).then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); }).then(function(x){
+      bezig(false);
+      if (!x.ok){ melding.textContent = 'Er is geen spel of klas met code ' + letters + '. Kijk of je hem goed overnam.'; veld.focus(); return; }
+      if (x.j.spel === 'klas'){ location.href = 'leermiddelen/?koppel=' + letters; return; }
+      var doel = paginaVoorSpel(x.j.spel, x.j.game);
+      if (!doel){ melding.textContent = 'Deze code hoort bij een spel dat je hier niet kunt openen. Vraag je docent waar je hem invult.'; return; }
+      if (x.j.fase === 'einde'){ melding.textContent = 'Dit spel is al afgelopen. Vraag je docent om de nieuwe code.'; return; }
+      spelNu = { code: letters, doel: doel };
+      veld.value = letters;
+      var naamSpel = NAMEN[x.j.game] || (x.j.spel === 'quiz' ? 'de Klasquiz' : 'een spel van je docent');
+      gevonden.innerHTML = 'Gevonden: <b></b>. Kies een bijnaam en doe mee.';
+      gevonden.querySelector('b').textContent = naamSpel;
+      gevonden.hidden = false; naamLabel.hidden = false; knop.textContent = 'Meedoen';
+      try { if (!naamVeld.value) naamVeld.value = localStorage.getItem('lg-quiz-naam') || ''; } catch (e3){}
+      naamVeld.focus(); naamVeld.select();
+    }).catch(function(){ bezig(false); melding.textContent = 'Geen verbinding. Kijk of je internet hebt en probeer het nog eens.'; });
   });
 
   /* ---------- verder waar je was: het laatste spel uit de leeromgeving ---------- */
