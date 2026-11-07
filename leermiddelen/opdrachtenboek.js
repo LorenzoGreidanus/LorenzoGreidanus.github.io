@@ -1129,7 +1129,8 @@ window.OPDRACHTENBOEK = (function(){
 
   /* ---------- laden: de leerroute van het vak, en de vragenbank als een paragraaf die gebruikt ---------- */
   var bezig = {};
-  function script(src){ return new Promise(function(klaar, mis){ var s = document.createElement('script'); s.src = src; s.onload = klaar; s.onerror = mis; document.head.appendChild(s); }); }
+  /* async=false: scripts die tegelijk worden opgehaald, draaien toch op volgorde */
+  function script(src){ return new Promise(function(klaar, mis){ var s = document.createElement('script'); s.src = src; s.async = false; s.onload = klaar; s.onerror = mis; document.head.appendChild(s); }); }
   var DOEL = {};
   function doel(id){
     if (DOEL[id]) return DOEL[id];
@@ -1144,7 +1145,8 @@ window.OPDRACHTENBOEK = (function(){
     var v = window.LR_VERSIE || '3';
     var bank = BANKVAK[vak] && window.BANK && BANK.zorg ? BANK.zorg(BANKVAK[vak]).catch(function(){}) : Promise.resolve();
     var lr = heeftAl(vak) ? Promise.resolve() : (window.LEERROUTE ? Promise.resolve() : script('leerroute.js?v=' + v)).then(function(){
-      return (LEERROUTE.BESTANDEN[vak] || []).reduce(function(p, f){ return p.then(function(){ return script('leerroute/' + f + '.js?v=' + v); }); }, Promise.resolve());
+      /* alle bestanden van het vak tegelijk ophalen; ze draaien op volgorde */
+      return Promise.all((LEERROUTE.BESTANDEN[vak] || []).map(function(f){ return script('leerroute/' + f + '.js?v=' + v); }));
     }).then(function(){ DOEL = {}; if (LEERROUTE._mixen) LEERROUTE._mixen(); });
     bezig[vak] = Promise.all([lr, bank, laadLezen(vak)]).then(function(){}, function(e){ bezig[vak] = null; throw e; });
     return bezig[vak];

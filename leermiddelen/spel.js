@@ -194,7 +194,7 @@ window.SPEL = (function(){
     var meer = paneel.querySelector('.meer'), lang = [];
     if (o.meer !== false){
       lang = Array.prototype.slice.call(start.querySelectorAll(o.meer || '.uitleg, .tip'));
-      lang.forEach(function(el){ meer.appendChild(el); });
+      lang.forEach(function(el){ if (el.style.display === 'none') el.style.display = ''; meer.appendChild(el); });
     }
     var regelsKnop = paneel.querySelector('.regels-knop');
     if (!lang.length) regelsKnop.hidden = true;
@@ -257,6 +257,8 @@ window.SPEL = (function(){
     if (na && na.nextElementSibling && na.nextElementSibling.classList.contains('leadmeer')) na = na.nextElementSibling;
     if (na){ if (stapKnop) na.insertAdjacentElement('afterend', stapKnop); na.insertAdjacentElement('afterend', knop); na.insertAdjacentElement('afterend', paneel); }
     else { if (stapKnop) start.insertBefore(stapKnop, start.firstChild); start.insertBefore(knop, start.firstChild); start.insertBefore(paneel, start.firstChild); }
+    /* de lege plek die vakspel.js voor de knop vrijhield, mag weg nu de knop er staat */
+    var wachtplek = start.querySelector('.uitlegwacht'); if (wachtplek) wachtplek.parentNode.removeChild(wachtplek);
     if (o.onder){ knop.classList.add('onder'); if (stapKnop) stapKnop.classList.add('onder'); }
     /* ook bij een eerste bezoek dicht: dan staat het doel in de knop */
     toon(false);

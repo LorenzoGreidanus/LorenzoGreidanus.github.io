@@ -40,7 +40,7 @@
   <section id="codeScherm">
     <p class="hand">van je docent</p>
     <h1>Oefenen met een code</h1>
-    <p class="intro">Je docent heeft een oefening, toets of woordenlijst gemaakt. Vul de code in die je hebt gekregen.</p>
+    <p class="intro">Je docent heeft een oefening, toets of woordenlijst gemaakt. Vul de code in die je hebt gekregen. Heb je een code van vier letters van het bord? Die kan hier ook.</p>
     <form class="codevak" id="codeForm" autocomplete="off">
       <label class="sronly" for="codeIn">Code</label>
       <input class="veld" id="codeIn" maxlength="6" placeholder="K7M2QX" autocapitalize="characters" spellcheck="false" inputmode="text">
@@ -143,6 +143,20 @@
   $('codeIn').addEventListener('input', function(){ this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); });
   $('andereCode').addEventListener('click', function(){ history.replaceState(null, '', location.pathname); scherm('codeScherm'); $('codeIn').value = ''; $('codeIn').focus(); });
   function laad(c){
+    /* vier letters is geen oefening maar een spel op het bord of een klas: de leeromgeving zoekt uit welke */
+    var vier = String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (/^[A-Z]{4}$/.test(vier)){
+      melding($('codeMelding'), 'Even kijken…');
+      fetch('/api/kamer/' + vier).then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); }).then(function(x){
+        if (!x.ok){ melding($('codeMelding'), 'Er is geen spel of klas met code ' + vier + '. Kijk of je hem goed overnam.', 'fout'); return; }
+        var j = x.j, doel = j.spel === 'klas' ? 'index.html?koppel=' + vier
+          : j.spel === 'rollen' ? (j.game === 'teken' ? 'tekenslag.html' : j.game === 'crisis' ? 'crisis-team.html' : 'rol.html') + '?k=' + vier
+          : j.spel === 'strijd' ? 'strijd.html?k=' + vier : j.spel === 'quiz' ? 'klasquiz.html?k=' + vier : '';
+        if (!doel){ melding($('codeMelding'), 'Deze code hoort bij een spel dat je hier niet kunt openen. Vraag je docent waar je hem invult.', 'fout'); return; }
+        location.href = doel;
+      }).catch(function(){ melding($('codeMelding'), 'Geen verbinding. Kijk of je internet hebt en probeer het opnieuw.', 'fout'); });
+      return;
+    }
     $('codeKnop').disabled = true; $('codeKnop').setAttribute('aria-busy', 'true'); melding($('codeMelding'), 'Ophalen…');
     /* een voorbeeldtoets staat in de browser zelf: niets ophalen, niets inleveren */
     var vb = window.VOORBEELDTOETSEN && VOORBEELDTOETSEN[String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '')];

@@ -178,7 +178,9 @@ window.VAKSPEL = (function(){
         '<h1>' + schoon(cfg.naam) + '</h1>' +
         '<p class="lead" id="leadTekst">' + schoon(cfg.lead || '') + '</p>' +
         /* de kaartjes met uitleg gaan achter "Alle regels" in het paneel van spel.js, zodat Start in beeld staat */
-        '<div class="hoe uitleg">' + (cfg.hoe || []).map(function(h, i){ return '<div><i>' + (i + 1) + '</i><b>' + schoon(h.kop) + '</b><span>' + h.tekst + '</span></div>'; }).join('') + '</div>' +
+        /* tot spel.js de uitleg in het paneel zet: de kaartjes onzichtbaar en een lege plek zo groot als de knop Hoe werkt het?, zodat er niets verspringt */
+        (cfg.uitleg ? '<div class="uitlegknop eerst uitlegwacht" aria-hidden="true" style="visibility:hidden"><span class="uk-tekst"><b>Hoe werkt het?</b>' + (cfg.uitleg.doel ? '<span class="uk-doel">' + schoon(cfg.uitleg.doel) + '</span>' : '') + '</span></div>' : '') +
+        '<div class="hoe uitleg"' + (cfg.uitleg ? ' style="display:none"' : '') + '>' + (cfg.hoe || []).map(function(h, i){ return '<div><i>' + (i + 1) + '</i><b>' + schoon(h.kop) + '</b><span>' + h.tekst + '</span></div>'; }).join('') + '</div>' +
         /* wat je oefent: kaartjes in een raster. Het niveau staat niet hier maar onder Start (zie niveauHtml). */
         (cfg.keuzes || []).filter(function(k){ return k.id !== 'niveau'; }).map(function(k, i){
           var rij = '<div class="keuze tegels" id="keuze-' + k.id + '" role="group" aria-labelledby="kop-' + k.id + '"></div><p class="keuzeuit hide" id="uit-' + k.id + '"></p>';

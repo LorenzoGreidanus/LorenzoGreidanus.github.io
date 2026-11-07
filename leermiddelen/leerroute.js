@@ -427,10 +427,12 @@ window.LEERROUTE = (function(){
         h += '<h2 class="lr-dom">' + schoon(dm.naam) + '</h2><div class="lr-groepen">';
         gd.forEach(function(g){
           var k = g.doelen.filter(function(d){ return v[d.id] === 2; }).length;
-          h += '<article class="lr-groep" id="g-' + g.id + '"><div class="lr-gkop"><h3>' + schoon(g.naam) + '</h3><span class="lr-tel' + (k === g.doelen.length ? ' af' : '') + '">' + k + '/' + g.doelen.length + '</span></div>' +
+          /* een groep staat dicht, behalve waar je bezig bent of waar de link heen wijst: zo blijft de pagina kort */
+          var open = naarId === 'g-' + g.id || (volgende && volgende.groep === g) || g.doelen.some(function(d){ return v[d.id] === 1; });
+          h += '<details class="lr-groep" id="g-' + g.id + '"' + (open ? ' open' : '') + '><summary class="lr-gkop"><h3>' + schoon(g.naam) + '</h3><span class="lr-tel' + (k === g.doelen.length ? ' af' : '') + '">' + k + '/' + g.doelen.length + '</span></summary>' +
             (g.uit ? '<p class="lr-guit">' + schoon(g.uit) + '</p>' : '') + kdPillen(g) +
             '<ol class="lr-doelen">' + g.doelen.map(function(d){ var s = v[d.id] | 0;
-              return '<li><a href="#d=' + d.id + '" title="' + STATUS[s] + '">' + bol(s) + '<span><b>' + schoon(d.naam) + '</b>' + (d.kort ? '<small>' + schoon(d.kort) + '</small>' : '') + '</span></a></li>'; }).join('') + '</ol></article>';
+              return '<li><a href="#d=' + d.id + '" title="' + STATUS[s] + '">' + bol(s) + '<span><b>' + schoon(d.naam) + '</b>' + (d.kort ? '<small>' + schoon(d.kort) + '</small>' : '') + '</span></a></li>'; }).join('') + '</ol></details>';
         });
         h += '</div>';
       });
@@ -701,13 +703,15 @@ window.LEERROUTE = (function(){
     else if (h === 'kerndoelen') overzicht('kerndoelen');
     else overzicht();
   }
+  /* alle bestanden tegelijk ophalen (op een telefoon scheelt dat seconden), maar wel op volgorde uitvoeren */
   function laad(lijst, klaar){
-    var i = 0;
-    (function volgende(){
-      if (i >= lijst.length){ klaar(); return; }
-      var s = document.createElement('script'); s.src = 'leerroute/' + lijst[i++] + '.js?v=' + (window.LR_VERSIE || '1');
-      s.onload = volgende; s.onerror = volgende; document.head.appendChild(s);
-    })();
+    var over = lijst.length;
+    if (!over){ klaar(); return; }
+    lijst.forEach(function(f){
+      var s = document.createElement('script'); s.src = 'leerroute/' + f + '.js?v=' + (window.LR_VERSIE || '1'); s.async = false;
+      s.onload = s.onerror = function(){ if (--over === 0) klaar(); };
+      document.head.appendChild(s);
+    });
   }
   function start(){
     wortel = $('lr');

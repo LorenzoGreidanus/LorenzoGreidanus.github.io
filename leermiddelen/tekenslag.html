@@ -233,7 +233,7 @@ select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
     <p class="eyebrow">meedoen</p>
     <h2>Ik doe mee met de klas</h2>
     <div class="rij" style="margin-top:10px">
-      <input class="veld" id="joinCode" maxlength="4" placeholder="CODE" autocapitalize="characters" autocomplete="off" spellcheck="false" style="flex:0 0 120px;text-transform:uppercase;letter-spacing:.2em;font-weight:700;text-align:center" aria-label="Code van het bord">
+      <input class="veld" id="joinCode" maxlength="6" placeholder="CODE" autocapitalize="characters" autocomplete="off" spellcheck="false" style="flex:0 0 120px;text-transform:uppercase;letter-spacing:.2em;font-weight:700;text-align:center" aria-label="Code van het bord">
       <input class="veld" id="joinNaam" maxlength="16" placeholder="Je bijnaam" autocomplete="off" style="flex:1;min-width:160px" aria-label="Bijnaam">
       <button class="knop crab" id="joinBtn" type="button">Meedoen</button>
     </div>
@@ -1380,6 +1380,9 @@ select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
   if (param && /[?&]ga=1/.test(location.search) && $('joinNaam').value.trim().length >= 2) setTimeout(doeMee, 0);
   function doeMee(sprong){
     sprong = typeof sprong === 'number' ? sprong : 0;
+    var ruw6 = $('joinCode').value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    /* zes tekens is geen spel maar een oefening van de docent */
+    if (ruw6.length === 6){ location.href = 'oefen.html?code=' + ruw6; return; }
     code = $('joinCode').value.toUpperCase().replace(/[^A-Z]/g, '');
     naam = $('joinNaam').value.trim().slice(0, 16);
     if (code.length !== 4){ $('joinFout').textContent = 'De code heeft vier letters.'; return; }
@@ -1390,6 +1393,7 @@ select:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
     fetch('/api/kamer/' + code).then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); }).then(function(x){
       if (x.ok && x.j.spel && !(x.j.spel === 'rollen' && x.j.game === 'teken')){
         var doel = { strijd:'strijd.html', rollen:'rol.html', quiz:'klasquiz.html' }[x.j.spel];
+        if (!doel && x.j.spel === 'klas'){ location.href = 'index.html?koppel=' + code; return; }
         if (!doel){ $('joinFout').textContent = x.j.spel === 'klas' ? 'Dit is een klascode van een docent, geen spelcode. Die vul je in de leeromgeving in, bij "Code van je docent".' : 'Deze code hoort bij een ander spel. Vraag je docent welke pagina je moet openen.'; return; }
         location.href = doel + '?k=' + code + '&ga=1'; return;
       }

@@ -415,7 +415,7 @@ body.app-aan.vb-hapert .vb-balk{bottom:calc(76px + env(safe-area-inset-bottom,0p
   <section id="s-join" class="kaart">
     <p class="eyebrow">doe mee</p>
     <h2 style="font-size:1.3rem;margin-top:4px">Vul de code van het bord in</h2>
-    <input class="veld code" id="joinCode" maxlength="4" placeholder="CODE" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Code van het bord">
+    <input class="veld code" id="joinCode" maxlength="6" placeholder="CODE" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Code van het bord">
     <input class="veld" id="joinNaam" maxlength="16" placeholder="Je bijnaam" autocomplete="nickname" aria-label="Je bijnaam">
     <button class="knop" id="joinBtn" type="button">Meedoen</button>
     <p class="fout" id="joinFout"></p>
@@ -457,9 +457,12 @@ body.app-aan.vb-hapert .vb-balk{bottom:calc(76px + env(safe-area-inset-bottom,0p
   function doeMee(){
     /* een tik tegelijk: de knop wacht op de server */
     if ($('joinBtn').disabled) return;
+    var ruw6 = $('joinCode').value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    /* zes tekens is geen spel maar een oefening van de docent */
+    if (ruw6.length === 6){ location.href = 'oefen.html?code=' + ruw6; return; }
     code = $('joinCode').value.toUpperCase().replace(/[^A-Z]/g, '');
     naam = $('joinNaam').value.trim().slice(0, 16);
-    if (code.length !== 4){ $('joinFout').textContent = 'De code heeft vier letters.'; return; }
+    if (code.length !== 4){ $('joinFout').textContent = 'De code heeft vier letters (een spel) of zes tekens (een oefening).'; return; }
     if (naam.length < 2){ $('joinFout').textContent = 'Vul een bijnaam in.'; return; }
     if (window.NAAMFILTER && NAAMFILTER.verboden(naam)){ $('joinFout').textContent = 'Die bijnaam kan niet. Kies een andere.'; return; }
     try { localStorage.setItem('lg-quiz-naam', naam); } catch (e){}
@@ -473,6 +476,8 @@ body.app-aan.vb-hapert .vb-balk{bottom:calc(76px + env(safe-area-inset-bottom,0p
       if (x.ok && x.j.spel && x.j.spel !== 'rollen'){
         /* deze code hoort bij een ander spel van de docent; alleen soorten die we kennen krijgen een doorverwijzing */
         var doel = { strijd:'strijd.html', quiz:'klasquiz.html' }[x.j.spel];
+        /* een klascode: koppelen gaat in de leeromgeving */
+        if (!doel && x.j.spel === 'klas'){ location.href = 'index.html?koppel=' + code; return; }
         if (!doel){ $('joinFout').textContent = x.j.spel === 'klas' ? 'Dit is een klascode van een docent, geen spelcode. Die vul je in de leeromgeving in, bij "Code van je docent".' : 'Deze code hoort bij een ander spel. Vraag je docent welke pagina je moet openen.'; return; }
         location.href = doel + '?k=' + code + '&ga=1'; return;
       }
