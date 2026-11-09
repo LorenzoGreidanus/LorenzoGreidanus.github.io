@@ -603,7 +603,32 @@ export class Kamer extends DurableObject {
     try { this.ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair("ping", "pong")); }
     catch (e){ console.error("autoResponse", e && e.message); }
   }
-  async bewaar(){ this.stand.laatst = Date.now(); await this.ctx.storage.put("stand", this.stand); }
+  async bewaar(){ this.stand.laatst = Date.now(); await this.ctx.storage.put("stand", this.stand); this.beheerMeld(); }
+  /* Het beheer (beheer.html, Nu bezig) hoort welke kamers er in gebruik zijn:
+     de code, het spel, de fase en hoeveel spelers, nooit namen. Een klascode
+     meldt de naam die de docent koos en hoeveel leerlingen erin zitten.
+     Hoogstens om de vijf seconden; zonder wijziging hoogstens om de minuut. */
+  beheerMeld(weg){
+    const st = this.stand, env = this.env;
+    if (!env || !env.BEHEER_DO || (!st && !weg)) return;
+    const code = st ? st.code : this.beheerCode;
+    if (!code) return;
+    this.beheerCode = code;
+    let d;
+    if (weg) d = { code, weg: true };
+    else if (st.spel === "klas") d = { code, spel: "klas", naam: st.naam, n: Object.keys(st.leerlingen || {}).length, gemaakt: st.gemaakt, eigenaar: !!st.vanEigenaar };
+    else d = { code, spel: st.spel, game: st.game || "", duel: !!st.duel, fase: st.fase, n: Object.keys(st.spelers || {}).length,
+      verbonden: this.ctx.getWebSockets("speler").filter(w => w.readyState === 1).length, bord: this.ctx.getWebSockets("host").some(w => w.readyState === 1), vak: st.vak || "", niveau: st.niveau || "", gemaakt: st.gemaakt };
+    const sig = JSON.stringify(d), nu = Date.now(), sinds = nu - (this.beheerT || 0);
+    if (!weg && sig === this.beheerSig && sinds < 60000) return;
+    if (!weg && sinds < 5000){
+      if (!this.beheerKlok) this.beheerKlok = setTimeout(() => { this.beheerKlok = null; this.beheerMeld(); }, 5000 - sinds);
+      return;
+    }
+    clearTimeout(this.beheerKlok); this.beheerKlok = null;
+    this.beheerSig = sig; this.beheerT = nu;
+    try { this.ctx.waitUntil(env.BEHEER_DO.get(env.BEHEER_DO.idFromName("beheer")).fetch("https://beheer/kamer", { method: "POST", body: sig }).catch(() => {})); } catch (e){}
+  }
   get strijd(){ return !!this.stand && this.stand.spel === "strijd"; }
   get rollen(){ return !!this.stand && this.stand.spel === "rollen"; }
   get race(){ return this.strijd && this.stand.game === "poortrace"; }
@@ -869,6 +894,7 @@ export class Kamer extends DurableObject {
     /* het sluiten beantwoorden, anders blijft de socket van de browser op CLOSING hangen en wacht wakker.js lang op een nieuwe verbinding */
     try { ws.close(code === 1005 || code === 1006 || !code ? 1000 : code, "dicht"); } catch (e){}
     this.zegSpelers(); if (this.strijd) this.planStand();
+    this.beheerMeld();
     const wie = ws.deserializeAttachment() || {};
     if (wie.rol === "speler" && wie.sid) this.planVertrek(wie.sid);
   }
@@ -1044,6 +1070,7 @@ export class Kamer extends DurableObject {
     if (a.wat === "opruimen"){
       this.motorStop();
       this.ctx.getWebSockets().forEach(ws => { try { ws.close(1000, "de kamer is gesloten"); } catch (e){} });
+      this.beheerMeld(true);
       this.stand = null;
       await this.ctx.storage.deleteAll();
     }
@@ -2643,6 +2670,7 @@ export class Kamer extends DurableObject {
   async opheffen(inz){
     if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
     if (!inz || inz.sleutel !== this.stand.sleutel) return json({ fout: "dit is niet jouw klas" }, 403);
+    this.beheerMeld(true);
     this.stand = null;
     await this.ctx.storage.deleteAll();
     return json({ ok: true });

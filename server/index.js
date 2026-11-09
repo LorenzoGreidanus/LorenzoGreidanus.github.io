@@ -348,7 +348,13 @@ async function verdeel(req, env, ctx){
     /* tickets: GET /api/beheer/tickets, POST /api/beheer/ticket (nieuw of bijwerken), POST /api/beheer/ticket-weg */
     /* speelcode: POST { oud, nu } hangt een oude speelcode weer aan het account dat nu code nu heeft */
     /* munten: POST { code, aantal, reden } telt munten op bij een speelcode (negatief haalt eraf, nooit onder 0); aantal 0 kijkt alleen */
-    const bm = p.match(/^\/api\/beheer\/(meldingen|tellers|melding-weg|tel-zet|tickets|ticket|ticket-weg|speelcode|munten)\/?$/);
+    /* de mededeling op de site: iedereen mag hem lezen, een minuut in de browser bewaard */
+    if (p === "/api/mededeling" && req.method === "GET"){
+      const r = await beheer().fetch("https://beheer/mededeling");
+      return new Response(await r.text(), { status: r.status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=60", "x-content-type-options": "nosniff" } });
+    }
+    /* live: de kamers die nu in gebruik zijn; gebruikers: accounts tellen en klascodes; mededeling: lezen (GET) en zetten (POST) */
+    const bm = p.match(/^\/api\/beheer\/(meldingen|tellers|melding-weg|tel-zet|tickets|ticket|ticket-weg|speelcode|munten|live|gebruikers|mededeling)\/?$/);
     if (bm){
       const nee = await beheerToegang(env, req); if (nee) return nee;
       if (bm[1] === "speelcode"){
@@ -363,6 +369,12 @@ async function verdeel(req, env, ctx){
         if (!/^[A-Z]{8}$/.test(code)) return json({ fout: "een speelcode van acht letters" }, 400);
         return env.PROFIEL.get(env.PROFIEL.idFromName(code)).fetch("https://profiel/munten", { method: "POST",
           body: JSON.stringify({ aantal: opdr.aantal, reden: opdr.reden }) });
+      }
+      if (bm[1] === "mededeling"){
+        if (req.method === "GET") return beheer().fetch("https://beheer/mededeling?alles=1");
+        if (req.method !== "POST") return json({ fout: "alleen GET of POST" }, 405);
+        let opdr; try { opdr = await leesJson(req); } catch (e){ return json({ fout: "geen geldige mededeling" }, 400); }
+        return beheer().fetch("https://beheer/mededeling-zet", { method: "POST", body: JSON.stringify(opdr || {}) });
       }
       if (bm[1] === "melding-weg" || bm[1] === "tel-zet" || bm[1] === "ticket" || bm[1] === "ticket-weg"){
         if (req.method !== "POST") return json({ fout: "alleen POST" }, 405);

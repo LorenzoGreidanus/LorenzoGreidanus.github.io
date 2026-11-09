@@ -67,3 +67,11 @@
     meld('belofte: ' + korte(r && r.stack || r));
   });
 })();
+
+/* De mededeling van de beheerder (mededeling.js): via het vangnet, omdat dat op bijna elke pagina staat. */
+(function(){
+  try {
+    var s = document.createElement('script'); s.src = '/mededeling.js?v=1'; s.defer = true;
+    (document.head || document.documentElement).appendChild(s);
+  } catch (e){}
+})();

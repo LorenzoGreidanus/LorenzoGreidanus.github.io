@@ -432,9 +432,24 @@ export class Account extends DurableObject {
     this.stand.laatst = Date.now();
     await this.ctx.storage.put("stand", this.stand);
     await this.ctx.storage.setAlarm(Date.now() + LEEFT);
+    this.beheerMeld();
+  }
+  /* Het beheer telt de accounts: alleen een kenmerk (een stuk van het nummer
+     van dit object, dat zelf al uit een hash komt), wanneer het gebruikt werd
+     en of het een docent is. Geen naam, geen speelcode. Hoogstens een keer per
+     uur, of eerder als het docent wordt. */
+  beheerMeld(weg){
+    const env = this.env;
+    if (!env || !env.BEHEER_DO) return;
+    const s = this.stand || {}, nu = Date.now();
+    const docent = !!((s.klassen && s.klassen.length) || (s.sets && s.sets.length) || (s.materiaal && s.materiaal.length));
+    if (!weg && docent === this.gemeldDocent && nu - (this.gemeld || 0) < 3600000) return;
+    this.gemeld = nu; this.gemeldDocent = docent;
+    const d = { id: this.ctx.id.toString().slice(0, 24), docent, weg: !!weg };
+    try { this.ctx.waitUntil(env.BEHEER_DO.get(env.BEHEER_DO.idFromName("beheer")).fetch("https://beheer/account", { method: "POST", body: JSON.stringify(d) }).catch(() => {})); } catch (e){}
   }
   async alarm(){
-    if (this.stand && Date.now() - this.stand.laatst >= LEEFT - 60000){ await this.ctx.storage.deleteAll(); this.stand = null; }
+    if (this.stand && Date.now() - this.stand.laatst >= LEEFT - 60000){ this.beheerMeld(true); await this.ctx.storage.deleteAll(); this.stand = null; }
   }
   async fetch(req){
     const url = new URL(req.url);
@@ -518,6 +533,7 @@ export class Account extends DurableObject {
       return json({ ok: true, code: this.stand.code, beheer: !!this.stand.beheer });
     }
     if (url.pathname === "/weg"){
+      this.beheerMeld(true);
       await this.ctx.storage.deleteAll();
       this.stand = null;
       return json({ ok: true });
