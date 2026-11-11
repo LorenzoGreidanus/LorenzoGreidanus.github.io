@@ -381,8 +381,16 @@ function regels(v, n, lang){
 function schoonLijst(d){
   d = d && typeof d === "object" ? d : {};
   const uit = { titel: tekst(d.titel, 80), uitleg: tekst(d.uitleg, 600), proef: !!d.proef, monitor: !!d.monitor,
-    antwoorden: regels(d.antwoorden, 7, 30), schalen: regels(d.schalen, 12, 50), vragen: [] };
+    antwoorden: regels(d.antwoorden, 10, 30), schalen: regels(d.schalen, 12, 50), vragen: [] };
   if (uit.antwoorden.length < 2) uit.antwoorden = ["Nooit", "Bijna nooit", "Soms", "Vaak", "Altijd"];
+  /* Bolletjes: de leerling kiest een cijfer, van 1 tot het aantal bolletjes. De
+     twee uiteinden krijgen een betekenis (laag en hoog), de rest niet. */
+  uit.vorm = d.vorm === "bollen" ? "bollen" : "knoppen";
+  if (uit.vorm === "bollen"){
+    const n = Math.max(2, Math.min(10, Array.isArray(d.antwoorden) ? d.antwoorden.length : 5));
+    uit.antwoorden = Array.from({ length: n }, (x, i) => String(i + 1));
+    uit.laag = tekst(d.laag, 40); uit.hoog = tekst(d.hoog, 40);
+  }
   if (!uit.schalen.length) uit.schalen = ["Totaal"];
   for (const x of (Array.isArray(d.vragen) ? d.vragen : []).slice(0, 150)){
     const t = tekst(x && x.tekst, 300);
@@ -677,6 +685,7 @@ export class Pmt extends DurableObject {
     if (!r) return null;
     const l = JSON.parse(a.lijst);
     return { voornaam: (await this.open(r.inhoud)).voornaam, titel: l.titel, uitleg: l.uitleg, antwoorden: l.antwoorden,
+      vorm: l.vorm || "knoppen", laag: l.laag || "", hoog: l.hoog || "",
       door: a.door, vast: !!a.vast, al: !!a.vast && Date.now() - a.laatst < VAST_RUST,
       vragen: l.vragen.map(v => ({ id: v.id, tekst: v.tekst })) };
   }
