@@ -247,6 +247,9 @@ td.tijd{white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--muted)}
 .blok .wie small{color:var(--muted);font-size:.72rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .blok .avatar{width:30px;height:30px;border-radius:10px;font-size:.72rem}
 .blok.gekozen{outline:3px solid var(--accent);outline-offset:1px}
+.blok.vrijdag{border:0;background:color-mix(in srgb,var(--amber) 22%,var(--kaart));color:var(--ink);font-weight:600;font-size:.82rem;justify-content:center;text-align:center;cursor:default}
+.dagkolom.vrij .dagkop small{color:var(--ink);font-weight:500}
+.vrijrij{display:grid;grid-template-columns:minmax(0,1fr) 160px 160px auto;gap:8px;align-items:center}
 .blok.vol{cursor:grab}
 .blok.sleept{opacity:.45}
 .blok.over{border-color:var(--accent);border-style:solid;background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent)}
@@ -346,6 +349,8 @@ button.tegel:hover{border-color:var(--accent)}
   .rooster{grid-template-columns:50px minmax(0,1fr)}
   .dagkolom{display:none}
   .bak{display:none}
+  .vrijrij{grid-template-columns:1fr 1fr}
+  .vrijrij input[type=text]{grid-column:1 / -1}
   .rooster[data-dag="0"] .dagkolom[data-d="0"],.rooster[data-dag="1"] .dagkolom[data-d="1"],.rooster[data-dag="2"] .dagkolom[data-d="2"],.rooster[data-dag="3"] .dagkolom[data-d="3"],.rooster[data-dag="4"] .dagkolom[data-d="4"]{display:flex}
   .blok.leeg{color:var(--muted)}
   .nav button,.zijvoet button{font-size:.58rem;position:relative}
@@ -963,7 +968,7 @@ button.tegel:hover{border-color:var(--accent)}
           if (weken.value === 'eind') vraag.tot = I.eind; else if (weken.value === 'datum') vraag.tot = totVeld.value; else vraag.weken = +weken.value;
           if (vraag.tot !== undefined && !(vraag.tot >= dag)){ stand.textContent = 'Kies een datum op of na ' + korteDag(dag) + '.'; return; }
           stuur('POST', '/afspraken', vraag)
-            .then(function(u){ S.planVoor = null; S.melding = u.gemaakt > 1 || u.overgeslagen ? u.gemaakt + ' keer ' + (vraag.dicht ? 'dichtgezet.' : 'ingepland.') + (u.overgeslagen ? ' ' + u.overgeslagen + ' keer overgeslagen, daar stond al iets.' : '') + (u.gemaakt > 12 && !vraag.dicht ? ' Vakanties zijn niet overgeslagen: zet die weken dicht of haal ze zelf weg.' : '') : ''; return herlaad(); })
+            .then(function(u){ S.planVoor = null; S.melding = u.gemaakt > 1 || u.overgeslagen || u.vrij ? u.gemaakt + ' keer ' + (vraag.dicht ? 'dichtgezet.' : 'ingepland.') + (u.overgeslagen ? ' ' + u.overgeslagen + ' keer overgeslagen, daar stond al iets.' : '') + (u.vrij ? ' ' + u.vrij + ' keer overgeslagen: vakantie of vrije dag.' : u.gemaakt > 12 && !j.vrij.length ? ' Er staan nog geen vakanties in het rooster. Vul ze in, dan slaat hij ze voortaan over.' : '') : ''; return herlaad(); })
             .catch(function(e){ if (e.message !== 'uit') stand.textContent = e.message.charAt(0).toUpperCase() + e.message.slice(1) + '.'; });
         } }, [
           el('h2', { style: 'font-size:1.05rem', tekst: langeDag(dag).charAt(0).toUpperCase() + langeDag(dag).slice(1) + ', ' + uur(b.begin) + ' tot ' + uur(b.begin + b.duur) }),
@@ -995,6 +1000,68 @@ button.tegel:hover{border-color:var(--accent)}
             el('button', { class: 'knop stil', type: 'button', tekst: 'Sluiten', onclick: sluit })])]));
         paneel.scrollIntoView({ block: 'nearest' }); paneel.querySelector('button').focus();
       }
+      /* ---------- vakanties en vrije dagen ---------- */
+      function vrijOp(dag){ for (var x = 0; x < j.vrij.length; x++) if (j.vrij[x].van <= dag && dag <= j.vrij[x].tot) return j.vrij[x]; return null; }
+      var V = j.vrij.map(function(v){ return { naam: v.naam, van: v.van, tot: v.tot }; });
+      var vLijst = el('div', { style: 'display:grid;gap:8px' }), vStand = el('span', { class: 'zacht', role: 'status' });
+      function erbij(naamV, van, tot){ for (var x = 0; x < V.length; x++) if (V[x].naam === naamV && V[x].van === van) return false; V.push({ naam: naamV, van: van, tot: tot }); return true; }
+      function tekenVrij(){
+        vLijst.textContent = '';
+        V.sort(function(a, b){ return a.van < b.van ? -1 : a.van > b.van ? 1 : 0; });
+        V.forEach(function(v, n){
+          var iN = el('input', { type: 'text', maxlength: '40', autocomplete: 'off', value: v.naam, 'aria-label': 'Naam van vrije dag ' + (n + 1), oninput: function(){ v.naam = iN.value; } });
+          var iV = el('input', { type: 'date', value: v.van, 'aria-label': 'Van', onchange: function(){ v.van = iV.value; if (!v.tot || v.tot < v.van){ v.tot = v.van; iT.value = v.tot; } } });
+          var iT = el('input', { type: 'date', value: v.tot, 'aria-label': 'Tot en met', onchange: function(){ v.tot = iT.value; } });
+          vLijst.appendChild(el('div', { class: 'vrijrij' }, [iN, iV, iT, el('button', { class: 'knop stil klein', type: 'button', tekst: 'Weghalen', onclick: function(){ V.splice(n, 1); tekenVrij(); } })]));
+        });
+        if (!V.length) vLijst.appendChild(el('p', { class: 'zacht', tekst: 'Nog geen vakanties of vrije dagen.' }));
+      }
+      /* de vaste feestdagen in het voorjaar van dit schooljaar, uitgerekend vanaf Pasen */
+      function feestdagen(){
+        var nuD = new Date(S.week + 'T12:00:00'), jr = nuD.getMonth() >= 7 ? nuD.getFullYear() + 1 : nuD.getFullYear();
+        var a = jr % 19, b = Math.floor(jr / 100), c = jr % 100, d = Math.floor(b / 4), e = b % 4, g = Math.floor((b - Math.floor((b + 8) / 25) + 1) / 3),
+          h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+        var pasen = datumVan(new Date(jr, Math.floor((h + l - 7 * m + 114) / 31) - 1, ((h + l - 7 * m + 114) % 31) + 1, 12));
+        var koning = new Date(jr, 3, 27, 12); if (koning.getDay() === 0) koning.setDate(26);
+        return [['Goede Vrijdag', plusDag(pasen, -2)], ['Tweede paasdag', plusDag(pasen, 1)], ['Koningsdag', datumVan(koning)], ['Bevrijdingsdag', jr + '-05-05'],
+          ['Hemelvaartsdag', plusDag(pasen, 39)], ['Dag na Hemelvaart', plusDag(pasen, 40)], ['Tweede pinksterdag', plusDag(pasen, 50)]];
+      }
+      var regio = el('select', { id: 'v-regio', 'aria-label': 'Regio', style: 'width:auto' }, [['noord', 'Regio noord'], ['midden', 'Regio midden'], ['zuid', 'Regio zuid']].map(function(x){ return el('option', { value: x[0], tekst: x[1] }); }));
+      if (S.regio) regio.value = S.regio;
+      var vrijPaneel = el('form', { class: 'planpaneel', hidden: !S.vrijOpen, onsubmit: function(ev){
+        ev.preventDefault();
+        stuur('PUT', '/rooster/vrij', { vrij: V.filter(function(v){ return v.van; }) }).then(function(u){
+          S.vrijOpen = false; S.ruim = u.erin;
+          S.melding = 'Opgeslagen.' + (u.erin ? ' Er ' + (u.erin === 1 ? 'staat nog 1 afspraak' : 'staan nog ' + u.erin + ' afspraken') + ' op een vrije dag.' : '');
+          tekenRooster();
+        }).catch(function(e){ if (e.message !== 'uit') vStand.textContent = e.message; });
+      } }, [
+        el('h2', { style: 'font-size:1.05rem', tekst: 'Vakanties en vrije dagen' }),
+        el('p', { class: 'zacht', tekst: 'Op deze dagen plant het rooster niets in, en een wekelijkse reeks slaat ze over. Zet hier ook studiedagen en feestdagen: een losse dag heeft dezelfde begin- en einddatum.' }),
+        vLijst,
+        el('div', { class: 'onder', style: 'margin-top:0' }, [
+          el('button', { class: 'knop stil klein', type: 'button', tekst: 'Dag of periode toevoegen', onclick: function(){ V.push({ naam: 'Studiedag', van: vandaag(), tot: vandaag() }); tekenVrij(); var velden = vLijst.querySelectorAll('input[type=text]'); velden[velden.length - 1].select(); } }),
+          el('button', { class: 'knop stil klein', type: 'button', tekst: 'Feestdagen toevoegen', onclick: function(){
+            var n = 0; feestdagen().forEach(function(x){ if (erbij(x[0], x[1], x[1])) n++; }); tekenVrij();
+            vStand.textContent = n + ' feestdagen toegevoegd. Haal weg wat bij jullie een gewone schooldag is, en sla op.';
+          } }),
+          regio,
+          el('button', { class: 'knop stil klein', type: 'button', tekst: 'Schoolvakanties ophalen', onclick: function(){
+            S.regio = regio.value; vStand.textContent = 'Bezig met ophalen';
+            api('/rooster/vakanties?regio=' + regio.value).then(function(u){
+              var n = 0; u.vakanties.forEach(function(x){ if (erbij(x.naam, x.van, x.tot)) n++; }); tekenVrij();
+              vStand.textContent = n + ' vakanties opgehaald voor schooljaar ' + u.schooljaar + ', regio ' + u.regio + '. Dit zijn de landelijke data: kijk na of jullie school ervan afwijkt, en sla op.';
+            }).catch(function(e){ if (e.message !== 'uit') vStand.textContent = e.message.charAt(0).toUpperCase() + e.message.slice(1) + '.'; });
+          } })]),
+        el('div', { class: 'onder', style: 'margin-top:0' }, [el('button', { class: 'knop', type: 'submit', tekst: 'Opslaan' }),
+          el('button', { class: 'knop stil', type: 'button', tekst: 'Sluiten zonder opslaan', onclick: function(){ S.vrijOpen = false; vrijPaneel.hidden = true; } }), vStand])]);
+      tekenVrij();
+      /* na het opslaan: staan er nog afspraken op vrije dagen, dan kunnen die in een keer weg */
+      var ruimKnop = S.ruim ? el('div', { style: 'margin-bottom:14px' }, [el('button', { class: 'knop weg klein', type: 'button', tekst: 'Haal de afspraken op vrije dagen weg', onclick: function(){
+        stuur('PUT', '/rooster/vrij', { vrij: j.vrij, ruim: true }).then(function(u){ S.ruim = 0; S.melding = u.weg + ' afspraken weggehaald.'; return herlaad(); }).catch(meld);
+      } })]) : null;
+      S.ruim = 0;
+
       /* de tijden zelf instellen */
       var iVan = el('input', { type: 'time', id: 'r-van', value: klok(I.van) }), iTot = el('input', { type: 'time', id: 'r-tot', value: klok(I.tot) });
       var iBlok = el('input', { type: 'number', id: 'r-blok', min: '10', max: '120', step: '5', value: String(I.blok), style: 'width:100%;min-height:42px;padding:8px 12px;border-radius:10px;border:1.5px solid var(--rand2);background:var(--kaart);color:var(--ink)' });
@@ -1014,12 +1081,13 @@ button.tegel:hover{border-color:var(--accent)}
       raster = el('div', { class: 'rooster', 'data-dag': String(S.roosterDag) }, [
         el('div', { class: 'tijdkolom' }, [el('div', { class: 'dagkop' })].concat(blokken.map(function(b){ return el('div', { class: 'tijd', tekst: uur(b.begin) }); })))
       ].concat(DAGEN.map(function(dagnaam, i){
-        var dag = plusDag(S.week, i);
-        return el('div', { class: 'dagkolom' + (dag === nu ? ' nu' : ''), 'data-d': String(i) }, [
+        var dag = plusDag(S.week, i), vd = vrijOp(dag);
+        return el('div', { class: 'dagkolom' + (dag === nu ? ' nu' : '') + (vd ? ' vrij' : ''), 'data-d': String(i) }, [
           el('div', { class: 'dagkop' }, [el('b', { tekst: dagnaam }), el('small', { tekst: new Date(dag + 'T12:00:00').toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' }) })])
-        ].concat(blokken.map(function(b){
+        ].concat(blokken.map(function(b, bi){
           var a = null;
           j.afspraken.forEach(function(x){ if (!a && x.dag === dag && x.begin < b.begin + b.duur && x.begin + x.duur > b.begin) a = x; });
+          if (!a && vd) return el('div', { class: 'blok vrijdag', tekst: bi === 0 ? vd.naam : '' });
           if (!a){
             var leeg = el('button', { class: 'blok leeg', type: 'button', tekst: '+', 'aria-label': dagnaam + ' ' + uur(b.begin) + ' inplannen', onclick: function(ev){
               /* ben je een afspraak aan het verplaatsen, dan komt hij hier */
@@ -1049,10 +1117,11 @@ button.tegel:hover{border-color:var(--accent)}
             el('button', { class: 'knop stil klein', type: 'button', tekst: '‹ Vorige week', onclick: function(){ S.week = plusDag(S.week, -7); S.roosterDag = 0; tekenRooster(); } }),
             el('button', { class: 'knop stil klein', type: 'button', tekst: 'Deze week', onclick: function(){ S.week = maandag(vandaag()); S.roosterDag = null; tekenRooster(); } }),
             el('button', { class: 'knop stil klein', type: 'button', tekst: 'Volgende week ›', onclick: function(){ S.week = plusDag(S.week, 7); S.roosterDag = 0; tekenRooster(); } }),
+            el('button', { class: 'knop stil klein', type: 'button', tekst: 'Vakanties en vrije dagen', onclick: function(){ S.vrijOpen = vrijPaneel.hidden; vrijPaneel.hidden = !vrijPaneel.hidden; if (!vrijPaneel.hidden) vrijPaneel.scrollIntoView({ block: 'nearest' }); } }),
             el('button', { class: 'knop stil klein', type: 'button', tekst: 'Tijden instellen', onclick: function(){ instel.hidden = !instel.hidden; if (!instel.hidden) iVan.focus(); } })])]),
         el('p', { class: 'zacht', style: 'margin-bottom:14px', tekst: 'Week van ' + langeDag(S.week) + '. Van ' + uur(I.van) + ' tot ' + uur(I.tot) + ', in blokken van ' + I.blok + ' minuten. Klik op een leeg blok om een leerling in te plannen, of sleep een leerling of een afspraak naar een blok.' +
           (S.planVoor && dossierVan(S.planVoor) ? ' Je plant nu ' + naam(dossierVan(S.planVoor)) + ' in.' : '') }),
-        melding, instel, paneel,
+        melding, ruimKnop, instel, vrijPaneel, paneel,
         S.verplaats ? el('p', { class: 'melding', role: 'status', tekst: 'Je bent een afspraak aan het verplaatsen. Tik op een leeg blok.' }) : null,
         el('div', { class: 'bak' }, [el('span', { tekst: 'Sleep een leerling naar een blok:' })].concat(actief().filter(function(d){ return d.status !== 'afgerond'; }).map(function(d){
           return sleepbaar(el('span', { class: 'greep', title: 'Sleep naar een blok in het rooster' }, [avatar(d), naam(d)]), 'd:' + d.id);

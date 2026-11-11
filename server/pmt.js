@@ -65,6 +65,8 @@
      POST   /api/pmt/dossiers/ID/verslag   alleen een regel in het logboek: er is een verslag gemaakt
      GET    /api/pmt/rooster?week=DATUM     de tijden van het rooster en de afspraken van die week
      PUT    /api/pmt/rooster/instelling    begin, eind en de lengte van een blok
+     PUT    /api/pmt/rooster/vrij          de vakanties en vrije dagen (met ruim: haal de afspraken op die dagen weg)
+     GET    /api/pmt/rooster/vakanties     de schoolvakanties van dit schooljaar, opgehaald bij de Rijksoverheid (?regio=noord|midden|zuid)
      POST   /api/pmt/afspraken             een leerling inplannen (weken: zoveel weken achter elkaar)
      PUT    /api/pmt/afspraken/ID          verplaatsen naar een andere dag of tijd
      DELETE /api/pmt/afspraken/ID          met ?reeks=1 ook alle latere op dezelfde weekdag en tijd
@@ -346,6 +348,33 @@ export async function behandel(req, env, url, hulp){
     return klaar({ lijsten: await k.lijsten() });
   }
   if (p === "/api/pmt/rooster" && m === "GET") return klaar(await k.rooster(String(url.searchParams.get("week") || "")));
+  if (p === "/api/pmt/rooster/vrij" && m === "PUT"){
+    let inhoud; try { inhoud = await leesInhoud(req); } catch (e){ return klaar({ fout: "dit kan de server niet lezen" }, 400); }
+    return klaar(await k.zetVrij(inhoud.vrij, s.naam, !!inhoud.ruim));
+  }
+  /* De schoolvakanties komen uit de open gegevens van de Rijksoverheid. Het zijn
+     de landelijke data per regio; een school kan ervan afwijken, dus de
+     therapeut kijkt ze na en slaat ze zelf op. Hier wordt niets bewaard. */
+  if (p === "/api/pmt/rooster/vakanties" && m === "GET"){
+    const gevraagd = url.searchParams.get("regio");
+    const regio = ["noord", "midden", "zuid"].indexOf(gevraagd) >= 0 ? gevraagd : "noord";
+    const nu = vandaagNL(), jaar = +nu.slice(0, 4), schooljaar = nu.slice(5) > "07-31" ? jaar + "-" + (jaar + 1) : (jaar - 1) + "-" + jaar;
+    try {
+      const r = await fetch("https://opendata.rijksoverheid.nl/v1/infotypes/schoolholidays/schoolyear/" + schooljaar + "?output=json", { headers: { accept: "application/json" } });
+      if (!r.ok) throw new Error("status " + r.status);
+      const d = await r.json(), lijst = [];
+      for (const v of ((((d && d.content) || [])[0] || {}).vacations || [])){
+        const g = (v.regions || []).find(x => String(x.region).trim() === regio) || (v.regions || []).find(x => String(x.region).trim() === "heel Nederland");
+        if (!g) continue;
+        const van = echteDag(String(g.startdate).slice(0, 10)), tot = echteDag(String(g.enddate).slice(0, 10));
+        if (van && tot && tot >= van) lijst.push({ naam: tekst(String(v.type || "").trim(), 40) || "Vakantie", van, tot });
+      }
+      return klaar({ schooljaar, regio, vakanties: lijst });
+    } catch (e){
+      console.warn("pmt: vakanties ophalen mislukt", e && e.message);
+      return klaar({ fout: "de vakanties ophalen bij de Rijksoverheid lukte niet. Vul ze met de hand in" }, 502);
+    }
+  }
   if (p === "/api/pmt/rooster/instelling" && m === "PUT"){
     let inhoud; try { inhoud = await leesInhoud(req); } catch (e){ return klaar({ fout: "dit kan de server niet lezen" }, 400); }
     const i = await k.zetRooster(inhoud, s.naam);
@@ -355,13 +384,14 @@ export async function behandel(req, env, url, hulp){
     let inhoud; try { inhoud = await leesInhoud(req); } catch (e){ return klaar({ fout: "dit kan de server niet lezen" }, 400); }
     const u = await k.plan(inhoud, s.naam);
     if (!u) return klaar({ fout: "deze afspraak klopt niet" }, 400);
-    return u.gemaakt ? klaar(u) : klaar({ fout: "op dit moment staat al een afspraak" }, 409);
+    return u.gemaakt ? klaar(u) : klaar({ fout: u.vrij ? "die dag is vrij: " + u.vrijNaam : "op dit moment staat al een afspraak" }, 409);
   }
   const afm = p.match(/^\/api\/pmt\/afspraken\/([A-Za-z0-9_-]{8,24})$/);
   if (afm && m === "PUT"){
     let inhoud; try { inhoud = await leesInhoud(req); } catch (e){ return klaar({ fout: "dit kan de server niet lezen" }, 400); }
     const u = await k.verplaats(afm[1], inhoud, s.naam);
     if (u === null) return klaar({ fout: "deze afspraak bestaat niet of het moment klopt niet" }, 404);
+    if (u === "vrij") return klaar({ fout: "die dag is vrij" }, 409);
     return u ? klaar({ ok: true }) : klaar({ fout: "op dat moment staat al een afspraak" }, 409);
   }
   if (afm && m === "DELETE") return (await k.wegAfspraak(afm[1], s.naam, url.searchParams.get("reeks") === "1")) ? klaar({ ok: true }) : klaar({ fout: "deze afspraak bestaat niet" }, 404);
@@ -547,7 +577,7 @@ const VOORBEELDCIJFERS = {
   Jesse: { metingen: [[-3, [2, 2, 4, 2, 2, 4, 3, 2, 4]]], weken: {} }
 };
 /* verandert dit getal, dan vult de demo zich opnieuw, ook als hij nog geen dag oud is */
-const DEMO_VERSIE = "5";
+const DEMO_VERSIE = "6";
 
 export class Pmt extends DurableObject {
   constructor(ctx, env){
@@ -611,6 +641,34 @@ export class Pmt extends DurableObject {
     this.sql.exec("INSERT OR REPLACE INTO stand (k, v) VALUES ('versie', ?)", DEMO_VERSIE);
   }
   /* ---------- het rooster ---------- */
+  /* Vakanties en vrije dagen: een lijst van perioden met een naam. Een losse
+     dag (studiedag, feestdag) is een periode van een dag. */
+  vrijeDagen(){
+    const r = this.sql.exec("SELECT v FROM stand WHERE k = 'vrij'").toArray()[0];
+    try { const l = r && JSON.parse(r.v); if (Array.isArray(l)) return l; } catch (e){ /* dan geen */ }
+    return [];
+  }
+  vrijOp(d, lijst){ return (lijst || this.vrijeDagen()).find(v => v.van <= d && d <= v.tot) || null; }
+  zetVrij(lijst, wie, ruim){
+    const uit = [];
+    for (const x of (Array.isArray(lijst) ? lijst : []).slice(0, 80)){
+      const van = echteDag(x && x.van); if (!van) continue;
+      let tot = echteDag(x && x.tot); if (!tot || tot < van) tot = van;
+      if (tot > plusDagen(van, 70)) tot = plusDagen(van, 70);
+      uit.push({ naam: tekst(x.naam, 40) || "Vrij", van, tot });
+    }
+    uit.sort((a, b) => a.van < b.van ? -1 : a.van > b.van ? 1 : 0);
+    this.sql.exec("INSERT OR REPLACE INTO stand (k, v) VALUES ('vrij', ?)", JSON.stringify(uit));
+    /* wat er nog staat op een vrije dag: tellen, of weghalen als daarom gevraagd is */
+    let erin = 0, weg = 0;
+    for (const a of this.sql.exec("SELECT id, dag, soort FROM afspraak WHERE dag >= ?", vandaagNL()).toArray()){
+      if (!this.vrijOp(a.dag, uit)) continue;
+      if (ruim){ this.sql.exec("DELETE FROM afspraak WHERE id = ?", a.id); weg++; }
+      else if (a.soort !== "dicht") erin++;
+    }
+    this.meld(wie, "vakanties en vrije dagen aangepast" + (weg ? ", " + weg + " afspraken op vrije dagen weggehaald" : ""), "");
+    return { vrij: uit, erin, weg };
+  }
   roosterInstelling(){
     const r = this.sql.exec("SELECT v FROM stand WHERE k = 'rooster'").toArray()[0];
     try { const i = r && JSON.parse(r.v); if (i && i.van < i.tot && i.blok >= 10) return Object.assign({ eind: schooljaarEinde() }, i); } catch (e){ /* dan de standaard */ }
@@ -626,7 +684,7 @@ export class Pmt extends DurableObject {
   }
   rooster(week){
     const ma = maandagVan(echteDag(week) || vandaagNL());
-    return { week: ma, vandaag: vandaagNL(), instelling: this.roosterInstelling(),
+    return { week: ma, vandaag: vandaagNL(), instelling: this.roosterInstelling(), vrij: this.vrijeDagen(),
       afspraken: this.sql.exec("SELECT id, dag, begin, duur, dossier, soort, tekst FROM afspraak WHERE dag >= ? AND dag <= ? ORDER BY dag, begin", ma, plusDagen(ma, 6)).toArray() };
   }
   /* Inplannen, een keer of een aantal weken achter elkaar op dezelfde dag en
@@ -654,9 +712,13 @@ export class Pmt extends DurableObject {
     if (!dagEen || !(begin >= 0 && begin < 1440) || !(duur >= 5 && duur <= (isDicht ? 1440 : 240)) || begin + duur > 1440) return null;
     if (!isDicht && !this.sql.exec("SELECT id FROM dossier WHERE id = ?", String(d.dossier || "")).toArray().length) return null;
     if (this.sql.exec("SELECT COUNT(*) AS n FROM afspraak").one().n + weken > MAX_AFSPRAKEN) return null;
-    let gemaakt = 0, overgeslagen = 0;
+    let gemaakt = 0, overgeslagen = 0, vrij = 0, vrijNaam = "";
+    const vrijLijst = this.vrijeDagen();
     for (let w = 0; w < weken; w++){
       const dagNu = plusDagen(dagEen, 7 * w);
+      /* een vakantie of vrije dag slaat hij over */
+      const v = this.vrijOp(dagNu, vrijLijst);
+      if (v){ vrij++; vrijNaam = v.naam; continue; }
       const bezet = this.sql.exec("SELECT id FROM afspraak WHERE dag = ? AND begin < ? AND begin + duur > ?", dagNu, begin + duur, begin).toArray().length;
       if (bezet){ overgeslagen++; continue; }
       this.sql.exec("INSERT INTO afspraak (id, dag, begin, duur, dossier, soort, tekst) VALUES (?, ?, ?, ?, ?, ?, ?)", willekeur(9), dagNu, begin, duur, isDicht ? "" : d.dossier, soort, isDicht ? tekst(d.tekst, 40) : "");
@@ -667,13 +729,14 @@ export class Pmt extends DurableObject {
       this.meld(wie, gemaakt === 1 ? "afspraak ingepland" : gemaakt + " afspraken ingepland", d.dossier);
       await this.vanWachtrij(d.dossier, dagEen);
     }
-    return { gemaakt, overgeslagen };
+    return { gemaakt, overgeslagen, vrij, vrijNaam };
   }
   /* een afspraak naar een andere dag of tijd; de lengte blijft */
   verplaats(id, d, wie){
     const a = this.sql.exec("SELECT dossier, duur FROM afspraak WHERE id = ?", id).toArray()[0];
     const dagNu = echteDag(d && d.dag), begin = Math.round(Number(d && d.begin));
     if (!a || !dagNu || !(begin >= 0) || begin + a.duur > 1440) return null;
+    if (this.vrijOp(dagNu)) return "vrij";
     if (this.sql.exec("SELECT id FROM afspraak WHERE dag = ? AND begin < ? AND begin + duur > ? AND id <> ?", dagNu, begin + a.duur, begin, id).toArray().length) return false;
     this.sql.exec("UPDATE afspraak SET dag = ?, begin = ? WHERE id = ?", dagNu, begin, id);
     this.meld(wie, "afspraak verplaatst", a.dossier);
@@ -784,6 +847,10 @@ export class Pmt extends DurableObject {
   }
   async zaai(wie){
     const l = await this.zaaiLijst(wie);
+    if (!this.vrijeDagen().length){
+      const wo = plusDagen(maandagVan(vandaagNL()), 9);
+      this.sql.exec("INSERT OR REPLACE INTO stand (k, v) VALUES ('vrij', ?)", JSON.stringify([{ naam: "Studiedag", van: wo, tot: wo }]));
+    }
     /* elke dag van deze en volgende week een pauze van 12.00 tot 12.30 */
     for (let i = 0; i < 12; i++) if (i % 7 < 5) this.sql.exec("INSERT INTO afspraak (id, dag, begin, duur, dossier, soort, tekst) VALUES (?, ?, ?, ?, '', 'dicht', 'Pauze')", willekeur(9), plusDagen(maandagVan(vandaagNL()), i), 12 * 60, 30);
     const mon = this.lijsten().find(x => x.proef && x.monitor);
