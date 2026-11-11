@@ -2,8 +2,8 @@
 
    Het blad heeft drie vakken: rechts de aantekeningen (tijdens de les of het
    lezen), links een smalle kolom voor vragen en kernwoorden (na de les), en
-   onderaan de samenvatting in eigen woorden. Het staat bij elk vak, want
-   aantekeningen maak je overal.
+   onderaan de samenvatting in eigen woorden. Het hoort bij geen enkel vak:
+   in werkblad.html staat het apart, onder "Zonder vak" (vak 'los').
 
    De docent kiest hoeveel bladzijden, of er lijntjes, ruitjes of niets in de
    vakken staan, en of er in elk vak een korte aanwijzing staat. Het tweede
@@ -11,7 +11,7 @@
    dit blad, in vijf stappen. */
 (function(){
   'use strict';
-  if (!window.SPELBLAD || !window.VAKKEN) return;
+  if (!window.SPELBLAD) return;
   function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
 
   try {
@@ -50,9 +50,8 @@
     ['Herhaal', 'Kijk dezelfde week nog een keer tien minuten naar je vragen en je samenvatting. Zo blijft het hangen tot de toets.']
   ];
 
-  function maakBlad(vak){
-    return {
-      naam:'Aantekeningen: Cornell-methode', kort:'Een leeg blad met vragenkolom, aantekeningen en samenvatting', icoon:'lijst', vak:vak, eigenNiveau:true,
+  window.SPELBLAD.cornell = {
+      naam:'Aantekeningen: Cornell-methode', kort:'Een leeg blad met vragenkolom, aantekeningen en samenvatting', icoon:'lijst', vak:'los', eigenNiveau:true,
       aantallen:[1, 2, 3, 4], standaard:1, aantalNaam:'Aantal bladzijden',
       delenKop:'Hoe ziet het blad eruit',
       delenTip:'Een leeg blad om aantekeningen te maken bij een les, een tekst of een filmpje. Het tweede blad legt de leerling in vijf stappen uit hoe je ermee werkt; print dat een keer apart.',
@@ -74,7 +73,7 @@
         return uit;
       },
       teken:function(w){
-        var k = w.keuze, vaknaam = (VAKKEN.filter(function(v){ return v.id === vak; })[0] || {}).naam || '';
+        var k = w.keuze;
         var kl = 'cn-raam' + (k.lijn === 'lijn' ? ' cn-lijn' : k.lijn === 'ruit' ? ' cn-ruit' : '') + (k.hulp ? '' : ' cn-zonder');
         var vragen = w.items.map(function(it){
           /* de eerste bladzijde deelt het vel met de kop; de volgende hebben het hele vel */
@@ -88,13 +87,11 @@
         }).join('');
         var antwoorden = STAPPEN.map(function(s){ return '<li><b>' + schoon(s[0]) + '</b>' + schoon(s[1]) + '</li>'; }).join('');
         return {
-          titel:'Aantekeningen' + (vaknaam ? ' ' + vaknaam.toLowerCase() : ''), sub:'Cornell-methode · ' + w.items.length + (w.items.length === 1 ? ' bladzijde' : ' bladzijden'),
+          titel:'Aantekeningen', sub:'Cornell-methode · ' + w.items.length + (w.items.length === 1 ? ' bladzijde' : ' bladzijden'),
           klasse:'cornell', vragen:vragen, antwoorden:antwoorden,
           antwoordKop:'Zo werk je met dit blad',
           antwoordIntro:'De Cornell-methode in vijf stappen. Rechts schrijf je, links vraag je, onderaan vat je samen.'
         };
       }
-    };
-  }
-  VAKKEN.forEach(function(v){ if (v.id !== 'eigen') window.SPELBLAD['cornell-' + v.id] = maakBlad(v.id); });
+  };
 })();

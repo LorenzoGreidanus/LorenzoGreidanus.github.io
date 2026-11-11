@@ -89,7 +89,7 @@ var ONDERDELEN = {
   aard: [{id:'vlaggen',naam:'vlaggen van landen'},{id:'landvormen',naam:'vormen van landen'},{id:'topografie',naam:'topografie: hoofdsteden'}],
   bio: [{id:'organen',naam:'organen'},{id:'bloed',naam:'bloed en ademhaling'},{id:'vertering',naam:'vertering en voeding'},{id:'planten',naam:'planten'},{id:'cellen',naam:'cellen'},{id:'zintuigen',naam:'zintuigen en zenuwen'},{id:'ordening',naam:'ordening en ecologie'},{id:'erfelijkheid',naam:'erfelijkheid'}],
   wis: [{id:'vergelijking',naam:'vergelijkingen'},{id:'formule',naam:'formules'},{id:'oppervlakte',naam:'oppervlakte'},{id:'inhoud',naam:'inhoud'},{id:'omtrek',naam:'omtrek'},{id:'hoeken',naam:'hoeken'},{id:'grafiek',naam:'grafieken en assenstelsel'},{id:'statistiek',naam:'statistiek'},{id:'pythagoras',naam:'stelling van Pythagoras'},{id:'vlakken',naam:'vlakken herkennen'}],
-  burg: [{id:'democratie',naam:'democratie en verkiezingen'},{id:'rechtsstaat',naam:'rechtsstaat en grondrechten'},{id:'media',naam:'media en nieuws'},{id:'europa',naam:'Europa en de wereld'},{id:'samenleven',naam:'samenleven'},{id:'geld',naam:'geld en werk'}]
+  burg: [{id:'democratie',naam:'democratie en verkiezingen'},{id:'rechtsstaat',naam:'rechtsstaat en grondrechten'},{id:'media',naam:'media en nieuws'},{id:'europa',naam:'Europa en de wereld'},{id:'samenleven',naam:'samenleven'},{id:'normen',naam:'normen en waarden'},{id:'geld',naam:'geld en werk'}]
 };
 ONDERDELEN.aard.push({id:'waarom', naam:'waarom ligt het daar'});
 ONDERDELEN.aard.push({id:'examen-ak', naam:'weer, water, bevolking (examen vmbo)'});
@@ -163,7 +163,7 @@ var IN_GROEP = {
           organisme:'cellen', 'plantcel of diercel':'cellen', taken:'cellen', voedselweb:'natuur' },
   aard: { vlaggen:'landen', landvormen:'landen', topografie:'landen', 'examen-ak':'examen',
           bevolking:'klimaat', klimaten:'klimaat', kaartlezen:'kaart', waarom:'kaart' },
-  burg: { democratie:'staat', rechtsstaat:'staat', media:'samen', samenleven:'samen',
+  burg: { democratie:'staat', rechtsstaat:'staat', media:'samen', samenleven:'samen', normen:'samen',
           europa:'wereld', geld:'wereld', 'examen-mk':'examen', partijen:'staat', bestuurslagen:'staat' },
   eco:  { 'vraag en aanbod':'markt', 'examen-eco':'examen', geld:'geld', markt:'markt' },
   ges:  { staat:'examen', nl1900:'examen', 'oorzaak en gevolg':'vaardig', 'wie ben ik':'vaardig',

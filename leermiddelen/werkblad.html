@@ -103,6 +103,9 @@ main h1{font-size:clamp(1.8rem,4vw,2.5rem);margin-top:2px}
 .wm-vakken{display:flex;flex-wrap:wrap;gap:8px}
 .wm-vakchip{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 14px 0 10px;border-radius:12px;border:1.5px solid var(--rand2);background:var(--kaart);font-size:.9rem;font-weight:500;flex:none;white-space:nowrap}
 .wm-vakchip[aria-pressed="true"]{border-color:var(--keus);background:var(--kies);box-shadow:inset 0 0 0 1px var(--keus);font-weight:600}
+.wm-loskop{margin-top:14px}
+.wm-vakchip .wm-vm.los{background:#FCDED6;color:#B23A22}
+.wm-vakchip .wm-vm.los svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .wm-vakchip .wm-vm{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;font-size:.75rem;font-weight:600;flex:none}
 /* stap 2: de soort werkblad als kaartjes */
 .wm-groep{font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:16px 0 8px}
@@ -404,7 +407,7 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
     <p class="intro">Kies een vak en een soort werkblad. Je ziet meteen hoe het eruitziet; print het werkblad en het antwoordblad samen of elk apart.</p>
     <details class="wm-hoe">
       <summary>Hoe werkt het?</summary>
-      <p>Je krijgt genummerde vragen uit dezelfde vragenbank als de spellen, en op een apart blad de antwoorden. Bij elk vak kun je ook een werkblad uit een spel kiezen: alinea’s van de Tekstdetective, breuken van de Breukenbakker, sommen in het DHTE-schema, driehoeken om de oppervlakte van te berekenen, een topografiekaart met nummers, de opgaven van een van de vakspellen met het beeld erbij, of een dictee (Nederlands) of dictation (Engels) om zelf voor te lezen, met een voorleesblad.</p>
+      <p>Je krijgt genummerde vragen uit dezelfde vragenbank als de spellen, en op een apart blad de antwoorden. Bij elk vak kun je ook een werkblad uit een spel kiezen: alinea’s van de Tekstdetective, breuken van de Breukenbakker, sommen in het DHTE-schema, driehoeken om de oppervlakte van te berekenen, een topografiekaart met nummers, de opgaven van een van de vakspellen met het beeld erbij, of een dictee (Nederlands) of dictation (Engels) om zelf voor te lezen, met een voorleesblad. Onder <b>Zonder vak</b> staat een leeg blad voor aantekeningen volgens de Cornell-methode.</p>
       <p>Het blad past zich aan zodra je iets verandert. Met <b>Andere vragen</b> trek je een nieuwe set. Met <b>Link</b> kopieer je het adres met al je keuzes erin, zodat je hetzelfde soort werkblad later of bij een collega terugkrijgt.</p>
       <p>Met <b>Samenstellen</b> boven het blad maak je het blad zelf af: klik een opgave aan om hem te vervangen, te verplaatsen of weg te halen, en zet er vragen bij uit het boek, uit de vragenbank of die je zelf schrijft, ook kopjes. Het antwoordblad past zich aan. Je blad blijft op deze computer bewaard; met Bewaar in Mijn materiaal wordt het ook een toets.</p>
       <p>Bij het printen kies je wat je wilt: alleen het werkblad, alleen het antwoordblad, of allebei. Wil je een PDF, kies dan bij het printen voor Opslaan als PDF; het werkblad en de antwoorden worden zo twee losse bestanden.</p>
@@ -418,6 +421,8 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
       <div class="kaart">
         <h2 class="wm-stap"><span class="wm-nr" aria-hidden="true">1</span>Vak</h2>
         <div class="wm-vakken" id="vakken" role="group" aria-label="Vak"></div>
+        <p class="wm-groep wm-loskop" id="losKop">Zonder vak</p>
+        <div class="wm-vakken" id="los" role="group" aria-labelledby="losKop"></div>
       </div>
 
       <div class="kaart">
@@ -542,6 +547,7 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
 <script src="werkblad-lezen.js"></script>
 <script src="werkblad-boek.js"></script>
 <script src="werkblad-cornell.js"></script>
+<script src="werkblad-signaalborden.js"></script>
 <script src="werkblad-samen.js"></script>
 <script>
 (function(){
@@ -635,6 +641,7 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
     samenvatten:['Samenvatten', 'Hoofdzaken en bijzaken scheiden', 'tekst'],
     woordenschat:['Woordenschat', 'Lastige woorden in een zin', 'woord'],
     signaalwoorden:['Signaalwoorden', 'Verbanden herkennen en kiezen', 'pijl'],
+    signaalborden:['Signaalwoorden als verkeersborden', 'Elk verband een bord, met een bordenkaart', 'pijl'],
     register:['Formeel of informeel', 'Appje of brief: de goede toon', 'praat'],
     alinea:['Bouw een alinea', 'Kernzin, volgorde en verbindingswoorden', 'pen'],
     schrijfopdracht:['De schrijfopdracht', 'Een e-mail of brief zoals op het examen', 'pen'],
@@ -691,7 +698,8 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
      #aantal, #vorm): de knoppen zetten ze, en de scripts van de werkbladen
      (route, topografie, de vakspellen) lezen #blad om te weten wat er open staat. */
   var zoek = new URLSearchParams(location.search);
-  $('vak').innerHTML = VAKKEN.map(function(v){ return '<option value="' + v.id + '">' + schoon(v.naam) + '</option>'; }).join('');
+  /* 'los' is geen vak: daar staan de lege bladen die bij elk vak passen (aantekeningen volgens Cornell) */
+  $('vak').innerHTML = VAKKEN.map(function(v){ return '<option value="' + v.id + '">' + schoon(v.naam) + '</option>'; }).join('') + '<option value="los">Zonder vak</option>';
   function spellenVan(vak){
     var ids = Object.keys(SPELBLAD).filter(function(id){ return SPELBLAD[id].vak === vak; });
     function plek(id){ var i = VOLGORDE.indexOf(id); return i < 0 ? 999 : i; }
@@ -699,15 +707,19 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
   }
   function tekenBlad(kies){
     var ids = spellenVan($('vak').value);
-    $('blad').innerHTML = '<option value="">Vragen uit de vragenbank</option>' + ids.map(function(id){ return '<option value="' + id + '">' + schoon(SPELBLAD[id].naam) + '</option>'; }).join('');
-    $('blad').value = kies && ids.indexOf(kies) >= 0 ? kies : '';
+    var los = $('vak').value === 'los';
+    $('blad').innerHTML = (los ? '' : '<option value="">Vragen uit de vragenbank</option>') + ids.map(function(id){ return '<option value="' + id + '">' + schoon(SPELBLAD[id].naam) + '</option>'; }).join('');
+    $('blad').value = kies && ids.indexOf(kies) >= 0 ? kies : los ? ids[0] : '';
   }
   function spel(){ return SPELBLAD[$('blad').value] || null; }
   $('niveau').innerHTML = NIVEAUS.map(function(n){ return '<option value="' + n.id + '">' + schoon(n.naam) + '</option>'; }).join('');
   /* een oude link met vak=tekstdetective wordt vak=ned met werkblad=tekstdetective */
   var vakUit = zoek.get('vak'), bladUit = zoek.get('blad');
   if (vakUit && SPELBLAD[vakUit]){ bladUit = vakUit; vakUit = SPELBLAD[vakUit].vak; }
-  if (vakUit && VAKKEN.some(function(v){ return v.id === vakUit; })) $('vak').value = vakUit;
+  /* een link uit de eerste dagen had het Cornell-blad nog onder een vak (blad=cornell-ges) */
+  if (/^cornell-/.test(bladUit || '')) bladUit = 'cornell';
+  if (bladUit && SPELBLAD[bladUit] && SPELBLAD[bladUit].vak === 'los') vakUit = 'los';
+  if (vakUit && (vakUit === 'los' || VAKKEN.some(function(v){ return v.id === vakUit; }))) $('vak').value = vakUit;
   tekenBlad(bladUit);
   if (zoek.get('n') && NIVEAUS.some(function(v){ return v.id === zoek.get('n'); })) $('niveau').value = zoek.get('n');
   else $('niveau').value = 'kgt';
@@ -770,6 +782,7 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
   $('vakken').innerHTML = VAKKEN.map(function(v){
     return '<button type="button" class="wm-vakchip" data-vak="' + schoon(v.id) + '" aria-pressed="false"><span class="wm-vm" aria-hidden="true" style="background:' + schoon(v.kleur) + ';color:' + letterKleur(v.kleur) + '">' + schoon(v.mark) + '</span>' + schoon(v.naam) + '</button>';
   }).join('');
+  $('los').innerHTML = '<button type="button" class="wm-vakchip" data-vak="los" aria-pressed="false"><span class="wm-vm los" aria-hidden="true">' + ico('lijst') + '</span>Aantekeningen (Cornell)</button>';
   $('niveauSeg').innerHTML = NIVEAUS.map(function(n){ return '<button type="button" data-v="' + n.id + '" aria-label="' + schoon(n.naam) + '" aria-pressed="false">' + schoon(n.naam.replace(/^vmbo-/, '')) + '</button>'; }).join('');
   $('vormSeg').innerHTML = [['open', 'Open'], ['mk', 'Meerkeuze'], ['mix', 'Door elkaar']].map(function(v){ return '<button type="button" data-v="' + v[0] + '" aria-pressed="false">' + v[1] + '</button>'; }).join('');
 
@@ -783,6 +796,7 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
     var ids = spellenVan($('vak').value), blad = $('blad').value;
     var route = ids.filter(function(id){ return /^route-/.test(id); }), boek = ids.filter(function(id){ return /^boek-/.test(id); });
     var rest = ids.filter(function(id){ return !/^(route|boek)-/.test(id); });
+    if ($('vak').value === 'los'){ $('soorten').innerHTML = '<p class="wm-groep" id="groepLos">Leeg blad</p><div class="wm-soorten" role="group" aria-labelledby="groepLos">' + ids.map(kaartje).join('') + '</div>'; return; }
     var h = '<p class="wm-groep" id="groepVragen">Vragen</p><div class="wm-soorten" role="group" aria-labelledby="groepVragen">' + boek.map(kaartje).join('') + kaartje('') + route.map(kaartje).join('') + '</div>';
     if (rest.length){
       /* de eerste vier meteen; staat het gekozen blad verderop, dan alles */
@@ -799,6 +813,7 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
   function zetKnoppen(){
     function druk(lijst, attr, waarde){ [].forEach.call(lijst, function(b){ b.setAttribute('aria-pressed', String(b.getAttribute(attr) === waarde)); }); }
     druk($('vakken').children, 'data-vak', $('vak').value);
+    druk($('los').children, 'data-vak', $('vak').value);
     druk($('soorten').querySelectorAll('.wm-soort'), 'data-blad', $('blad').value);
     druk($('niveauSeg').children, 'data-v', $('niveau').value);
     druk($('vormSeg').children, 'data-v', $('vorm').value);
@@ -810,7 +825,9 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
   /* een keuze zetten gaat altijd via de verborgen keuzelijst, net als in de test */
   function zet(id, v){ var e = $(id); e.value = v; e.dispatchEvent(new Event('change', { bubbles:true })); }
 
-  $('vakken').addEventListener('click', function(e){ var b = e.target.closest('[data-vak]'); if (b && b.getAttribute('data-vak') !== $('vak').value) zet('vak', b.getAttribute('data-vak')); });
+  function kiesVak(e){ var b = e.target.closest('[data-vak]'); if (b && b.getAttribute('data-vak') !== $('vak').value) zet('vak', b.getAttribute('data-vak')); }
+  $('vakken').addEventListener('click', kiesVak);
+  $('los').addEventListener('click', kiesVak);
   $('soorten').addEventListener('click', function(e){
     if (e.target.closest('#meerSoorten')){
       var was = $('soorten').querySelectorAll('.wm-soort').length;
