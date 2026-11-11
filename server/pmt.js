@@ -63,6 +63,10 @@
      POST   /api/pmt/dossiers/ID/meting    de antwoorden van een papieren lijst invoeren
      DELETE /api/pmt/metingen/ID           een ingevulde lijst weg
      POST   /api/pmt/dossiers/ID/verslag   alleen een regel in het logboek: er is een verslag gemaakt
+     GET    /api/pmt/rooster?week=DATUM     de tijden van het rooster en de afspraken van die week
+     PUT    /api/pmt/rooster/instelling    begin, eind en de lengte van een blok
+     POST   /api/pmt/afspraken             een leerling inplannen (weken: zoveel weken achter elkaar)
+     DELETE /api/pmt/afspraken/ID
      GET    /api/pmt/logboek
    De wekelijkse check (EF-monitor) is een vragenlijst met monitor aan. Daarvoor is er
    een vaste code: twaalf weken geldig, steeds opnieuw te gebruiken, hooguit een keer
@@ -339,6 +343,20 @@ export async function behandel(req, env, url, hulp){
     await k.zaaiLijst(s.naam);
     return klaar({ lijsten: await k.lijsten() });
   }
+  if (p === "/api/pmt/rooster" && m === "GET") return klaar(await k.rooster(String(url.searchParams.get("week") || "")));
+  if (p === "/api/pmt/rooster/instelling" && m === "PUT"){
+    let inhoud; try { inhoud = await leesInhoud(req); } catch (e){ return klaar({ fout: "dit kan de server niet lezen" }, 400); }
+    const i = await k.zetRooster(inhoud, s.naam);
+    return i ? klaar({ instelling: i }) : klaar({ fout: "deze tijden kloppen niet: het eind moet na het begin liggen en een blok duurt 10 tot 120 minuten" }, 400);
+  }
+  if (p === "/api/pmt/afspraken" && m === "POST"){
+    let inhoud; try { inhoud = await leesInhoud(req); } catch (e){ return klaar({ fout: "dit kan de server niet lezen" }, 400); }
+    const u = await k.plan(inhoud, s.naam);
+    if (!u) return klaar({ fout: "deze afspraak klopt niet" }, 400);
+    return u.gemaakt ? klaar(u) : klaar({ fout: "op dit moment staat al een afspraak" }, 409);
+  }
+  const afm = p.match(/^\/api\/pmt\/afspraken\/([A-Za-z0-9_-]{8,24})$/);
+  if (afm && m === "DELETE") return (await k.wegAfspraak(afm[1], s.naam)) ? klaar({ ok: true }) : klaar({ fout: "deze afspraak bestaat niet" }, 404);
   if (p === "/api/pmt/logboek" && m === "GET") return klaar({ regels: await k.logboek() });
   if (p === "/api/pmt/proef" && m === "POST"){
     if (!proef(env)) return klaar({ fout: "dit is geen proefomgeving" }, 403);
@@ -462,6 +480,15 @@ const WEEK = 7 * 86400000, VAST_WEKEN = 12, VAST_RUST = 6 * 3600000;
 /* zoveel past er: per dossier, in het hele opslagobject, en aan open codes per dossier */
 const MAX_METINGEN_DOSSIER = 400, MAX_METINGEN = 3000, MAX_CODES_DOSSIER = 10;
 
+/* ---------- het rooster ---------- */
+const ROOSTER = { van: 8 * 60 + 30, tot: 14 * 60 + 15, blok: 30 };   /* 8.30 tot 14.15, blokken van een half uur */
+const SOORTEN = ["sessie", "intake", "meting", "gesprek"];
+const MAX_AFSPRAKEN = 3000;
+function vandaagNL(){ return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Amsterdam" }).format(new Date()); }
+function plusDagen(d, n){ return new Date(Date.parse(d + "T12:00:00Z") + n * 86400000).toISOString().slice(0, 10); }
+function echteDag(v){ const d = datum(v); return d && plusDagen(d, 0) === d ? d : ""; }
+function maandagVan(d){ const w = (new Date(d + "T12:00:00Z").getUTCDay() + 6) % 7; return plusDagen(d, -w); }
+
 function dag(verschil){ return new Date(Date.now() + verschil * 86400000).toISOString().slice(0, 10); }
 /* verzonnen leerlingen voor de proefomgeving */
 function voorbeelden(){
@@ -500,7 +527,7 @@ const VOORBEELDCIJFERS = {
   Jesse: { metingen: [[-3, [2, 2, 4, 2, 2, 4, 3, 2, 4]]], weken: {} }
 };
 /* verandert dit getal, dan vult de demo zich opnieuw, ook als hij nog geen dag oud is */
-const DEMO_VERSIE = "3";
+const DEMO_VERSIE = "4";
 
 export class Pmt extends DurableObject {
   constructor(ctx, env){
@@ -514,6 +541,7 @@ export class Pmt extends DurableObject {
       try { this.sql.exec("ALTER TABLE afname ADD COLUMN " + kolom); } catch (e){ /* de kolom is er al */ }
     }
     this.sql.exec("CREATE TABLE IF NOT EXISTS meting (id TEXT PRIMARY KEY, dossier TEXT NOT NULL, inhoud TEXT NOT NULL, t INTEGER NOT NULL)");
+    this.sql.exec("CREATE TABLE IF NOT EXISTS afspraak (id TEXT PRIMARY KEY, dag TEXT NOT NULL, begin INTEGER NOT NULL, duur INTEGER NOT NULL, dossier TEXT NOT NULL, soort TEXT NOT NULL)");
     this.sql.exec("CREATE TABLE IF NOT EXISTS stand (k TEXT PRIMARY KEY, v TEXT NOT NULL)");
     this.sql.exec("CREATE TABLE IF NOT EXISTS logboek (n INTEGER PRIMARY KEY AUTOINCREMENT, t INTEGER NOT NULL, wie TEXT NOT NULL, wat TEXT NOT NULL, dossier TEXT NOT NULL)");
   }
@@ -555,10 +583,56 @@ export class Pmt extends DurableObject {
     const r = this.sql.exec("SELECT v FROM stand WHERE k = 'gezaaid'").toArray()[0];
     const versie = this.sql.exec("SELECT v FROM stand WHERE k = 'versie'").toArray()[0];
     if (r && Date.now() - Number(r.v) < DEMO_DAG && this.tel().dossiers && versie && versie.v === DEMO_VERSIE) return;
-    for (const t of ["dossier", "meting", "afname", "lijst", "logboek"]) this.sql.exec("DELETE FROM " + t);
+    for (const t of ["dossier", "meting", "afname", "lijst", "logboek", "afspraak"]) this.sql.exec("DELETE FROM " + t);
     await this.zaai("Demo");
     this.sql.exec("INSERT OR REPLACE INTO stand (k, v) VALUES ('gezaaid', ?)", String(Date.now()));
     this.sql.exec("INSERT OR REPLACE INTO stand (k, v) VALUES ('versie', ?)", DEMO_VERSIE);
+  }
+  /* ---------- het rooster ---------- */
+  roosterInstelling(){
+    const r = this.sql.exec("SELECT v FROM stand WHERE k = 'rooster'").toArray()[0];
+    try { const i = r && JSON.parse(r.v); if (i && i.van < i.tot && i.blok >= 10) return i; } catch (e){ /* dan de standaard */ }
+    return Object.assign({}, ROOSTER);
+  }
+  zetRooster(d, wie){
+    const van = Math.round(Number(d && d.van)), tot = Math.round(Number(d && d.tot)), blok = Math.round(Number(d && d.blok));
+    if (!(van >= 0 && tot <= 1440 && van < tot) || !(blok >= 10 && blok <= 120)) return null;
+    const i = { van, tot, blok };
+    this.sql.exec("INSERT OR REPLACE INTO stand (k, v) VALUES ('rooster', ?)", JSON.stringify(i));
+    this.meld(wie, "tijden van het rooster aangepast", "");
+    return i;
+  }
+  rooster(week){
+    const ma = maandagVan(echteDag(week) || vandaagNL());
+    return { week: ma, vandaag: vandaagNL(), instelling: this.roosterInstelling(),
+      afspraken: this.sql.exec("SELECT id, dag, begin, duur, dossier, soort FROM afspraak WHERE dag >= ? AND dag <= ? ORDER BY dag, begin", ma, plusDagen(ma, 6)).toArray() };
+  }
+  /* Inplannen, een keer of een aantal weken achter elkaar op dezelfde dag en
+     tijd. Waar al iets staat, slaat hij die week over. */
+  plan(d, wie){
+    const dagEen = echteDag(d && d.dag), begin = Math.round(Number(d && d.begin)), duur = Math.round(Number(d && d.duur));
+    const soort = SOORTEN.indexOf(d && d.soort) >= 0 ? d.soort : "sessie";
+    const weken = Math.max(1, Math.min(12, Math.round(Number(d && d.weken)) || 1));
+    if (!dagEen || !(begin >= 0 && begin < 1440) || !(duur >= 5 && duur <= 240) || begin + duur > 1440) return null;
+    if (!this.sql.exec("SELECT id FROM dossier WHERE id = ?", String(d.dossier || "")).toArray().length) return null;
+    if (this.sql.exec("SELECT COUNT(*) AS n FROM afspraak").one().n + weken > MAX_AFSPRAKEN) return null;
+    let gemaakt = 0, overgeslagen = 0;
+    for (let w = 0; w < weken; w++){
+      const dagNu = plusDagen(dagEen, 7 * w);
+      const bezet = this.sql.exec("SELECT id FROM afspraak WHERE dag = ? AND begin < ? AND begin + duur > ?", dagNu, begin + duur, begin).toArray().length;
+      if (bezet){ overgeslagen++; continue; }
+      this.sql.exec("INSERT INTO afspraak (id, dag, begin, duur, dossier, soort) VALUES (?, ?, ?, ?, ?, ?)", willekeur(9), dagNu, begin, duur, d.dossier, soort);
+      gemaakt++;
+    }
+    if (gemaakt) this.meld(wie, gemaakt === 1 ? "afspraak ingepland" : gemaakt + " afspraken ingepland", d.dossier);
+    return { gemaakt, overgeslagen };
+  }
+  wegAfspraak(id, wie){
+    const r = this.sql.exec("SELECT dossier FROM afspraak WHERE id = ?", id).toArray()[0];
+    if (!r) return false;
+    this.sql.exec("DELETE FROM afspraak WHERE id = ?", id);
+    this.meld(wie, "afspraak verwijderd", r.dossier);
+    return true;
   }
   /* is er nog plek voor een meting bij dit dossier? */
   plek(dossier){
@@ -589,7 +663,11 @@ export class Pmt extends DurableObject {
       } catch (e){ console.error("pmt: meting niet te openen voor de lijst"); }
     }
     for (const r of this.sql.exec("SELECT dossier, COUNT(*) AS n FROM afname WHERE tot >= ? GROUP BY dossier", Date.now()).toArray()) cod[r.dossier] = r.n;
-    return (await this.alles()).map(d => ({ id: d.id, voornaam: d.voornaam, letter: d.letter, klas: d.klas, status: d.status, start: d.start,
+    const volgende = {};
+    for (const r of this.sql.exec("SELECT dossier, dag, begin FROM afspraak WHERE dag >= ? ORDER BY dag, begin", vandaagNL()).toArray()){
+      if (!volgende[r.dossier]) volgende[r.dossier] = { dag: r.dag, begin: r.begin };
+    }
+    return (await this.alles()).map(d => ({ id: d.id, volgende: volgende[d.id] || null, voornaam: d.voornaam, letter: d.letter, klas: d.klas, status: d.status, start: d.start,
       proef: !!d.proef, notities: d.notities.length, bijgewerkt: d.bijgewerkt,
       metingen: met[d.id] ? met[d.id].trend.length : 0, laatsteMeting: met[d.id] ? met[d.id].t : 0, weekchecks: met[d.id] ? met[d.id].weken : 0,
       trend: met[d.id] ? met[d.id].trend.slice(-8) : [], codes: cod[d.id] || 0 }))
@@ -608,6 +686,7 @@ export class Pmt extends DurableObject {
     this.sql.exec("DELETE FROM afname WHERE tot < ?", Date.now());
     d.afnames = this.sql.exec("SELECT code, lijst, tot, vast, door FROM afname WHERE dossier = ? ORDER BY gemaakt", id).toArray()
       .map(x => { const l = JSON.parse(x.lijst); return { code: x.code, titel: l.titel, lijst: l.id, tot: x.tot, vast: !!x.vast, door: x.door }; });
+    d.afspraken = this.sql.exec("SELECT id, dag, begin, duur, soort FROM afspraak WHERE dossier = ? AND dag >= ? ORDER BY dag, begin LIMIT 12", id, vandaagNL()).toArray();
     if (wat) this.meld(wie, wat, id);
     return d;
   }
@@ -631,6 +710,7 @@ export class Pmt extends DurableObject {
     this.sql.exec("DELETE FROM dossier WHERE id = ?", id);
     this.sql.exec("DELETE FROM meting WHERE dossier = ?", id);
     this.sql.exec("DELETE FROM afname WHERE dossier = ?", id);
+    this.sql.exec("DELETE FROM afspraak WHERE dossier = ?", id);
     this.meld(wie, "verwijderd", id);
     return true;
   }
@@ -650,6 +730,13 @@ export class Pmt extends DurableObject {
     };
     for (const v of voorbeelden()){
       const d = await this.bewaar(null, v, wie);
+      const vast = d && { Sam: [1, 9 * 60, "sessie"], Noor: [3, 10 * 60 + 30, "sessie"], Jesse: [2, 13 * 60, "intake"] }[v.voornaam];
+      if (vast){
+        const ma = maandagVan(vandaagNL());
+        for (let w = 0; w < (vast[2] === "intake" ? 1 : 4); w++){
+          this.sql.exec("INSERT INTO afspraak (id, dag, begin, duur, dossier, soort) VALUES (?, ?, ?, ?, ?, ?)", willekeur(9), plusDagen(ma, vast[0] + 7 * w), vast[1], 30, d.id, vast[2]);
+        }
+      }
       const c = d && VOORBEELDCIJFERS[v.voornaam];
       if (!c) continue;
       for (const [terug, w] of c.metingen) await erbij(d.id, l, w, Date.now() + terug * 86400000);
