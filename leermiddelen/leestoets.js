@@ -97,21 +97,29 @@ window.LEESTOETS = (function(){
      Afgeleid van de lange 1F-toets, zodat een verbetering daar hier meekomt: drie keer een
      leesstrategie kiezen, de korte zwemtekst (zoekend), de pannenkoekentekst (nauwkeurig en
      verwijswoorden) en losse vragen over signaalwoorden en verwijswoorden. De zebratekst vervalt:
-     drie teksten is voor 14 vragen te veel leeswerk. */
+     drie teksten is voor 14 vragen te veel leeswerk.
+     De helft is een open vraag (7 van de 14): waar het antwoord een woord of een naam is, vervallen
+     de keuzes en staan de goede antwoorden erbij (open). */
   (function(){
     var lang = KLAAR['strategie-signaal-verwijs-1f'], b = lang.beelden, los = [].concat(lang.delen[0].los, lang.delen[4].los);
     /* een losse vraag met zijn eigen scène: de volgorde van beelden klopt hier niet meer */
-    function pak(i){ var x = JSON.parse(JSON.stringify(los[i])); x.plaatje = b[i]; return x; }
+    function pak(i, open){ var x = JSON.parse(JSON.stringify(los[i])); x.plaatje = b[i]; return open ? alsOpen(x, open) : x; }
     KLAAR['strategie-signaal-verwijs-1f-kort'] = { naam:'Leestoets kort: leesstrategieën, signaalwoorden en verwijswoorden (1F, vmbo-bb)', vak:'ned', modus:'toets', delen:[
       { los:[pak(0), pak(1), pak(5)] },
       { bank:'zwembad-golf', doelen:['zoekend'], kies:[0, 1, 5] },
-      { bank:'nauwkeurig-pannenkoeken', doelen:['nauwkeurig', 'verwijs'], kies:[0, 7, 9, 10] },
-      { los:[pak(6), pak(7), pak(9), pak(10)] }
+      { bank:'nauwkeurig-pannenkoeken', doelen:['nauwkeurig', 'verwijs'], kies:[0, 7, 9, 10], open:{ 9:['de eieren', 'eieren', 'naar de eieren'] } },
+      { los:[pak(6), pak(7, ['tegenstelling', 'een tegenstelling']), pak(9, ['zodat', 'opdat']), pak(10, ['Lisa'])] }
     ] };
   })();
   /* de leesbankteksten met een scène (beeld/lees/s-tekst-<id>.svg) */
   var TEKSTBEELD = ['zwembad-golf', 'nauwkeurig-pannenkoeken', 'globaal-zebra', 'zoekend-klimhal', 'nauwkeurig-spaaractie', 'globaal-spierpijn',
     'zoekend-bus', 'brandalarm', 'globaal-opa', 'zoekend-dierenpark', 'nauwkeurig-hondenuitlaters', 'katten-spinnen'];
+  /* een meerkeuzevraag als open vraag: de keuzes vervallen, de goede antwoorden staan erbij */
+  function alsOpen(x, antwoorden){
+    if (!x || x.vorm !== 'mk') return x;
+    x.vorm = 'open'; x.antwoorden = antwoorden.slice(0, 8); delete x.goed; delete x.fout;
+    return x;
+  }
   function klaar(id){
     var k = KLAAR[id]; if (!k || !window.LEESBANK) return null;
     var teksten = [], items = [], b = 0;
@@ -121,6 +129,8 @@ window.LEESTOETS = (function(){
       var tid = 'ABCDEF'.charAt(teksten.length);
       teksten.push({ id: tid, titel: t.titel, bank: t.id });
       var v = vragen(t, d.doelen);
+      /* d.open: welke vragen van deze tekst open worden, met hun goede antwoorden (het nummer is dat van kies) */
+      if (d.open) Object.keys(d.open).forEach(function(i){ if (v[i]) alsOpen(v[i], d.open[i]); });
       (d.kies ? d.kies.map(function(i){ return v[i]; }).filter(Boolean) : v).forEach(function(x){ x.tekst = tid; items.push(x); });
     });
     return { naam: k.naam, vak: k.vak, modus: k.modus, teksten: teksten, items: items };
