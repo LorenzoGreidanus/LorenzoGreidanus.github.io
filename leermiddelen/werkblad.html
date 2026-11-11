@@ -338,8 +338,22 @@ main h1{font-size:clamp(1.8rem,4vw,2.5rem);margin-top:2px}
 .blad ol.antw.dictee .ook{font-weight:400;color:#4a5270}
 .blad svg.taartje{display:block}
 
+.wm-printkeus{border:none;border-radius:20px;padding:24px;width:min(440px,calc(100vw - 32px));background:var(--kaart,#fff);color:var(--ink);box-shadow:0 24px 60px rgba(20,34,76,.3)}
+.wm-printkeus::backdrop{background:rgba(20,34,76,.45)}
+.wm-printkeus h2{font-size:1.25rem}
+.wm-printkeus .tip{margin:6px 0 14px}
+.wm-pk{display:grid;gap:8px;margin-bottom:14px}
+.wm-pkknop{display:grid;gap:2px;text-align:left;border:1.5px solid var(--rand2,rgba(20,34,76,.16));background:none;color:inherit;border-radius:14px;padding:12px 14px;min-height:60px;font:inherit;cursor:pointer;transition:border-color .12s,background-color .12s}
+.wm-pkknop:hover{border-color:var(--deep-ocean,#204ECF);background:rgba(32,78,207,.06)}
+.wm-pkknop b{font-weight:600}
+.wm-pkknop small{color:var(--muted);font-size:.84rem}
+.wm-printkeus #printKeusDicht{width:100%;min-height:44px}
 @media print{
   @page{margin:14mm}
+  .wm-printkeus{display:none !important}
+  /* apart printen: alleen het gekozen blad gaat mee (de knop Printen zet data-print op de body) */
+  body[data-print="werk"] .bladen .blad.wb-achter,body[data-print="antw"] .bladen .blad.wb-voor{display:none !important}
+  body[data-print="antw"] .bladen .blad.wb-achter{break-before:auto;page-break-before:auto}
   body{background:#fff;color:#14224C;padding:0}
   body > header,body > footer,.wm-kop,.wm-keuzes,.wm-balk,#melding,#standUitleg,#schermtip,.wm-onderbalk,.wm-meetvak,.wm-eigenpagina{display:none !important}
   /* de knoppen van Samenstellen en het oranje van eigen vragen: niet op papier */
@@ -387,13 +401,13 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
   <div class="wm-kop">
     <p class="wm-hand">voor de docent</p>
     <h1>Werkblad maken</h1>
-    <p class="intro">Kies een vak en een soort werkblad. Je ziet meteen hoe het eruitziet; print het met het antwoordblad erbij.</p>
+    <p class="intro">Kies een vak en een soort werkblad. Je ziet meteen hoe het eruitziet; print het werkblad en het antwoordblad samen of elk apart.</p>
     <details class="wm-hoe">
       <summary>Hoe werkt het?</summary>
       <p>Je krijgt genummerde vragen uit dezelfde vragenbank als de spellen, en op een apart blad de antwoorden. Bij elk vak kun je ook een werkblad uit een spel kiezen: alinea’s van de Tekstdetective, breuken van de Breukenbakker, sommen in het DHTE-schema, driehoeken om de oppervlakte van te berekenen, een topografiekaart met nummers, de opgaven van een van de vakspellen met het beeld erbij, of een dictee (Nederlands) of dictation (Engels) om zelf voor te lezen, met een voorleesblad.</p>
       <p>Het blad past zich aan zodra je iets verandert. Met <b>Andere vragen</b> trek je een nieuwe set. Met <b>Link</b> kopieer je het adres met al je keuzes erin, zodat je hetzelfde soort werkblad later of bij een collega terugkrijgt.</p>
       <p>Met <b>Samenstellen</b> boven het blad maak je het blad zelf af: klik een opgave aan om hem te vervangen, te verplaatsen of weg te halen, en zet er vragen bij uit het boek, uit de vragenbank of die je zelf schrijft, ook kopjes. Het antwoordblad past zich aan. Je blad blijft op deze computer bewaard; met Bewaar in Mijn materiaal wordt het ook een toets.</p>
-      <p>Bij het printen komt het antwoordblad op een eigen pagina. Wil je een PDF, kies dan bij het printen voor Opslaan als PDF.</p>
+      <p>Bij het printen kies je wat je wilt: alleen het werkblad, alleen het antwoordblad, of allebei. Wil je een PDF, kies dan bij het printen voor Opslaan als PDF; het werkblad en de antwoorden worden zo twee losse bestanden.</p>
     </details>
   </div>
 
@@ -448,6 +462,7 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
           <p class="tip" id="delenTip"></p>
           <div class="delen" id="delen"></div>
         </div>
+        <label class="vink hide" id="somBeginVeld"><input type="checkbox" id="somBegin"> Het begin van elke som staat al in de kladruimte (staartdeling, onder elkaar)</label>
         <label class="vink"><input type="checkbox" id="metUitleg" checked> Uitleg bij elk antwoord op het antwoordblad</label>
       </div>
 
@@ -481,7 +496,7 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
       <p class="tip wm-standuitleg hide" id="standUitleg"></p>
       <div class="wm-blikveld" id="blikveld">
         <div class="bladen" id="bladen" data-toon="werk" role="tabpanel" aria-labelledby="tabWerk"></div>
-        <p class="tip schermtip hide" id="schermtip">Zo ziet het er op papier uit. Bij het printen komt het antwoordblad op een eigen pagina.</p>
+        <p class="tip schermtip hide" id="schermtip">Zo ziet het er op papier uit. Bij het printen kies je het werkblad, de antwoorden of allebei.</p>
       </div>
     </section>
   </div>
@@ -494,6 +509,16 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
   <button type="button" class="knop" id="printTel">Printen of PDF</button>
 </div>
 <div class="wm-meetvak" id="meet" aria-hidden="true"></div>
+<dialog class="wm-printkeus" id="printKeus" aria-labelledby="printKeusKop">
+  <h2 id="printKeusKop">Wat wil je printen?</h2>
+  <p class="tip">Kies bij het printen voor Opslaan als PDF om het als bestand te bewaren. Apart geprint zijn het twee losse bestanden.</p>
+  <div class="wm-pk">
+    <button type="button" class="wm-pkknop" data-p="werk"><b>Alleen het werkblad</b><small id="pkWerk">Voor de leerlingen, zonder antwoorden</small></button>
+    <button type="button" class="wm-pkknop" data-p="antw"><b id="pkAntwKop">Alleen de antwoorden</b><small id="pkAntw">Het antwoordblad, voor jou of om na te kijken</small></button>
+    <button type="button" class="wm-pkknop" data-p="beide"><b>Allebei</b><small>Eerst het werkblad, daarna het tweede blad op een eigen pagina</small></button>
+  </div>
+  <button type="button" class="knop stil" id="printKeusDicht">Annuleren</button>
+</dialog>
 
 <script src="thema.js"></script>
 <script src="nagekeken.js"></script>
@@ -516,6 +541,7 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
 <script src="leesbank.js"></script>
 <script src="werkblad-lezen.js"></script>
 <script src="werkblad-boek.js"></script>
+<script src="werkblad-cornell.js"></script>
 <script src="werkblad-samen.js"></script>
 <script>
 (function(){
@@ -701,6 +727,7 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
   function tekenDelen(aan){
     var vak = $('vak').value, S = spel();
     $('vormVeld').classList.toggle('hide', !!(S && !S.vormen));
+    $('somBeginVeld').classList.toggle('hide', !!S || (vak !== 'reken' && vak !== 'wis'));
     $('woordVeld').classList.toggle('hide', vak !== 'eng' || !!S);
     $('niveauVeld').classList.toggle('hide', !!(S && S.eigenNiveau));
     $('delenKnoppen').classList.toggle('hide', !!S);
@@ -815,6 +842,10 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
   function uitlegVerder(){ if (zelfdeBlad()){ laatste.uitleg = $('metUitleg').checked; teken(); } }
   $('vorm').addEventListener('change', function(){ zetKnoppen(); if (!vraagEerst(vormVerder, herstelKeuzes)) vormVerder(); });
   $('metUitleg').addEventListener('change', function(){ if (!vraagEerst(uitlegVerder, herstelKeuzes)) uitlegVerder(); });
+  /* het begin van de som in de kladruimte: een keuze bij rekenen en wiskunde, onthouden op dit apparaat (ook voor de papieren toets) */
+  try { $('somBegin').checked = localStorage.getItem('lg-som-begin') === '1'; } catch (e){}
+  function beginVerder(){ try { localStorage.setItem('lg-som-begin', $('somBegin').checked ? '1' : '0'); } catch (e){} if (laatste && !laatste.spel) teken(); }
+  $('somBegin').addEventListener('change', function(){ if (!vraagEerst(beginVerder, function(){ $('somBegin').checked = !$('somBegin').checked; })) beginVerder(); });
   $('delen').addEventListener('change', function(){ telDelen(); plan(); });
   $('alleDelen').addEventListener('click', function(){ [].forEach.call($('delen').querySelectorAll('input'), function(x){ x.checked = true; }); telDelen(); plan(); });
   $('geenDelen').addEventListener('click', function(){ [].forEach.call($('delen').querySelectorAll('input'), function(x){ x.checked = false; }); telDelen(); plan(); });
@@ -1097,7 +1128,7 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
     var vr = '<span class="vr">' + (q.woord ? OPENPAPIER.vraagHtml(p.v) : schoon(p.v)) + '</span>' + (p.opdr ? '<span class="opdr">' + schoon(p.opdr) + '</span>' : '');
     var kop = kopjes && q.kop ? '<span class="odkop">' + schoon(q.kop) + '</span>' : '';
     /* open: de ruimte past bij het antwoord, een vak of een regel (open-papier.js) */
-    if (p.soort === 'open') return '<li>' + kop + OPENPAPIER.open({ vraag:p.v, antwoorden:[q.o[q.g]], punten:1, afb:!!(q.svg || q.vlag) }, { kop:vr, beeld:beeld(q) }) + '</li>';
+    if (p.soort === 'open') return '<li>' + kop + OPENPAPIER.open({ vraag:p.v, antwoorden:[q.o[q.g]], punten:1, afb:!!(q.svg || q.vlag) }, { kop:vr, beeld:beeld(q), begin:$('somBegin').checked && !$('somBeginVeld').classList.contains('hide') }) + '</li>';
     return '<li>' + kop + vr + beeld(q) +
       (p.soort === 'kies' ? OPENVRAAG.kiesUit(q.o) + '<span class="lijn" aria-hidden="true"></span>'
         : '<div class="opties">' + q.o.map(function(o, i){ return '<span><b>' + LETTERS[i] + '</b>' + schoon(o) + '</span>'; }).join('') + '</div>') + '</li>';
@@ -1176,8 +1207,36 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
   /* printen wacht op het blad als er nog een keuze onderweg is */
   function printen(){
     if (stand === 'wacht') maak();
-    if (stand === 'bezig'){ wachters.push(function(s){ if (s === 'klaar') window.print(); }); return; }
-    if (stand === 'klaar') window.print();
+    if (stand === 'bezig'){ wachters.push(function(s){ if (s === 'klaar') vraagPrint(); }); return; }
+    if (stand === 'klaar') vraagPrint();
+  }
+  /* Wat gaat er naar de printer: het werkblad, het tweede blad (de antwoorden) of allebei.
+     Apart geprint en als PDF bewaard zijn het twee losse bestanden, elk met een eigen naam. */
+  var paginaTitel = document.title;
+  function vraagPrint(){
+    var d = $('printKeus');
+    if (!d || !d.showModal || !$('bladen').querySelector('.blad.wb-achter')){ window.print(); return; }
+    var antw = antwNaam === 'Antwoorden';
+    $('pkAntwKop').textContent = antw ? 'Alleen de antwoorden' : 'Alleen: ' + antwNaam.toLowerCase();
+    $('pkAntw').textContent = antw ? 'Het antwoordblad, voor jou of om na te kijken' : 'Het tweede blad';
+    $('pkWerk').textContent = antw ? 'Voor de leerlingen, zonder antwoorden' : 'Het eerste blad';
+    if (!d.open) d.showModal();
+  }
+  function printNu(wat){
+    var kop = $('bladen').querySelector('.blad.wb-voor h2'), naam = kop ? kop.textContent.trim() : 'Werkblad';
+    document.body.setAttribute('data-print', wat);
+    /* de browser stelt de titel van de pagina voor als naam van de PDF */
+    document.title = naam + (wat === 'werk' ? ' - werkblad' : wat === 'antw' ? ' - ' + antwNaam.toLowerCase() : '');
+    window.print();
+  }
+  function naPrint(){ document.body.removeAttribute('data-print'); document.title = paginaTitel; }
+  window.addEventListener('afterprint', naPrint);
+  if ($('printKeus')){
+    $('printKeus').addEventListener('click', function(e){
+      var k = e.target.closest('[data-p]');
+      if (k){ $('printKeus').close(); printNu(k.getAttribute('data-p')); }
+    });
+    $('printKeusDicht').addEventListener('click', function(){ $('printKeus').close(); });
   }
   $('print').addEventListener('click', printen);
   $('printTel').addEventListener('click', printen);

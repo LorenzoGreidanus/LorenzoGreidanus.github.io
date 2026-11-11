@@ -8,9 +8,12 @@
      OPENPAPIER.maakVraag(stijl, woord, o) -> de vraag in die stijl; o: { naar, zin }
      OPENPAPIER.woord(vraag)               -> een woordvraag herkennen: { stijl, woord, naar, zin } of null
      OPENPAPIER.vraagHtml(vraag)           -> de vraag met het woord vet (en groot bij de stijl groot)
-     OPENPAPIER.open(it, o)                -> een open vraag op papier; o: { kop, beeld, hulp, klad }
+     OPENPAPIER.open(it, o)                -> een open vraag op papier; o: { kop, beeld, hulp, klad, begin }
+                                              begin: true zet bij elke som het begin al in de kladruimte (een keuze van de docent)
                                               klad: 'reken' (standaard: bij rekenvragen), 'ruim' (bij elke vraag) of 'geen'
-     OPENPAPIER.klad(soort)                -> een vak met ruitjes; soort: '' (gewoon), 'hoog', 'blok' (over de hele breedte), 'mk' (naast meerkeuze)
+     OPENPAPIER.klad(soort, vraag)         -> een vak met ruitjes; soort: '' (gewoon), 'hoog', 'blok' (over de hele breedte), 'mk' (naast meerkeuze)
+                                              met de vraag erbij (alleen als de docent dat koos) staat het begin van de som er al in
+     OPENPAPIER.kladBegin(vraag)           -> { html, hoog } of null: de staartdeling of de som onder elkaar, nog niet uitgerekend
      OPENPAPIER.isReken(it)                -> is dit een rekenvraag (dan hoort er kladruimte bij)
      OPENPAPIER.kanTabel(it)               -> mag deze vraag in een woordentabel
      OPENPAPIER.tabel(lijst, hulp, bank)   -> woordvragen als tabel; bank: de woorden om uit te kiezen
@@ -99,7 +102,40 @@ var OPENPAPIER = (function(){
   function langste(l){ return l.reduce(function(n, x){ return Math.max(n, x.length); }, 0); }
   /* kop: de vraag zoals hij er al staat (html); beeld: een plaatje eronder (html) */
   /* een vak met ruitjes om in te rekenen */
-  function klad(soort){ return '<span class="op-klad' + (soort ? ' op-' + soort : '') + '"><small>Kladruimte</small></span>'; }
+  /* Het begin staat er al: een keuze van de docent, en dan bij elke som. Bij een deling
+     de staartdeling (deler / deeltal \), of de haptabel als de klas met happen deelt;
+     bij optellen, aftrekken en keer de twee getallen onder elkaar met de streep. De
+     leerling begint zo meteen met rekenen in plaats van met overschrijven. Alleen als
+     rekenmanieren.js geladen is, en alleen als er precies één som in de vraag staat
+     (met spaties om het teken: 12:30 is een tijd). */
+  var SOM = /(^|[^\d,.])(\d[\d.]*)\s+([:÷×x*+\-−])\s+(\d[\d.]*)(?![\d,])/g;
+  var KLADHOOGTE = { '':130, hoog:190, blok:120, mk:110 };
+  function kladBegin(vraag){
+    var RM = window.REKENMANIEREN, t = String(vraag || '');
+    if (!RM || !RM.herken || !t) return null;
+    var m, alle = []; SOM.lastIndex = 0;
+    while ((m = SOM.exec(t))) alle.push(m);
+    if (alle.length !== 1) return null;
+    var h = RM.herken(alle[0][2] + ' ' + alle[0][3] + ' ' + alle[0][4]);
+    if (!h) return null;
+    var id = null, mijn = RM.mijn ? RM.mijn(h.bew) : null;
+    if (h.bew === 'deel') id = !/staartdeling/i.test(t) && mijn === 'hap' ? 'hap' : 'staart';
+    else id = 'cijferend';
+    if (!id || !RM.manieren(h.bew, h.a, h.b).some(function(x){ return x.id === id; })) return null;
+    var res;
+    try { res = RM.reken(h.bew, h.a, h.b, id); } catch (e){ return null; }
+    if (!res || !res.beeld) return null;
+    /* zoveel ruimte als de uitwerking nodig heeft */
+    var regels = id === 'staart' ? res.stappen.length : id === 'hap' ? 5 : res.stappen.filter(function(s){ return /^Regel/.test(s.tekst); }).length + 4;
+    return { html:res.beeld(0), hoog:Math.min(330, 52 + regels * 27), id:id };
+  }
+  function klad(soort, vraag){
+    var b = vraag ? kladBegin(vraag) : null;
+    if (b && window.REKENMANIEREN.stijl) REKENMANIEREN.stijl();
+    return '<span class="op-klad' + (soort ? ' op-' + soort : '') + (b ? ' op-metbegin' : '') + '"' +
+      (b ? ' style="min-height:' + Math.max(b.hoog, KLADHOOGTE[soort || ''] || 130) + 'px"' : '') + '><small>Kladruimte</small>' +
+      (b ? '<span class="op-kladbegin op-begin-' + b.id + '" aria-hidden="true">' + b.html + '</span>' : '') + '</span>';
+  }
   /* een rekenvraag: het woord staat erin, of de antwoorden (of keuzes) zijn getallen en de vraag heeft er ook een */
   function isReken(it){
     var vraag = String(it.vraag || ''), l = it.vorm === 'mk' ? [it.goed].concat(it.fout || []) : (it.antwoorden || []);
@@ -114,7 +150,7 @@ var OPENPAPIER = (function(){
     var r = openKern(it, o);
     if (o.klad !== 'ruim' || r.indexOf('op-klad') >= 0) return r;
     var i = r.indexOf('<span class="op-regel');
-    return i >= 0 ? r.slice(0, i) + klad('blok') + r.slice(i) : r + klad('blok');
+    return i >= 0 ? r.slice(0, i) + klad('blok', o.begin && it.vraag) + r.slice(i) : r + klad('blok', o.begin && it.vraag);
   }
   function openKern(it, o){
     var ants = (it.antwoorden || []).map(function(x){ return String(x).trim(); }).filter(Boolean), pt = it.punten || 1;
@@ -126,7 +162,8 @@ var OPENPAPIER = (function(){
       var zelf = eenheid && vraag.toLowerCase().indexOf(eenheid.toLowerCase()) < 0;
       if (zelf) eenheid = '';
       var cijfers = ants.map(function(a){ return (a.match(MET_EENHEID) || [0, a])[1].replace(/\s/g, ''); });
-      var metKlad = o.klad === 'ruim' || (o.klad !== 'geen' && !it.afb && !beeld && (pt >= 2 || KLAD.test(vraag)));
+      /* koos de docent "het begin staat er al", dan krijgt elke som kladruimte met dat begin */
+      var metKlad = o.klad === 'ruim' || (o.klad !== 'geen' && !it.afb && !beeld && (pt >= 2 || KLAD.test(vraag) || (o.begin && !!kladBegin(vraag))));
       /* schrijft de leerling de eenheid zelf, dan past die ook in het vak */
       var breed = Math.max(76, Math.min(220, 26 + langste(zelf ? ants : cijfers) * 13));
       /* een getal in het DHTE-schema: een hokje per cijfer, met de punt waar hij hoort */
@@ -138,7 +175,7 @@ var OPENPAPIER = (function(){
         (eenheid ? '<span class="op-eenheid">' + schoon(eenheid) + '</span>' : '') + '</span>';
       /* zonder kladruimte alleen het vak, met de eenheid erachter */
       if (!metKlad) return naast(kop, beeld, vak('', breed) + (eenheid ? '<span class="op-eenheid">' + schoon(eenheid) + '</span>' : ''));
-      return kop + beeld + '<div class="op-reken">' + klad(pt >= 2 || o.klad === 'ruim' ? 'hoog' : '') +
+      return kop + beeld + '<div class="op-reken">' + klad(pt >= 2 || o.klad === 'ruim' ? 'hoog' : '', o.begin && vraag) +
         '<span class="op-antwkant">' + antw + (pt === 2 ? '<small class="op-tip">1 punt voor de berekening, 1 voor het antwoord</small>' : '') + '</span></div>';
     }
     /* een woord of een paar woorden: een vak achter de vraag, zo breed als het antwoord */
@@ -192,6 +229,6 @@ var OPENPAPIER = (function(){
     }).join('') + '</div></li>';
   }
 
-  return { STIJLEN:STIJLEN, maakVraag:maakVraag, woord:woord, vraagHtml:vraagHtml, open:open, kanTabel:kanTabel, tabel:tabel, modelTabel:modelTabel, klad:klad, isReken:isReken };
+  return { STIJLEN:STIJLEN, maakVraag:maakVraag, woord:woord, vraagHtml:vraagHtml, open:open, kanTabel:kanTabel, tabel:tabel, modelTabel:modelTabel, klad:klad, kladBegin:kladBegin, isReken:isReken };
 })();
 if (typeof module !== 'undefined') module.exports = OPENPAPIER;

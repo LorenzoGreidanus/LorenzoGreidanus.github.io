@@ -179,6 +179,7 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
             <label><input type="radio" name="klad" value="reken" checked><span>Bij rekenvragen</span></label>
             <label><input type="radio" name="klad" value="ruim"><span>Ruim bij elke vraag</span></label>
           </div>
+          <label class="vink"><input type="checkbox" id="somBegin"> Het begin van elke som staat al in de kladruimte (staartdeling, onder elkaar)</label>
           <label class="vink"><input type="checkbox" id="kladblad"> Kladblad achter de toets</label>
         </div>
         <div class="hide" id="hulpVeld">
@@ -207,6 +208,7 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
 <script src="nagekeken.js"></script>
 <script src="eigen.js"></script>
 <script src="topo-eigen.js"></script>
+<script src="rekenmanieren.js"></script>
 <script src="open-papier.js"></script>
 <script src="schema.js"></script>
 <script src="leestoets.js"></script>
@@ -215,6 +217,8 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
 (function(){
   'use strict';
   function $(id){ return document.getElementById(id); }
+  /* het begin van de som in de kladruimte: dezelfde keuze als bij de werkbladen, onthouden op dit apparaat */
+  try { $('somBegin').checked = localStorage.getItem('lg-som-begin') === '1'; } catch (e){}
   function melding(tekst, soort){ var el = $('melding'); el.textContent = tekst || ''; el.className = 'melding' + (soort ? ' ' + soort : ''); }
   var q = new URLSearchParams(location.search);
   var code = String(q.get('code') || '').toUpperCase().replace(/[^A-Z0-9]/g, ''), m = null;
@@ -228,7 +232,8 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
     /* hulp bij open vragen: alleen op versie B kan pas als B ook geprint wordt */
     var hulp = document.querySelector('input[name="hulp"]:checked').value;
     $('alleenBVeld').classList.toggle('hide', !ab || hulp === 'geen');
-    var o = { hulp:hulp, alleenB:ab && $('alleenB').checked, klad:document.querySelector('input[name="klad"]:checked').value, kladblad:$('kladblad').checked };
+    var o = { hulp:hulp, alleenB:ab && $('alleenB').checked, klad:document.querySelector('input[name="klad"]:checked').value, kladblad:$('kladblad').checked, begin:$('somBegin').checked };
+    try { localStorage.setItem('lg-som-begin', o.begin ? '1' : '0'); } catch (e){}
     var versies = ab ? ['A', 'B'] : ['A'], h = '';
     if (!alleen) versies.forEach(function(v){ h += PAPIER.toets(m, code, v, o); });
     if (model) versies.forEach(function(v){ h += PAPIER.model(m, code, v); });
@@ -236,7 +241,7 @@ footer{color:var(--muted);font-size:.85rem;padding:20px 0 40px}
     document.title = (m.naam || 'Toets') + (alleen ? ' · nakijkmodel' : ab ? ' · versie A en B' : ' · versie A');
     $('print').textContent = alleen ? 'Nakijkmodel printen' : 'Printen';
   }
-  [].forEach.call(document.querySelectorAll('input[name="versies"], input[name="hulp"], input[name="klad"], #kladblad, #metModel, #alleenModel, #alleenB'), function(el){ el.addEventListener('change', teken); });
+  [].forEach.call(document.querySelectorAll('input[name="versies"], input[name="hulp"], input[name="klad"], #kladblad, #somBegin, #metModel, #alleenModel, #alleenB'), function(el){ el.addEventListener('change', teken); });
   $('print').addEventListener('click', function(){ window.print(); });
 
   if (!/^[A-Z0-9]{6}$/.test(code)){ melding('Open deze pagina vanuit Mijn materiaal, met de knop Op papier bij een toets.', 'fout'); return; }

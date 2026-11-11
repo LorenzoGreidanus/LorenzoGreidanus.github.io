@@ -157,7 +157,7 @@ var PAPIER = (function(){
   function wat(it){ var m = window.KAARTEN && KAARTEN[it.kaart]; return m && m.soort === 'gemengd' && it.wat ? ' (' + schoon(it.wat) + ')' : ''; }
   function opKaart(kn, it){ return kn.n > 1 ? ' op kaart ' + kn.per[it.kaart].volgnr : ' op de kaart'; }
   /* wat een vraag op papier is, en het antwoord in het nakijkmodel */
-  function vraag(it, code, versie, kn, hulp, klad){
+  function vraag(it, code, versie, kn, hulp, klad, begin){
     var z = zaadVan(code, it), v = it.vorm, h = '', ant = '';
     var beeld = it.afb && v !== 'aanwijzen' ? '<div class="beeld"><img alt="" src="' + schoon(afbAdres(code, it.afb)) + '"></div>' : '';
     var tekst = '<span class="vr">' + schoon(it.vraag) + '</span>';
@@ -165,12 +165,12 @@ var PAPIER = (function(){
       var o = perVersie([it.goed].concat(it.fout || []), z, versie);
       var keus = '<div class="opties">' + o.map(function(w, i){ return '<span><b>' + LETTERS[i] + '</b>' + schoon(w) + '</span>'; }).join('') + '</div>';
       /* een rekenvraag (of kladruimte bij elke vraag): de keuzes met een vak met ruitjes ernaast */
-      var mkKlad = window.OPENPAPIER && klad && (klad === 'ruim' || (klad !== 'geen' && OPENPAPIER.isReken(it)));
-      h = tekst + beeld + (mkKlad ? '<div class="op-mkklad">' + keus + OPENPAPIER.klad('mk') + '</div>' : keus);
+      var mkKlad = window.OPENPAPIER && klad && (klad === 'ruim' || (klad !== 'geen' && (OPENPAPIER.isReken(it) || (begin && !!OPENPAPIER.kladBegin(it.vraag)))));
+      h = tekst + beeld + (mkKlad ? '<div class="op-mkklad">' + keus + OPENPAPIER.klad('mk', begin && it.vraag) + '</div>' : keus);
       ant = LETTERS[o.indexOf(it.goed)] + ': ' + schoon(it.goed);
     } else if (v === 'open'){
       /* de ruimte past bij het antwoord: een vak, een regel of een regel per punt (open-papier.js) */
-      h = window.OPENPAPIER ? OPENPAPIER.open(it, { kop:'<span class="vr">' + OPENPAPIER.vraagHtml(it.vraag) + '</span>', beeld:beeld, hulp:hulp, klad:klad || 'reken' })
+      h = window.OPENPAPIER ? OPENPAPIER.open(it, { kop:'<span class="vr">' + OPENPAPIER.vraagHtml(it.vraag) + '</span>', beeld:beeld, hulp:hulp, klad:klad || 'reken', begin:!!begin })
         : tekst + beeld + regels((it.punten || 1) >= 4 ? 5 : (it.punten || 1) >= 2 ? 3 : 2);
       ant = (it.antwoorden || []).length ? (it.antwoorden || []).map(schoon).join(' <i>of</i> ') : '<i>Geen antwoord opgegeven: zelf beoordelen.</i>';
     } else if (v === 'koppel'){
@@ -286,7 +286,7 @@ var PAPIER = (function(){
           li.push('<li class="kaartblok"><span class="odkop">' + (kn.n > 1 ? 'Kaart ' + kaart.volgnr + ': ' : 'Kaart: ') + schoon(km.naam) + ', bij ' + welke + '</span>' + kaartSvg(km, mee) + '</li>');
         }
       }
-      var x = vraag(it, code, versie, kn, hulp, o.klad || 'reken');
+      var x = vraag(it, code, versie, kn, hulp, o.klad || 'reken', o.begin);
       li.push('<li><span class="ptvak"><i></i>/ ' + (it.punten || 1) + '</span>' + x.html + '</li>');
     });
     return '<article class="blad toetsblad" data-versie="' + versie + '" aria-label="Toets, versie ' + versie + '">' +
