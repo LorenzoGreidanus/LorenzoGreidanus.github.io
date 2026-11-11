@@ -469,6 +469,23 @@ function voorbeelden(){
   ];
 }
 
+/* Wat de verzonnen leerlingen hebben ingevuld. metingen: hoeveel dagen geleden en
+   de negen antwoorden op de voorbeeldlijst. weken: per week de zes antwoorden op
+   de weekcheck, van de leerling en van de mentor; de laatste week is nu. Zo is er
+   bij elke leerling iets te zien: een lang traject (Mila), een lopend traject met
+   een terugval (Sam), een pas begonnen traject (Noor) en alleen een beginmeting (Jesse). */
+const VOORBEELDCIJFERS = {
+  Sam: { metingen: [[-84, [2, 2, 4, 3, 3, 4, 2, 3, 4]], [-42, [3, 2, 3, 4, 3, 3, 3, 3, 3]], [-7, [4, 3, 2, 4, 4, 2, 3, 4, 3]]],
+    weken: { leerling: [[2, 1, 3, 2, 3, 2], [2, 2, 3, 3, 3, 2], [3, 2, 3, 3, 2, 3], [3, 3, 4, 4, 3, 3], [3, 3, 3, 4, 3, 4], [4, 3, 4, 4, 3, 4], [4, 4, 4, 4, 4, 4], [4, 4, 4, 2, 3, 5]],
+      mentor: [[2, 2, 3, 2, 3, 2], [2, 2, 3, 2, 3, 3], [3, 2, 3, 3, 3, 3], [3, 3, 3, 3, 3, 3], [3, 3, 4, 4, 3, 3], [3, 3, 4, 4, 3, 4], [4, 4, 4, 4, 3, 4], [4, 3, 4, 3, 3, 4]] } },
+  Noor: { metingen: [[-28, [2, 3, 3, 2, 2, 4, 2, 2, 4]], [-3, [3, 3, 3, 3, 2, 3, 2, 3, 4]]],
+    weken: { leerling: [[3, 2, 3, 2, 2, 3], [3, 3, 3, 3, 2, 3], [3, 3, 4, 3, 3, 3], [4, 3, 4, 3, 3, 4]] } },
+  Mila: { metingen: [[-200, [2, 2, 4, 2, 1, 5, 2, 2, 5]], [-150, [3, 2, 3, 3, 2, 4, 2, 2, 4]], [-100, [4, 3, 2, 3, 3, 3, 3, 4, 3]], [-60, [4, 4, 1, 4, 4, 2, 4, 3, 2]]], weken: {} },
+  Jesse: { metingen: [[-3, [2, 2, 4, 2, 2, 4, 3, 2, 4]]], weken: {} }
+};
+/* verandert dit getal, dan vult de demo zich opnieuw, ook als hij nog geen dag oud is */
+const DEMO_VERSIE = "3";
+
 export class Pmt extends DurableObject {
   constructor(ctx, env){
     super(ctx, env);
@@ -520,10 +537,12 @@ export class Pmt extends DurableObject {
      achterlieten blijft zo nooit lang staan. */
   async demoKlaar(){
     const r = this.sql.exec("SELECT v FROM stand WHERE k = 'gezaaid'").toArray()[0];
-    if (r && Date.now() - Number(r.v) < DEMO_DAG && this.tel().dossiers) return;
+    const versie = this.sql.exec("SELECT v FROM stand WHERE k = 'versie'").toArray()[0];
+    if (r && Date.now() - Number(r.v) < DEMO_DAG && this.tel().dossiers && versie && versie.v === DEMO_VERSIE) return;
     for (const t of ["dossier", "meting", "afname", "lijst", "logboek"]) this.sql.exec("DELETE FROM " + t);
     await this.zaai("Demo");
     this.sql.exec("INSERT OR REPLACE INTO stand (k, v) VALUES ('gezaaid', ?)", String(Date.now()));
+    this.sql.exec("INSERT OR REPLACE INTO stand (k, v) VALUES ('versie', ?)", DEMO_VERSIE);
   }
   async alles(){
     const uit = [];
@@ -589,30 +608,20 @@ export class Pmt extends DurableObject {
   }
   async zaai(wie){
     const l = await this.zaaiLijst(wie);
+    const mon = this.lijsten().find(x => x.proef && x.monitor);
+    const erbij = async (dossier, lijst, waarden, t, door) => {
+      const antw = {}; lijst.vragen.forEach((q, i) => { antw[q.id] = waarden[i]; });
+      const m = reken(lijst, antw);
+      if (m) this.sql.exec("INSERT INTO meting (id, dossier, inhoud, t) VALUES (?, ?, ?, ?)", willekeur(9), dossier, await this.dicht(Object.assign(m, { lijst: lijst.id }, door ? { door } : {})), t);
+    };
     for (const v of voorbeelden()){
       const d = await this.bewaar(null, v, wie);
-      /* Sam heeft al drie metingen, zodat er iets te zien is */
-      if (d && v.voornaam === "Sam"){
-        /* en acht weken van de wekelijkse check, van Sam zelf en van de mentor;
-           in de laatste week zakt het regelen van emoties bij allebei */
-        const mon = this.lijsten().find(x => x.proef && x.monitor);
-        if (mon){
-          const weken = { leerling: [[2, 1, 3, 2, 3, 2], [2, 2, 3, 3, 3, 2], [3, 2, 3, 3, 2, 3], [3, 3, 4, 4, 3, 3], [3, 3, 3, 4, 3, 4], [4, 3, 4, 4, 3, 4], [4, 4, 4, 4, 4, 4], [4, 4, 4, 2, 3, 5]],
-            mentor: [[2, 2, 3, 2, 3, 2], [2, 2, 3, 2, 3, 3], [3, 2, 3, 3, 3, 3], [3, 3, 3, 3, 3, 3], [3, 3, 4, 4, 3, 3], [3, 3, 4, 4, 3, 4], [4, 4, 4, 4, 3, 4], [4, 3, 4, 3, 3, 4]] };
-          for (const door of Object.keys(weken)){
-            for (let i = 0; i < weken[door].length; i++){
-              const antw = {}; mon.vragen.forEach((q, n) => { antw[q.id] = weken[door][i][n]; });
-              const m = reken(mon, antw);
-              if (m) this.sql.exec("INSERT INTO meting (id, dossier, inhoud, t) VALUES (?, ?, ?, ?)", willekeur(9), d.id, await this.dicht(Object.assign(m, { lijst: mon.id, door })), Date.now() - (weken[door].length - 1 - i) * WEEK - 3600000);
-            }
-          }
-        }
-        const rondes = [[-84, [2, 2, 4, 3, 3, 4, 2, 3, 4]], [-42, [3, 2, 3, 4, 3, 3, 3, 3, 3]], [-7, [4, 3, 2, 4, 4, 2, 3, 4, 3]]];
-        for (const [terug, w] of rondes){
-          const antw = {}; l.vragen.forEach((q, i) => { antw[q.id] = w[i]; });
-          const m = reken(l, antw);
-          if (m) this.sql.exec("INSERT INTO meting (id, dossier, inhoud, t) VALUES (?, ?, ?, ?)", willekeur(9), d.id, await this.dicht(Object.assign(m, { lijst: l.id })), Date.now() + terug * 86400000);
-        }
+      const c = d && VOORBEELDCIJFERS[v.voornaam];
+      if (!c) continue;
+      for (const [terug, w] of c.metingen) await erbij(d.id, l, w, Date.now() + terug * 86400000);
+      if (mon) for (const door of Object.keys(c.weken)){
+        const weken = c.weken[door];
+        for (let i = 0; i < weken.length; i++) await erbij(d.id, mon, weken[i], Date.now() - (weken.length - 1 - i) * WEEK - 3600000, door);
       }
     }
   }

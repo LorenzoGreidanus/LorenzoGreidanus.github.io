@@ -166,6 +166,9 @@ details.meting time{min-width:104px;color:var(--muted);font-size:.86rem;font-var
 .vbkeuzes.bollen span{width:40px;height:40px;border-radius:50%;padding:0;display:inline-grid;place-items:center;font-weight:600;font-size:.95rem}
 .vbuiteinden{display:flex;flex-wrap:wrap;justify-content:center;gap:2px 16px;font-size:.82rem;color:var(--muted)}
 .vbnav{display:flex;gap:8px;justify-content:center}
+.makerrechts .grafiek{padding:10px 8px}
+.makerrechts .grafiek svg{min-width:0}
+.makerrechts .raster td{min-width:38px}
 .vbpapier{background:#fff;color:#14224C;border-radius:10px;border:1px solid var(--rand2);padding:14px;font-size:.8rem;display:flex;flex-direction:column;gap:8px;overflow-x:auto}
 .vbpapier b.titel{font-size:1rem;font-weight:600}
 .vbpapier .prij{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;border-top:1px solid rgba(20,34,76,.15);padding-top:6px}
@@ -936,8 +939,9 @@ button.tegel:hover{border-color:var(--accent)}
   /* Een lijn per schaal, met de naam en de laatste score aan het eind van de
      lijn. Elke lijn heeft ook een eigen vorm van punt: de kleur is nooit het
      enige verschil. */
-  function grafiek(g){
-    var W = 700, H = 290, L = 34, R = 214, T = 16, B = 36, ms = g.metingen, n = ms.length;
+  function grafiek(g, smal){
+    /* smal: voor het voorbeeld in de lijstenmaker, dat in een smal vak staat */
+    var W = smal ? 460 : 700, H = smal ? 250 : 290, L = 34, R = smal ? 178 : 214, T = 16, B = 36, ms = g.metingen, n = ms.length;
     var x = function(i){ return n === 1 ? L + (W - L - R) / 2 : L + i * (W - L - R) / (n - 1); };
     var y = function(sc){ return T + (g.max - sc) * (H - T - B) / (g.max - 1); };
     var kind = [], v, i, zeg = [];
@@ -1115,7 +1119,7 @@ button.tegel:hover{border-color:var(--accent)}
       var m = model(), rij = L.vragen.filter(function(v){ return v.tekst.trim(); }), n = rij.length;
       if (vbNr >= n) vbNr = Math.max(0, n - 1);
       vb.textContent = '';
-      vb.appendChild(el('div', { class: 'filter', role: 'group', 'aria-label': 'Soort voorbeeld' }, [['scherm', 'Op het scherm'], ['papier', 'Op papier']].map(function(p){
+      vb.appendChild(el('div', { class: 'filter', role: 'group', 'aria-label': 'Soort voorbeeld' }, [['scherm', 'Op het scherm'], ['papier', 'Op papier'], ['dossier', 'In het dossier']].map(function(p){
         return el('button', { type: 'button', 'aria-pressed': vbSoort === p[0] ? 'true' : 'false', tekst: p[1], onclick: function(){ vbSoort = p[0]; tekenVoorbeeld(); } });
       })));
       var uiteinden = m.vorm === 'bollen' ? [el('span', { tekst: '1 = ' + (m.laag || 'het minst') }), el('span', { tekst: m.antwoorden.length + ' = ' + (m.hoog || 'het meest') })] : null;
@@ -1131,7 +1135,7 @@ button.tegel:hover{border-color:var(--accent)}
           el('button', { class: 'knop stil klein', type: 'button', tekst: 'Vorige vraag', disabled: vbNr === 0, onclick: function(){ vbNr--; tekenVoorbeeld(); } }),
           el('button', { class: 'knop stil klein', type: 'button', tekst: 'Volgende vraag', disabled: vbNr >= n - 1, onclick: function(){ vbNr++; tekenVoorbeeld(); } })]));
         vb.appendChild(el('p', { class: 'zacht', tekst: 'De leerling ziet een vraag per scherm en tikt een antwoord aan.' }));
-      } else {
+      } else if (vbSoort === 'papier'){
         var toon5 = rij.slice(0, 5);
         vb.appendChild(el('div', { class: 'vbpapier' }, [
           el('b', { class: 'titel', tekst: titel.value.trim() || 'Titel van de lijst' }),
@@ -1142,6 +1146,23 @@ button.tegel:hover{border-color:var(--accent)}
         }) : [el('span', { tekst: 'Hier komen je vragen, elk met een rij bolletjes.' })])
          .concat(n > 5 ? [el('span', { tekst: 'en nog ' + (n - 5) + (n - 5 === 1 ? ' zin' : ' zinnen') })] : [])));
         vb.appendChild(el('p', { class: 'zacht', tekst: 'Op papier kleurt de leerling bij elke zin een bolletje in. Printen doe je vanuit het dossier.' }));
+      } else {
+        /* Wat je er later van terugziet, met verzonnen cijfers: de grafiek per
+           schaal, of bij een wekelijkse check het raster per week. */
+        var namen = regels(schalen.value); if (!namen.length) namen = ['Totaal'];
+        var hoogste = m.antwoorden.length, keer = mon.checked ? 6 : 3, nu = Date.now(), nep = [];
+        for (var k = 0; k < keer; k++){
+          nep.push({ t: nu - (keer - 1 - k) * (mon.checked ? 7 : 42) * 86400000, door: 'leerling', monitor: mon.checked, max: hoogste,
+            schalen: namen.map(function(naamSchaal, j){
+              var begin = 1 + (hoogste - 1) * (0.2 + 0.09 * (j % 3)), stapje = (hoogste - 1) * (mon.checked ? 0.09 : 0.17 + 0.04 * ((j + 1) % 3));
+              var sc = Math.min(hoogste, begin + k * stapje);
+              return { naam: naamSchaal, score: mon.checked ? Math.round(sc) : Math.round(sc * 10) / 10 };
+            }) });
+        }
+        var g = { titel: titel.value.trim() || 'Titel van de lijst', max: hoogste, namen: namen, metingen: nep };
+        if (mon.checked) vb.appendChild(el('div', { class: 'grafiek', style: 'margin-top:0' }, [rasterTabel(g, 'leerling')]));
+        else vb.appendChild(el('div', { class: 'grafiek', style: 'margin-top:0' }, [grafiek(g, true)]));
+        vb.appendChild(el('p', { class: 'zacht', tekst: (mon.checked ? 'Zo komt de wekelijkse check in het dossier: een vakje per week, hoe donkerder hoe beter het lukte.' : 'Zo komt de ontwikkeling in het dossier te staan na een paar metingen: een lijn per schaal.') + ' De cijfers hier zijn verzonnen.' }));
       }
     }
     function tekenVragen(){
@@ -1202,7 +1223,7 @@ button.tegel:hover{border-color:var(--accent)}
     links.addEventListener('change', tekenVoorbeeld);
     scherm([
       el('div', { class: 'paginakop' }, [el('h1', { tekst: bron ? 'Vragenlijst bewerken' : 'Nieuwe vragenlijst' })]),
-      el('div', { class: 'maker' }, [links, el('aside', { class: 'makerrechts', 'aria-label': 'Voorbeeld' }, [el('h2', { tekst: 'Zo ziet de leerling het' }), vb])]),
+      el('div', { class: 'maker' }, [links, el('aside', { class: 'makerrechts', 'aria-label': 'Voorbeeld' }, [el('h2', { tekst: 'Voorbeeld' }), vb])]),
       el('div', { class: 'onder' }, [
         el('button', { class: 'knop', type: 'button', tekst: 'Opslaan', onclick: bewaar }),
         el('button', { class: 'knop stil', type: 'button', tekst: 'Terug zonder opslaan', onclick: tekenLijsten }),
