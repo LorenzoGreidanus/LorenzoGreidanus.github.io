@@ -518,8 +518,14 @@ export class Account extends DurableObject {
         if (!m || typeof m !== "object") return;
         const code = String(m.code || "").toUpperCase();
         if (!/^[A-Z0-9]{6}$/.test(code) || !/^[A-Z0-9]{20}$/.test(String(m.sleutel || ""))) return;
+        const oud = heb[code];
         heb[code] = { code, sleutel: String(m.sleutel), naam: String(m.naam || "Eigen materiaal").slice(0, 80),
                       soort: ({ lijst: 1, oefening: 1, dictee: 1 })[m.soort] ? m.soort : "oefening", gemaakt: Number(m.gemaakt) || Date.now() };
+        /* het archief (arch, archT): de nieuwste keuze wint, zodat een apparaat dat er nog niets
+           van weet het archief van een ander apparaat niet terugdraait */
+        const bron = oud && (Number(oud.archT) || 0) > (Number(m.archT) || 0) ? oud : m;
+        const t = Math.floor(Number(bron.archT)) || 0;
+        if (t > 0){ heb[code].archT = t; if (bron.arch) heb[code].arch = 1; }
       });
       weg.forEach(c => { delete heb[c]; });
       this.stand.materiaal = Object.keys(heb).map(c => heb[c]).sort((x, y) => y.gemaakt - x.gemaakt).slice(0, 200);

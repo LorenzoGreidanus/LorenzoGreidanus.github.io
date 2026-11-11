@@ -187,6 +187,7 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
 .lijstpaneel .melding{margin:0;padding:0 18px}
 .lijstpaneel .melding:empty{display:none}
 .lijstpaneel .melding:not(:empty){padding:10px 18px 14px}
+.archieftip{margin:0;padding:12px 18px;font-size:.86rem;color:var(--muted);border-top:1px solid var(--rand)}
 .lijstkop,.mrij{display:grid;grid-template-columns:minmax(0,2.4fr) minmax(0,.9fr) minmax(0,1.5fr) 344px;gap:16px;align-items:center;padding:14px 18px;border-top:1px solid var(--rand)}
 .lijstkop{padding-top:8px;padding-bottom:8px;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:600;color:var(--muted)}
 .mnaam{min-width:0}
@@ -832,7 +833,7 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
 
   /* toets of oefening weet je pas als de server het zei; tot dan telt het als oefening */
   function soortVan(m){ return m.soort === 'oefening' || !m.soort ? ((info[m.code] || {}).modus === 'toets' ? 'toets' : 'oefening') : m.soort; }
-  var TABS = [['alles', 'Alles'], ['toets', 'Toetsen'], ['oefening', 'Oefeningen'], ['lijst', 'Woordenlijsten'], ['dictee', 'Dictees'], ['topo', 'Topografie']];
+  var TABS = [['alles', 'Alles'], ['toets', 'Toetsen'], ['oefening', 'Oefeningen'], ['lijst', 'Woordenlijsten'], ['dictee', 'Dictees'], ['topo', 'Topografie'], ['archief', 'Archief']];
   var BADGE = { toets: 'Toets', oefening: 'Oefening', lijst: 'Woordenlijst', dictee: 'Dictee', topo: 'Topografie' };
   function eenheid(s, n){ return s === 'lijst' ? (n === 1 ? 'woord' : 'woorden') : s === 'dictee' ? (n === 1 ? 'zin' : 'zinnen') : s === 'topo' ? (n === 1 ? 'plek' : 'plekken') : (n === 1 ? 'vraag' : 'vragen'); }
   var tab = 'alles';
@@ -883,6 +884,7 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
       (s === 'toets' || s === 'oefening' ? (window.NAKIJK && (info[m.code] || {}).open ? '<button role="menuitem" type="button" data-uitslag="' + c + '">Resultaten</button>' : '') +
         '<a role="menuitem" href="papieren-toets.html?code=' + c + '" target="_blank" rel="noopener">Op papier</a>' : '') +
       '<span role="separator"></span>' +
+      '<button role="menuitem" type="button" data-arch="' + c + '" data-aan="' + (m.arch ? '0' : '1') + '">' + (m.arch ? 'Terug uit het archief' : 'Naar het archief') + '</button>' +
       '<button role="menuitem" type="button" class="gevaar" data-weg="' + c + '" data-naam="' + schoon(m.naam) + '">Weghalen</button>';
     return '<div class="menuhouder"><button class="meerknop" type="button" data-menu aria-haspopup="true" aria-expanded="false" aria-controls="' + id + '" aria-label="Meer bij ' + schoon(m.naam) + '" data-f="' + c + ':meer">' + STIPPEN + '</button>' +
       '<div class="menu" role="menu" id="' + id + '" aria-label="' + schoon(m.naam) + '" hidden>' + l + '</div></div>';
@@ -896,26 +898,31 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
       '<div class="macties">' + hoofdKnop(m, s, x) + '<button class="knop stil klein" type="button" data-werk="' + c + '" data-f="' + c + ':werk">Bewerken</button>' + meerMenu(m, s) + '</div></div>';
   }
   function tekenLijst(){
-    var l = EIGEN.mijn(), z = $('zoek').value.trim().toLowerCase(), tel = { alles: l.length };
-    l.forEach(function(m){ var s = soortVan(m); tel[s] = (tel[s] || 0) + 1; });
+    /* wat in het archief staat, telt alleen mee op het tabblad Archief */
+    var l = EIGEN.mijn(), z = $('zoek').value.trim().toLowerCase(), tel = { alles: 0, archief: 0 };
+    l.forEach(function(m){ if (m.arch){ tel.archief++; return; } tel.alles++; var s = soortVan(m); tel[s] = (tel[s] || 0) + 1; });
     if (!tel[tab]) tab = 'alles';
+    var inArchief = tab === 'archief';
     /* de focus blijft op dezelfde knop staan, ook als de lijst opnieuw getekend wordt */
     var f = document.activeElement, fk = f && $('lijstvak').contains(f) ? f.getAttribute('data-f') : null;
-    $('tabs').innerHTML = TABS.filter(function(t){ return tel[t[0]]; }).map(function(t){
+    $('tabs').innerHTML = TABS.filter(function(t){ return tel[t[0]] || (t[0] === 'alles' && tel.archief); }).map(function(t){
       var aan = t[0] === tab;
       return '<button class="tab" type="button" role="tab" aria-selected="' + aan + '" tabindex="' + (aan ? 0 : -1) + '" aria-controls="stukken" data-tab="' + t[0] + '" data-f="tab:' + t[0] + '">' + t[1] + ' <span class="tal">' + tel[t[0]] + '</span></button>';
     }).join('');
-    var zicht = l.filter(function(m){ return (tab === 'alles' || soortVan(m) === tab) && (!z || String(m.naam).toLowerCase().indexOf(z) >= 0 || m.code.toLowerCase().indexOf(z) >= 0); });
+    var zicht = l.filter(function(m){ return (inArchief ? !!m.arch : !m.arch && (tab === 'alles' || soortVan(m) === tab)) && (!z || String(m.naam).toLowerCase().indexOf(z) >= 0 || m.code.toLowerCase().indexOf(z) >= 0); });
     $('lijstpaneel').classList.toggle('leeglijst', !l.length);
     $('vergelijkKnop').classList.toggle('hide', !(tel.toets || tel.oefening));
     $('stukken').innerHTML = !l.length ? '<p class="leeg">Nog niets gemaakt. Begin hierboven met een toets of oefening, een woordenlijst, een dictee of topografie, of met een voorbeeld hieronder.</p>'
-      : !zicht.length ? '<p class="leeg">Niets gevonden' + (z ? ' met "' + schoon($('zoek').value.trim()) + '"' : '') + '. Zoek op een deel van de naam of op de code.</p>'
-      : zicht.map(rijHtml).join('');
+      : !zicht.length ? (!z && !inArchief ? '<p class="leeg">Alles staat in het archief. Kijk op het tabblad Archief, of maak hierboven iets nieuws.</p>'
+        : '<p class="leeg">Niets gevonden' + (z ? ' met "' + schoon($('zoek').value.trim()) + '"' : '') + '. Zoek op een deel van de naam of op de code.</p>')
+      : (inArchief ? '<p class="archieftip">In het archief blijft alles bewaard: de code werkt nog en de resultaten blijven staan. Zet een stuk terug via de drie puntjes.</p>' : '') + zicht.map(rijHtml).join('');
     if (fk){ var terug = $('lijstvak').querySelector('[data-f="' + fk + '"]'); if (terug) terug.focus(); }
     tekenNakijk(l);
     l.forEach(function(m){
       var x = info[m.code];
       /* oefeningen en toetsen een keer per bezoek (er komt steeds werk binnen); de rest alleen als het nog niet bekend is */
+      /* het archief pas ophalen als de docent ernaar kijkt */
+      if (m.arch && !inArchief) return;
       if (m.soort === 'oefening' || !m.soort || !x || x.n == null) vraagInfo(m);
     });
   }
@@ -959,6 +966,12 @@ body.bewerkstand .wrap{width:min(100% - 28px,1360px)}
     if (g('data-dupl')) dupliceer(g('data-dupl'), false);
     if (g('data-oefentoets')) dupliceer(g('data-oefentoets'), true);
     if (g('data-bord')){ var m = mijnVan(g('data-bord')); if (m) toonBord(m.code, m.soort, m.naam); }
+    if (g('data-arch')){
+      var naar = g('data-aan') === '1';
+      menuDicht();
+      EIGEN.archief(g('data-arch'), naar).then(function(){ tekenLijst(); melding($('lijstMelding'), naar ? 'In het archief gezet. Je vindt het terug op het tabblad Archief.' : 'Teruggezet in de lijst.', 'goed'); })
+        .catch(function(f){ melding($('lijstMelding'), f.message, 'fout'); });
+    }
     if (weg){
       if (!confirm('"' + g('data-naam') + '" weghalen? Leerlingen kunnen het daarna niet meer openen, en alle inleveringen en je nakijkwerk zijn ook weg. Dit kan niet terug.')) return;
       b.disabled = true;

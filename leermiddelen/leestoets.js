@@ -32,7 +32,7 @@ window.LEESTOETS = (function(){
   function laad(m){
     var bank = m === true || !!(m && (m.teksten || []).some(function(t){ return t.bank; }));
     return (window.LEESBANK ? Promise.resolve() : script('leesbank.js?v=1')).then(function(){
-      return Promise.all([window.LEESBLAD ? null : script('leesblad.js?v=3'), bank && !LEESBANK.TEKSTEN.length ? script('leesteksten.js?v=1') : null]);
+      return Promise.all([window.LEESBLAD ? null : script('leesblad.js?v=4'), bank && !LEESBANK.TEKSTEN.length ? script('leesteksten.js?v=1') : null]);
     });
   }
   function eigenTekst(tk){

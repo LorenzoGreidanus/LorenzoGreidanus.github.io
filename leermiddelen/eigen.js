@@ -8,6 +8,8 @@
      EIGEN.weg(code)             -> weghalen, van de server en uit de eigen lijst
      EIGEN.mijn()                -> de eigen lijst op dit apparaat [{code, sleutel, naam, soort, gemaakt}]
      EIGEN.afstemmen()           -> de eigen lijst met het Microsoft-account gelijk trekken
+     EIGEN.archief(code, aan)    -> een stuk in het archief zetten of eruit halen (arch en archT in de eigen lijst);
+                                    het blijft bestaan en leerlingen kunnen het nog openen, het staat alleen niet meer in de lijst
      EIGEN.vragenUitLijst(m)     -> een woordenlijst als meerkeuzevragen voor de spellen
      EIGEN.oefeningUitLijst(m,n) -> een woordenlijst als oefening voor oefen.html
      EIGEN.plakken(tekst)        -> paren uit geplakte tekst (tab, =, ;, : of " - ")
@@ -45,7 +47,9 @@ var EIGEN = (function(){
                  : vraag('/api/materiaal', 'POST', m);
     return p.then(function(j){
       var c = code || j.code, l = mijn().filter(function(x){ return x.code !== c; });
-      l.unshift(Object.assign({ code: c, sleutel: code ? eigen.sleutel : j.sleutel, naam: m.naam, soort: m.soort, gemaakt: eigen ? eigen.gemaakt : Date.now() }, m.soort === 'oefening' && m.modus === 'toets' ? { modus: 'toets' } : {}));
+      l.unshift(Object.assign({ code: c, sleutel: code ? eigen.sleutel : j.sleutel, naam: m.naam, soort: m.soort, gemaakt: eigen ? eigen.gemaakt : Date.now() }, m.soort === 'oefening' && m.modus === 'toets' ? { modus: 'toets' } : {},
+        /* bewerken haalt een stuk niet uit het archief */
+        eigen && eigen.archT ? (eigen.arch ? { arch: 1, archT: eigen.archT } : { archT: eigen.archT }) : {}));
       zetMijn(l);
       afstemmen();
       return { code: c };
@@ -60,6 +64,17 @@ var EIGEN = (function(){
     };
     if (!eigen){ klaar(); return Promise.resolve(); }
     return vraag('/api/materiaal/' + code + '/weg', 'POST', { sleutel: eigen.sleutel }).then(klaar);
+  }
+  /* In het archief: het stuk verdwijnt uit de lijst in Mijn materiaal, meer niet. archT is
+     het moment van de keuze: bij afstemmen met het account wint de nieuwste keuze, zodat
+     een ander apparaat het archief overneemt in plaats van het terug te draaien. */
+  function archief(code, aan){
+    var l = mijn(), m = l.filter(function(x){ return x.code === code; })[0];
+    if (!m) return Promise.reject(new Error('Dit materiaal staat niet bij jou.'));
+    if (aan) m.arch = 1; else delete m.arch;
+    m.archT = Date.now();
+    zetMijn(l);
+    return afstemmen().then(function(){ return m; });
   }
   /* Met de sleutel van wie het maakte: alles ophalen, de uitslagen, nakijken en de norm. */
   function metSleutel(code, pad, extra){
@@ -116,7 +131,12 @@ var EIGEN = (function(){
         if (!j) return null;
         zet(WEG, []);
         var heb = {}; mijn().forEach(function(x){ heb[x.code] = x; });
-        (j.materiaal || []).forEach(function(x){ if (!heb[x.code]) heb[x.code] = x; });
+        (j.materiaal || []).forEach(function(x){
+          var h = heb[x.code];
+          if (!h){ heb[x.code] = x; return; }
+          /* het archief: de nieuwste keuze wint, ook als die van een ander apparaat komt */
+          if ((Number(x.archT) || 0) > (Number(h.archT) || 0)){ h.archT = Number(x.archT); if (x.arch) h.arch = 1; else delete h.arch; }
+        });
         var l = Object.keys(heb).map(function(c){ return heb[c]; }).sort(function(a, b){ return (b.gemaakt || 0) - (a.gemaakt || 0); });
         zetMijn(l);
         return l;
@@ -256,7 +276,7 @@ var EIGEN = (function(){
     if (opts.code) laad(opts.code);
     return { laad: laad, code: function(){ return gekozen; } };
   }
-  return { haal: haal, bewaar: bewaar, weg: weg, mijn: mijn, afstemmen: afstemmen, kiezer: kiezer,
+  return { haal: haal, bewaar: bewaar, weg: weg, mijn: mijn, afstemmen: afstemmen, archief: archief, kiezer: kiezer,
            volledig: volledig, uitslagen: uitslagen, nakijk: nakijk, instel: instel, wisUitslag: wisUitslag, papier: papier, inlever: inlever,
            afbeelding: afbeelding, afbAdres: afbAdres, verklein: verklein,
            vragenUitLijst: vragenUitLijst, oefeningUitLijst: oefeningUitLijst, plakken: plakken, schud: schud, trek: trek };

@@ -127,7 +127,8 @@ window.LEESBLAD = (function(){
     '.blad > ol > li.lb-li{counter-increment:none;padding-left:0;break-inside:auto}' +
     '.blad > ol > li.lb-li::before{display:none}' +
     '.blad > ol > li.lb-li + li.lb-li{border-top:2px solid #14224C;margin-top:10px;padding-top:18px}' +
-    '@media print{.lb-tekst{break-inside:auto}.lb-op{break-inside:avoid}}';
+    /* op papier staat een tekst altijd in zijn geheel op een bladzijde, met zijn kopje erboven; past hij niet meer, dan begint hij op de volgende */
+    '@media print{.lb[class*="lb-v-"],.blad > ol > li.lb-li.tekstblok{break-inside:avoid;page-break-inside:avoid}.lb-intro{break-after:avoid}.lb-op{break-inside:avoid}}';
   var gezet = false;
   function stijl(){
     if (gezet) return; gezet = true;

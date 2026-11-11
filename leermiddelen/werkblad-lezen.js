@@ -19,7 +19,7 @@
   function laad(){
     if (window.LEESBLAD && B.TEKSTEN.length) return Promise.resolve();
     if (laden) return laden;
-    laden = Promise.all([window.LEESBLAD ? null : script('leesblad.js?v=3'), B.TEKSTEN.length ? null : script('leesteksten.js?v=1')])
+    laden = Promise.all([window.LEESBLAD ? null : script('leesblad.js?v=4'), B.TEKSTEN.length ? null : script('leesteksten.js?v=1')])
       .then(function(){}, function(e){ laden = null; throw e; });
     return laden;
   }

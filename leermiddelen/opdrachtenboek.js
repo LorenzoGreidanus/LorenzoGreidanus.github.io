@@ -1155,7 +1155,7 @@ window.OPDRACHTENBOEK = (function(){
   function laadLezen(vak){
     if (!paragrafen(vak).some(function(x){ return x.p.lezen; })) return Promise.resolve();
     return (window.LEESBANK ? Promise.resolve() : script('leesbank.js?v=1')).then(function(){
-      return Promise.all([window.LEESBLAD ? null : script('leesblad.js?v=3'), LEESBANK.TEKSTEN.length ? null : script('leesteksten.js?v=1')]);
+      return Promise.all([window.LEESBLAD ? null : script('leesblad.js?v=4'), LEESBANK.TEKSTEN.length ? null : script('leesteksten.js?v=1')]);
     });
   }
   /* een leesblad: een tekst met taken voor het doel, op een niveau dat in het boek aan staat */
