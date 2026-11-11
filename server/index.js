@@ -20,12 +20,15 @@ export { Materiaal } from "./materiaal.js";
 export { Beheer } from "./beheer.js";
 export { Profiel } from "./profiel.js";
 export { Account } from "./account.js";
+/* PMT: de dossiers op pmt.meneergreidanus.nl, los van de rest (zie pmt.js) */
+export { Pmt } from "./pmt.js";
 /* De klassen heten nog Zombiekamer omdat een Durable Object hernoemen om een
    migratie vraagt; het spel zelf heet De stad. */
 export { Zombiekamer, Veld } from "./stad.js";
 /* De personages van De stad: een object per speler, alleen voor de potjes (geen route) */
 export { Stadheld } from "./stad.js";
 import { behandel as accountBehandel, ingelogd as accountIngelogd, mogelijk as accountMogelijk, isEigenaar, naamVan as accountNaam, kenmerkVan as accountKenmerk, eigenaarVan as accountEigenaar, zorgVoorCode as accountZorgVoorCode, verhuisCode as accountVerhuisCode } from "./account.js";
+import { behandel as pmtBehandel } from "./pmt.js";
 const KLASSEMENTEN = { toren: true, zwaard: true, dag: true, mijnwerker: true, poortrace: true, kaarttoren: true, torendag: true };   /* dag en torendag: per datum een lijst, dag-2026-09-19 */
 /* de klassementen die per datum gaan: de Dagelijkse uitdaging en de daguitdaging van Torenverdediging */
 const PER_DAG = { dag: true, torendag: true };
@@ -161,6 +164,17 @@ export default {
   }
 };
 
+/* De pagina van PMT: nooit bewaren, nooit in een frame, niet voor zoekmachines. */
+async function pmtPagina(env, req, url, bestand){
+  const r = await env.ASSETS.fetch(new Request(url.origin + "/pmt/" + bestand, { headers: req.headers }));
+  const h = new Headers(r.headers);
+  h.set("cache-control", "no-store");
+  h.set("x-frame-options", "DENY");
+  h.set("x-robots-tag", "noindex, nofollow");
+  h.set("referrer-policy", "no-referrer");
+  return new Response(r.body, { status: r.status, headers: h });
+}
+
 async function verdeel(req, env, ctx){
     const url = new URL(req.url);
     const p = url.pathname;
@@ -169,6 +183,31 @@ async function verdeel(req, env, ctx){
        (AADSTS50011) en staat het sessiekoekje op de verkeerde host. */
     if (url.hostname.startsWith("www.")){
       return new Response(null, { status: 308, headers: { location: url.protocol + "//" + url.hostname.slice(4) + url.pathname + url.search, "cache-control": "public, max-age=86400" } });
+    }
+
+    /* PMT woont op een eigen adres. Daar bestaat alleen de PMT-pagina met haar
+       eigen api; de spellen en de rest van de site zijn er niet. Op het gewone
+       adres bestaat de api van PMT juist niet, en /pmt/ stuurt door. Lokaal
+       (testen) is er maar een adres: daar staat PMT onder /pmt/. */
+    const opPmt = url.hostname.startsWith("pmt.");
+    const lokaal = url.hostname === "localhost" || url.hostname === "127.0.0.1";
+    if (p === "/api/pmt" || p.startsWith("/api/pmt/")){
+      if (!opPmt && !lokaal) return json({ fout: "onbekend" }, 404);
+      return pmtBehandel(req, env, url, { magDoor: (wat, per, s, kijk) => magDoor(env, req, wat, per, s, kijk) });
+    }
+    if (opPmt){
+      if (p.startsWith("/api/") || p.startsWith("/ws/")) return json({ fout: "onbekend" }, 404);
+      if (p === "/") return pmtPagina(env, req, url, "index.html");
+      /* hier vult de leerling een vragenlijst in, met de code van vandaag */
+      if (p === "/invullen") return pmtPagina(env, req, url, "invullen.html");
+      if (p === "/fonts.css" || p.startsWith("/fonts/") || ["/favicon.ico", "/favicon.svg", "/apple-touch-icon.png"].indexOf(p) >= 0) return env.ASSETS.fetch(req);
+      return new Response(null, { status: 302, headers: { location: "/", "cache-control": "no-store" } });
+    }
+    if (p === "/pmt" || p.startsWith("/pmt/")){
+      if (!lokaal) return new Response(null, { status: 302, headers: { location: "https://pmt." + url.hostname + "/", "cache-control": "no-store" } });
+      if (p === "/pmt") return new Response(null, { status: 302, headers: { location: "/pmt/", "cache-control": "no-store" } });
+      if (p === "/pmt/" || p === "/pmt/index.html") return pmtPagina(env, req, url, "index.html");
+      if (p === "/pmt/invullen" || p === "/pmt/invullen.html") return pmtPagina(env, req, url, "invullen.html");
     }
 
     /* korte weg voor docenten: meneergreidanus.nl/docent */

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>
+(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();
+</script>
+<title>Vragenlijst invullen</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#204ECF">
+<link rel="icon" href="/favicon.svg">
+<link rel="stylesheet" href="/fonts.css?v=2">
+<style>
+/* ---------------------------------------------------------------------------
+   Het scherm van de leerling: een vraag per keer, grote knoppen, een balk die
+   laat zien hoe ver je bent. Past op een schoollaptop (1366 bij 768) zonder
+   schuiven en op een telefoon. Niets wordt in de browser bewaard.
+   --------------------------------------------------------------------------- */
+:root{--crab:#F26749;--amber:#EA9836;--ocean:#204ECF;--vista:#83A5F2;
+  --room:#FBF6F1;--ink:#14224C;--muted:#5b6480;--kaart:#fff;--rand2:rgba(20,34,76,.24);--spoor:#E9E2D8;--accent:#204ECF;--let:#FDEDE8}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--room:#0F1A3D;--ink:#F3EFE9;--muted:#B3BBD0;--kaart:#182652;--rand2:rgba(243,239,233,.3);--spoor:#24346a;--accent:#a9c1f7;--let:#3a2430;color-scheme:dark}}
+:root[data-theme="dark"]{--room:#0F1A3D;--ink:#F3EFE9;--muted:#B3BBD0;--kaart:#182652;--rand2:rgba(243,239,233,.3);--spoor:#24346a;--accent:#a9c1f7;--let:#3a2430;color-scheme:dark}
+*{box-sizing:border-box}
+html{background:var(--room)}
+body{margin:0;min-height:100svh;background:var(--room);color:var(--ink);line-height:1.5;font-family:'Poppins',system-ui,-apple-system,'Segoe UI',Arial,sans-serif;-webkit-font-smoothing:antialiased;display:grid;place-items:center;padding:20px 16px}
+h1,h2{margin:0;font-weight:600;line-height:1.2;letter-spacing:-.01em;text-wrap:balance}
+p{margin:0}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+[hidden]{display:none !important}
+:focus-visible{outline:3px solid #B4701A;outline-offset:3px}
+.blad{width:min(720px,100%);display:flex;flex-direction:column;align-items:center;gap:20px;text-align:center}
+.pen{font-family:'Caveat','Segoe Script',cursive;font-size:1.7rem;color:var(--crab);line-height:1}
+.zacht{color:var(--muted);font-size:.95rem;max-width:52ch}
+.knop{display:inline-flex;align-items:center;justify-content:center;min-height:52px;padding:0 26px;border-radius:14px;border:0;background:var(--ocean);color:#fff;font-weight:600;font-size:1.05rem;box-shadow:0 4px 0 #173a9c}
+.knop:active{transform:translateY(2px);box-shadow:0 2px 0 #173a9c}
+.knop[disabled]{opacity:.45;cursor:default}
+.terug{background:transparent;border:0;color:var(--muted);font-weight:500;min-height:44px;padding:0 12px;text-decoration:underline;text-underline-offset:3px}
+.melding{background:var(--let);border-radius:12px;padding:10px 16px}
+#code{width:min(320px,100%);min-height:64px;text-align:center;font-size:2rem;font-weight:600;letter-spacing:.3em;text-transform:uppercase;border-radius:16px;border:2px solid var(--rand2);background:var(--kaart);color:var(--ink);padding:0 0 0 .3em}
+#code:focus{border-color:var(--accent);outline:none}
+.balk{width:min(460px,100%);height:12px;border-radius:999px;background:var(--spoor);overflow:hidden}
+.balk i{display:block;height:100%;width:0;background:var(--ocean);border-radius:999px;transition:width 200ms}
+@media (prefers-reduced-motion:reduce){.balk i{transition:none}}
+.stelling{font-size:clamp(1.3rem,3.2vw,1.9rem);max-width:26ch;min-height:3.6em;display:grid;place-items:center}
+.keuzes{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;width:100%}
+.keuzes button{flex:1 1 120px;max-width:200px;min-height:64px;padding:8px 12px;border-radius:16px;border:2px solid var(--ink);background:var(--kaart);font-weight:500;font-size:1.02rem}
+.keuzes button:hover{border-color:var(--accent)}
+.keuzes button[aria-pressed="true"]{background:var(--ocean);border-color:var(--ocean);color:#fff;font-weight:600}
+@media (max-width:520px){.keuzes{flex-direction:column;align-items:stretch}.keuzes button{max-width:none;flex:none;min-height:54px}}
+</style>
+</head>
+<body>
+<main class="blad" id="blad" aria-live="polite"></main>
+<script>
+(function(){
+  'use strict';
+  var blad = document.getElementById('blad');
+  var S = { code: '', lijst: null, antw: {}, nu: 0 };
+  function el(t, a, k){
+    var e = document.createElement(t), n;
+    for (n in (a || {})){
+      if (n === 'tekst') e.textContent = a[n];
+      else if (n.slice(0, 2) === 'on') e.addEventListener(n.slice(2), a[n]);
+      else if (a[n] === true) e.setAttribute(n, '');
+      else if (a[n] !== false && a[n] != null) e.setAttribute(n, a[n]);
+    }
+    (k || []).forEach(function(c){ if (c) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+    return e;
+  }
+  function toon(k){ blad.textContent = ''; k.forEach(function(c){ if (c) blad.appendChild(c); }); }
+  function schoon(c){ return String(c || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 6); }
+
+  /* ---------- de code ---------- */
+  function vraagCode(melding){
+    var veld = el('input', { id: 'code', type: 'text', inputmode: 'text', autocomplete: 'off', autocapitalize: 'characters', spellcheck: 'false', maxlength: '6', 'aria-label': 'Code van zes letters' });
+    veld.value = S.code;
+    veld.addEventListener('input', function(){ veld.value = schoon(veld.value); });
+    toon([
+      el('span', { class: 'pen', tekst: 'vragenlijst' }),
+      el('h1', { tekst: 'Welke code heb je gekregen?' }),
+      el('p', { class: 'zacht', tekst: 'Je kreeg zes letters van mevrouw Schipper. Tik ze hier in.' }),
+      melding ? el('p', { class: 'melding', role: 'alert', tekst: melding }) : null,
+      el('form', { style: 'display:flex;flex-direction:column;align-items:center;gap:18px;width:100%', onsubmit: function(ev){
+        ev.preventDefault();
+        var c = schoon(veld.value);
+        if (c.length !== 6){ veld.focus(); return; }
+        haal(c);
+      } }, [veld, el('button', { class: 'knop', type: 'submit', tekst: 'Verder' })])
+    ]);
+    veld.focus();
+  }
+  function haal(code){
+    S.code = code;
+    toon([el('p', { class: 'zacht', tekst: 'Even zoeken' })]);
+    fetch('/api/pmt/afname/' + code, { cache: 'no-store' }).then(function(r){
+      return r.json().then(function(j){
+        if (!r.ok){ vraagCode(r.status === 429 ? 'Er is te vaak een verkeerde code geprobeerd. Wacht een paar minuten.' : 'Deze code klopt niet, of hij is al gebruikt. Kijk nog eens goed, of vraag een nieuwe code.'); return; }
+        if (j.al){ toon([el('span', { class: 'pen', tekst: 'al gedaan' }), el('h1', { tekst: 'Deze check is vandaag al ingevuld' }), el('p', { class: 'zacht', tekst: 'Tot volgende week. Je kunt dit scherm sluiten.' })]); return; }
+        S.lijst = j; S.antw = {}; S.nu = 0; welkom();
+      });
+    }).catch(function(){ vraagCode('Er is geen verbinding. Probeer het nog een keer.'); });
+  }
+
+  /* ---------- de lijst ---------- */
+  function welkom(){
+    var l = S.lijst;
+    toon([
+      el('span', { class: 'pen', tekst: l.door === 'mentor' ? 'over ' + l.voornaam : 'Hoi ' + l.voornaam }),
+      el('h1', { tekst: l.titel }),
+      el('p', { class: 'zacht', tekst: l.uitleg || 'Kies bij elke zin wat het beste bij jou past. Er zijn geen goede of foute antwoorden.' }),
+      l.door === 'mentor' ? el('p', { class: 'zacht', tekst: 'De zinnen staan in de ik-vorm van ' + l.voornaam + '. Kies bij elke zin wat jij deze week bij ' + l.voornaam + ' zag.' }) : null,
+      el('p', { class: 'zacht', tekst: l.vragen.length + ' vragen. Je antwoorden gaan alleen naar mevrouw Schipper.' }),
+      el('button', { class: 'knop', type: 'button', tekst: 'Beginnen', onclick: vraag })
+    ]);
+    blad.querySelector('.knop').focus();
+  }
+  function vraag(){
+    var l = S.lijst, v = l.vragen[S.nu], gekozen = S.antw[v.id];
+    var keuzes = el('div', { class: 'keuzes', role: 'group', 'aria-label': 'Kies een antwoord' }, l.antwoorden.map(function(a, i){
+      return el('button', { type: 'button', 'aria-pressed': gekozen === i + 1 ? 'true' : 'false', tekst: a, onclick: function(){
+        S.antw[v.id] = i + 1;
+        if (S.nu < l.vragen.length - 1){ S.nu++; vraag(); } else einde();
+      } });
+    }));
+    var balk = el('div', { class: 'balk', role: 'progressbar', 'aria-valuemin': '0', 'aria-valuemax': String(l.vragen.length), 'aria-valuenow': String(S.nu) }, [el('i')]);
+    toon([
+      el('p', { class: 'zacht', tekst: 'Vraag ' + (S.nu + 1) + ' van ' + l.vragen.length }),
+      balk,
+      el('h1', { class: 'stelling', tekst: v.tekst }),
+      keuzes,
+      S.nu > 0 ? el('button', { class: 'terug', type: 'button', tekst: 'Terug naar de vorige vraag', onclick: function(){ S.nu--; vraag(); } }) : null
+    ]);
+    balk.firstChild.style.width = Math.round(100 * S.nu / l.vragen.length) + '%';
+  }
+  function einde(melding){
+    toon([
+      el('h1', { tekst: 'Dat waren alle vragen' }),
+      el('p', { class: 'zacht', tekst: 'Wil je nog iets veranderen? Dat kan nu nog. Daarna stuur je de lijst in.' }),
+      melding ? el('p', { class: 'melding', role: 'alert', tekst: melding }) : null,
+      el('button', { class: 'knop', type: 'button', id: 'stuur', tekst: 'Insturen', onclick: stuur }),
+      el('button', { class: 'terug', type: 'button', tekst: 'Terug naar de vragen', onclick: function(){ S.nu = S.lijst.vragen.length - 1; vraag(); } })
+    ]);
+    document.getElementById('stuur').focus();
+  }
+  function stuur(){
+    document.getElementById('stuur').disabled = true;
+    fetch('/api/pmt/afname/' + S.code, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ antwoorden: S.antw }) }).then(function(r){
+      return r.json().then(function(j){
+        if (r.status === 409){ S.lijst = null; toon([el('h1', { tekst: 'Deze check is vandaag al ingevuld' }), el('p', { class: 'zacht', tekst: 'Tot volgende week.' })]); return; }
+        if (!r.ok){ einde(r.status === 404 ? 'De code is verlopen. Vraag mevrouw Schipper om een nieuwe code.' : (j.fout || 'Het insturen lukte niet. Probeer het nog een keer.')); return; }
+        var naam = S.lijst.door === 'mentor' ? '' : S.lijst.voornaam;
+        S = { code: '', lijst: null, antw: {}, nu: 0 };
+        toon([el('span', { class: 'pen', tekst: 'klaar' }), el('h1', { tekst: naam ? 'Dank je wel, ' + naam : 'Dank je wel' }), el('p', { class: 'zacht', tekst: 'Je antwoorden zijn verstuurd. Je kunt dit scherm sluiten.' })]);
+      });
+    }).catch(function(){ einde('Er is geen verbinding. Probeer het nog een keer.'); });
+  }
+
+  /* weglopen met half ingevulde antwoorden: even vragen */
+  window.addEventListener('beforeunload', function(ev){ if (S.lijst && Object.keys(S.antw).length){ ev.preventDefault(); ev.returnValue = ''; } });
+
+  var uitAdres = schoon(location.hash.slice(1));
+  if (location.hash) history.replaceState(null, '', location.pathname);
+  if (uitAdres.length === 6) haal(uitAdres); else vraagCode();
+})();
+</script>
+</body>
+</html>

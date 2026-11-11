@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>
+(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();
+</script>
+<title>PMT &middot; dossiers</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#204ECF">
+<link rel="icon" href="/favicon.svg">
+<link rel="stylesheet" href="/fonts.css?v=2">
+<style>
+/* ---------------------------------------------------------------------------
+   PMT: links de leerlingen op een vlak van deep ocean, rechts een dossier.
+   Kleuren en letters uit het merkboek. De kleurtokens voor grond, tekst en
+   randen kantelen mee met het thema; de merkkleuren op vaste vlakken niet.
+   --------------------------------------------------------------------------- */
+:root{--crab:#F26749;--amber:#EA9836;--ocean:#204ECF;--vista:#83A5F2;--zand:#FCDED6;
+  --room:#FBF6F1;--ink:#14224C;--muted:#5b6480;--kaart:#fff;--kaart2:#f4efe8;--rand:rgba(20,34,76,.12);--rand2:rgba(20,34,76,.22);
+  --accent:#204ECF;--fout:#a8371f;--let:#FDEDE8;--schaduw:0 1px 2px rgba(20,34,76,.05),0 8px 24px rgba(20,34,76,.06);
+  --reeks0:#204ECF;--reeks1:#F26749;--reeks2:#14224C;--reeks3:#B4701A;--reeks4:#6B8FEA;--raster:rgba(20,34,76,.12)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--room:#0F1A3D;--ink:#F3EFE9;--muted:#B3BBD0;--kaart:#182652;--kaart2:#1f2f5e;--rand:rgba(243,239,233,.14);--rand2:rgba(243,239,233,.26);--accent:#a9c1f7;--fout:#ffb3a6;--let:#3a2430;--schaduw:0 1px 2px rgba(0,0,0,.2),0 10px 28px rgba(0,0,0,.25);--reeks0:#8FAEF5;--reeks1:#F26749;--reeks2:#F3EFE9;--reeks3:#EA9836;--reeks4:#5E7FD8;--raster:rgba(243,239,233,.14);color-scheme:dark}}
+:root[data-theme="dark"]{--room:#0F1A3D;--ink:#F3EFE9;--muted:#B3BBD0;--kaart:#182652;--kaart2:#1f2f5e;--rand:rgba(243,239,233,.14);--rand2:rgba(243,239,233,.26);--accent:#a9c1f7;--fout:#ffb3a6;--let:#3a2430;--schaduw:0 1px 2px rgba(0,0,0,.2),0 10px 28px rgba(0,0,0,.25);--reeks0:#8FAEF5;--reeks1:#F26749;--reeks2:#F3EFE9;--reeks3:#EA9836;--reeks4:#5E7FD8;--raster:rgba(243,239,233,.14);color-scheme:dark}
+*{box-sizing:border-box}
+html{background:var(--room)}
+body{margin:0;min-height:100svh;background:var(--room);color:var(--ink);line-height:1.5;font-family:'Poppins',system-ui,-apple-system,'Segoe UI',Arial,sans-serif;-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;font-weight:600;line-height:1.15;letter-spacing:-.01em}
+p{margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+[hidden]{display:none !important}
+:focus-visible{outline:3px solid #B4701A;outline-offset:2px}
+::selection{background:#FCDED6;color:#14224C}
+.pen{font-family:'Caveat','Segoe Script',cursive;font-size:1.5rem;color:var(--crab);line-height:1}
+.zacht{color:var(--muted);font-size:.9rem}
+
+/* ---------- niet ingelogd ---------- */
+.deur{min-height:100svh;display:grid;place-items:center;padding:24px 16px}
+.deur .kaart{width:min(440px,100%);background:var(--kaart);border:2px solid var(--ink);border-radius:22px;box-shadow:6px 6px 0 var(--vista);padding:30px 28px;display:flex;flex-direction:column;gap:14px}
+.deur h1{font-size:1.9rem}
+.melding{background:var(--let);border-radius:12px;padding:10px 14px;font-size:.92rem}
+
+/* ---------- knoppen en velden ---------- */
+.knop{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 18px;border-radius:12px;border:0;background:var(--ocean);color:#fff;font-weight:600;text-decoration:none;box-shadow:0 3px 0 #173a9c}
+.knop:active{transform:translateY(2px);box-shadow:0 1px 0 #173a9c}
+.knop.crab{background:var(--crab);color:#14224C;box-shadow:0 3px 0 #b9462f}
+.knop.stil{background:transparent;color:var(--ink);border:1.5px solid var(--rand2);box-shadow:none;font-weight:500}
+.knop.klein{min-height:36px;padding:0 12px;font-size:.88rem;border-radius:10px}
+.knop.weg{background:transparent;color:var(--fout);border:1.5px solid currentColor;box-shadow:none}
+label{display:flex;flex-direction:column;gap:4px;font-size:.84rem;font-weight:500;color:var(--muted)}
+input[type=text],input[type=date],select,textarea{width:100%;min-height:42px;padding:8px 12px;border-radius:10px;border:1.5px solid var(--rand2);background:var(--kaart);color:var(--ink);font-size:.96rem;font-weight:400}
+textarea{min-height:96px;resize:vertical;line-height:1.5}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 25%,transparent)}
+
+/* ---------- de indeling ---------- */
+.zij{position:fixed;inset:0 auto 0 0;width:264px;background:var(--ocean);color:#fff;display:flex;flex-direction:column;gap:6px;padding:20px 14px 14px;overflow-y:auto}
+.merk{display:flex;align-items:baseline;gap:8px;padding:0 8px 10px}
+.merk b{font-size:1.5rem;font-weight:600;letter-spacing:-.01em}
+.merk span{font-size:.8rem;opacity:.8}
+.zijkop{font-size:.72rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;opacity:.8;padding:12px 10px 4px}
+.namen{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+.namen button{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:42px;padding:0 10px;border:0;border-radius:10px;background:transparent;color:#fff;text-align:left;font-weight:500}
+.namen button:hover{background:rgba(255,255,255,.12)}
+.namen button[aria-current="true"]{background:#fff;color:#14224C;font-weight:600}
+.namen small{font-size:.74rem;opacity:.85;font-weight:400;white-space:nowrap}
+.zij .nieuw{margin-top:8px;background:#fff;color:#14224C;box-shadow:0 3px 0 rgba(20,34,76,.35)}
+.zijvoet{margin-top:auto;display:grid;gap:4px;padding-top:16px;font-size:.86rem}
+.zijvoet button{border:0;background:transparent;color:#fff;text-align:left;min-height:38px;padding:0 10px;border-radius:10px;font-weight:500}
+.zijvoet button:hover{background:rgba(255,255,255,.12)}
+.zijvoet .ik{padding:6px 10px 0;opacity:.85;font-size:.8rem}
+main{margin-left:264px;padding:26px clamp(16px,4vw,44px) 60px;max-width:1100px}
+.proef{background:var(--amber);color:#14224C;border-radius:12px;padding:8px 14px;font-size:.9rem;font-weight:500;margin-bottom:18px}
+
+.kop{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin-bottom:6px}
+.kop h1{font-size:1.8rem}
+.chip{display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:999px;font-size:.78rem;font-weight:600;background:var(--kaart2);color:var(--ink);border:1px solid var(--rand)}
+.chip.loopt{background:var(--ocean);color:#fff;border-color:transparent}
+.chip.intake{background:var(--amber);color:#14224C;border-color:transparent}
+.stand{margin-left:auto;font-size:.84rem;color:var(--muted)}
+.vak{background:var(--kaart);border:1px solid var(--rand);border-radius:18px;box-shadow:var(--schaduw);padding:20px 22px;margin-top:18px;display:flex;flex-direction:column;gap:14px}
+.vak h2{font-size:1.1rem}
+.rij{display:grid;grid-template-columns:2fr 1fr 1fr 1.4fr 1.4fr;gap:12px}
+.lijst{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.doel{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px}
+.doel input[type=checkbox]{width:22px;height:22px;accent-color:var(--ocean)}
+.doel.klaar span{text-decoration:line-through;color:var(--muted)}
+.erbij{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end}
+.notitie{display:grid;grid-template-columns:96px 1fr auto;gap:12px;align-items:start;padding:12px 0;border-top:1px solid var(--rand)}
+.notitie time{color:var(--muted);font-size:.86rem;font-variant-numeric:tabular-nums;padding-top:2px}
+.notitie p{white-space:pre-wrap;overflow-wrap:anywhere}
+.nieuwnotitie{display:grid;grid-template-columns:170px 1fr auto;gap:12px;align-items:end}
+.klaarzet{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end}
+.code{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;background:var(--kaart2);border-radius:14px;padding:12px 16px}
+.code .letters{font-size:1.7rem;font-weight:600;letter-spacing:.22em;font-variant-numeric:tabular-nums}
+.code .wat{flex:1 1 220px;font-size:.88rem;color:var(--muted)}
+details.meting{border-top:1px solid var(--rand);padding:10px 0}
+details.meting summary{cursor:pointer;display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;list-style:none}
+details.meting summary::-webkit-details-marker{display:none}
+details.meting summary::before{content:'+';width:22px;height:22px;border-radius:7px;border:1.5px solid var(--rand2);display:inline-grid;place-items:center;font-weight:600;line-height:1}
+details.meting[open] summary::before{content:'\2212'}
+details.meting time{min-width:104px;color:var(--muted);font-size:.86rem;font-variant-numeric:tabular-nums}
+.score{display:inline-flex;gap:6px;align-items:baseline;padding:2px 10px;border-radius:999px;background:var(--kaart2);font-size:.84rem}
+.score b{font-variant-numeric:tabular-nums}
+.antw{list-style:none;margin:10px 0 0;padding:0 0 0 34px;display:grid;gap:4px;font-size:.9rem}
+.antw li{display:grid;grid-template-columns:1fr auto;gap:12px}
+.antw b{font-weight:500;color:var(--accent);white-space:nowrap}
+.grafiek{margin-top:16px;border:1px solid var(--rand);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;break-inside:avoid}
+.grafiek h3{font-size:.98rem}
+.grafiek svg{display:block;width:100%;height:auto;max-width:760px}
+.grafiek svg text{font-family:inherit;font-size:12px;fill:var(--muted)}
+.grafiek svg text.naam{fill:var(--ink);font-weight:500}
+.grafiek svg .raster{stroke:var(--raster);stroke-width:1}
+.grafiek svg .lijn{fill:none;stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
+.r0{stroke:var(--reeks0);fill:var(--reeks0)}.r1{stroke:var(--reeks1);fill:var(--reeks1)}.r2{stroke:var(--reeks2);fill:var(--reeks2)}.r3{stroke:var(--reeks3);fill:var(--reeks3)}.r4{stroke:var(--reeks4);fill:var(--reeks4)}
+.grafiek td.num,.grafiek th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.grafiek .op{color:var(--accent);font-weight:600}
+.grafiek .af{color:var(--fout);font-weight:600}
+.verslag .vak{box-shadow:none}
+.verslagkop{display:flex;flex-wrap:wrap;gap:4px 18px;color:var(--muted);font-size:.92rem}
+.bol{width:30px;height:30px;border-radius:50%;border:1.5px solid var(--ink);display:inline-grid;place-items:center;font-size:.8rem;font-weight:500;font-variant-numeric:tabular-nums;background:var(--kaart);color:var(--ink);flex:none}
+.bollen{display:flex;gap:8px;justify-content:flex-end}
+.papier table{font-size:.95rem}
+.papier td{padding:10px 8px}
+.papier tr{break-inside:avoid}
+.papier .legenda{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:.9rem}
+.papier .lijn{display:inline-block;min-width:180px;border-bottom:1.5px solid var(--ink);height:1.3em;vertical-align:bottom}
+.invoer .rijtje{display:grid;grid-template-columns:1fr auto;gap:10px 16px;align-items:center;padding:8px 0;border-top:1px solid var(--rand)}
+.invoer .rijtje.mist{background:var(--let);border-radius:10px;padding:8px 10px}
+.invoer input[type=radio]{position:absolute;opacity:0;width:1px;height:1px}
+.invoer label.kies{flex-direction:row;cursor:pointer}
+.invoer input[type=radio]:checked + .bol{background:var(--ocean);border-color:var(--ocean);color:#fff;font-weight:600}
+.invoer input[type=radio]:focus-visible + .bol{outline:3px solid #B4701A;outline-offset:2px}
+.raster table{border-collapse:separate;border-spacing:4px;width:auto;font-size:.88rem}
+.raster th{border:0;padding:2px 4px;text-align:center;font-weight:500;font-size:.76rem;white-space:nowrap}
+.raster th.rij{text-align:left;color:var(--ink);font-size:.9rem;padding-right:14px}
+.raster td{border:0;text-align:center;border-radius:8px;padding:7px 0;min-width:50px;font-variant-numeric:tabular-nums;font-weight:500;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.t1{background:color-mix(in srgb,var(--ocean) 10%,var(--kaart))}
+.t2{background:color-mix(in srgb,var(--ocean) 28%,var(--kaart))}
+.t3{background:color-mix(in srgb,var(--ocean) 52%,var(--kaart));color:#fff}
+.t4{background:color-mix(in srgb,var(--ocean) 76%,var(--kaart));color:#fff}
+.t5{background:var(--ocean);color:#fff}
+.raster td.let{outline:3px solid var(--crab);outline-offset:-1px}
+.terugval{display:flex;gap:10px;align-items:flex-start;background:var(--let);border-radius:12px;padding:10px 14px;font-size:.92rem}
+.terugval b{color:var(--fout);white-space:nowrap}
+.lijstkaart{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;justify-content:space-between}
+.tweevak{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.vraagrij{display:grid;grid-template-columns:1fr 190px auto auto;gap:10px;align-items:center}
+.vraagrij label.om{flex-direction:row;align-items:center;gap:6px;white-space:nowrap}
+.vraagrij input[type=checkbox]{width:20px;height:20px;accent-color:var(--ocean)}
+.onder{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:22px}
+.zeker{display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:var(--let);border-radius:12px;padding:10px 14px;font-size:.92rem}
+.leeg{display:flex;flex-direction:column;align-items:flex-start;gap:14px;max-width:520px;padding-top:30px}
+.leeg h1{font-size:1.8rem}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th{text-align:left;font-weight:600;color:var(--muted);font-size:.8rem;padding:8px 10px;border-bottom:1.5px solid var(--rand2)}
+td{padding:9px 10px;border-bottom:1px solid var(--rand);vertical-align:top}
+td.tijd{white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--muted)}
+.schuif{overflow-x:auto}
+
+@media (max-width:860px){
+  .zij{position:static;width:auto;padding:14px}
+  .namen{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+  .zijvoet{margin-top:10px;grid-auto-flow:column;justify-content:start;align-items:center}
+  main{margin-left:0;padding-top:18px}
+  .rij{grid-template-columns:1fr 1fr}
+  .rij label:first-child{grid-column:1 / -1}
+  .nieuwnotitie,.notitie{grid-template-columns:1fr}
+  .tweevak,.vraagrij,.klaarzet{grid-template-columns:1fr}
+  .antw{padding-left:0}
+  .invoer .rijtje{grid-template-columns:1fr}
+  .bollen{justify-content:flex-start}
+  .stand{margin-left:0;width:100%}
+}
+/* het verslag op papier: alleen het verslag, in lichte kleuren */
+@media print{
+  :root,:root[data-theme="dark"],:root:not([data-theme="light"]){--room:#fff;--ink:#14224C;--muted:#4a5270;--kaart:#fff;--kaart2:#f1f1f4;--rand:rgba(20,34,76,.2);--rand2:rgba(20,34,76,.35);--accent:#204ECF;--fout:#a8371f;
+    --reeks0:#204ECF;--reeks1:#F26749;--reeks2:#14224C;--reeks3:#B4701A;--reeks4:#6B8FEA;--raster:rgba(20,34,76,.18);color-scheme:light}
+  .zij,.geenprint,.proef{display:none !important}
+  main{margin:0;padding:0;max-width:none}
+  .vak{border:0;padding:0;margin-top:22px}
+  .bol{border-color:#14224C;color:#4a5270}
+  body{font-size:11pt}
+}
+</style>
+</head>
+<body>
+
+<div class="deur" id="deur" hidden>
+  <div class="kaart">
+    <span class="pen">voor Marith</span>
+    <h1>PMT-dossiers</h1>
+    <p class="zacht" id="deurtekst">Log in met je Microsoft-account van school. Alleen wie op de toegangslijst staat komt binnen.</p>
+    <p class="melding" id="deurmelding" hidden></p>
+    <a class="knop" id="inlogknop" href="/api/pmt/inloggen">Inloggen met Microsoft</a>
+  </div>
+</div>
+
+<div id="app" hidden>
+  <nav class="zij" aria-label="Leerlingen">
+    <div class="merk"><b>PMT</b><span>dossiers</span></div>
+    <div class="zijkop" id="namenkop">Leerlingen</div>
+    <ul class="namen" id="namen"></ul>
+    <button class="knop nieuw" type="button" id="nieuwknop">Nieuw dossier</button>
+    <div class="zijvoet">
+      <button type="button" id="lijstknop">Vragenlijsten</button>
+      <button type="button" id="logknop">Logboek</button>
+      <button type="button" id="uitknop">Uitloggen</button>
+      <div class="ik" id="ik"></div>
+    </div>
+  </nav>
+  <main id="hoofd" tabindex="-1">
+    <div class="proef" id="proef" hidden>Dit is de proefomgeving. Zet hier alleen verzonnen leerlingen in, geen echte.</div>
+    <div id="scherm"></div>
+  </main>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var $ = function(id){ return document.getElementById(id); };
+  var S = { ik: null, lijst: [], lijsten: [], d: null, timer: null, klok: null, minuten: 15, bezig: null };
+  /* op het echte adres staat het leerlingscherm op /invullen, lokaal onder /pmt/ */
+  var INVUL = location.pathname.indexOf('/pmt/') === 0 ? '/pmt/invullen' : '/invullen';
+  function getal(x){ return Number(x).toLocaleString('nl-NL', { minimumFractionDigits: 1, maximumFractionDigits: 1 }); }
+  var STATUS = { intake: 'Intake', loopt: 'Loopt', afgerond: 'Afgerond' };
+
+  function el(t, a, k){
+    var e = document.createElement(t), n;
+    for (n in (a || {})){
+      if (n === 'tekst') e.textContent = a[n];
+      else if (n.slice(0, 2) === 'on') e.addEventListener(n.slice(2), a[n]);
+      else if (n === 'value') e.value = a[n];
+      else if (a[n] === true) e.setAttribute(n, '');
+      else if (a[n] !== false && a[n] != null) e.setAttribute(n, a[n]);
+    }
+    (k || []).forEach(function(c){ if (c) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+    return e;
+  }
+  function vandaag(){ var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  function mooieDatum(s){
+    if (!s) return 'geen datum';
+    var d = new Date(s + 'T12:00:00');
+    return isNaN(d) ? s : d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+  function mooieTijd(t){ return new Date(t).toLocaleString('nl-NL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); }
+  function naam(d){ return d.voornaam + (d.letter ? ' ' + d.letter + '.' : ''); }
+
+  /* Een kwartier niets gedaan: de server kent je dan niet meer, en het scherm
+     laat de dossiers ook niet meer zien. */
+  function zetKlok(){
+    clearTimeout(S.klok);
+    S.klok = setTimeout(function(){ naarDeur('verlopen'); }, S.minuten * 60000);
+  }
+  function api(pad, opt){
+    return fetch('/api/pmt' + pad, Object.assign({ cache: 'no-store', credentials: 'same-origin' }, opt || {})).then(function(r){
+      if (r.status === 401){ naarDeur('verlopen'); throw new Error('uit'); }
+      return r.json().then(function(j){
+        if (!r.ok) throw new Error(j && j.fout || 'dat lukte niet');
+        zetKlok();
+        return j;
+      });
+    });
+  }
+  function stuur(methode, pad, inhoud){
+    return api(pad, { method: methode, headers: { 'content-type': 'application/json' }, body: JSON.stringify(inhoud || {}) });
+  }
+
+  var MELDING = {
+    verlopen: 'Je bent uitgelogd omdat je een kwartier niets deed. Log opnieuw in om verder te gaan.',
+    geen: 'Dit account staat niet op de toegangslijst. Vraag meneer Greidanus om je toe te voegen.',
+    school: 'De school moet deze site eerst goedkeuren bij Microsoft. Vraag dat aan de ICT-afdeling.',
+    fout: 'Het inloggen lukte niet. Probeer het nog een keer.',
+    uit: 'Je bent uitgelogd.',
+    dicht: 'PMT staat op deze server nog niet aan.'
+  };
+  function naarDeur(waarom){
+    clearTimeout(S.klok); clearTimeout(S.timer);
+    S.d = null; S.lijst = [];
+    $('scherm').textContent = ''; $('namen').textContent = '';
+    $('app').hidden = true; $('deur').hidden = false;
+    var m = $('deurmelding');
+    m.hidden = !MELDING[waarom]; m.textContent = MELDING[waarom] || '';
+    $('inlogknop').hidden = waarom === 'dicht';
+  }
+
+  /* ---------- de zijbalk ---------- */
+  function tekenNamen(){
+    var ul = $('namen'); ul.textContent = '';
+    S.lijst.forEach(function(d){
+      ul.appendChild(el('li', {}, [el('button', { type: 'button', 'aria-current': S.d && S.d.id === d.id ? 'true' : null, onclick: function(){ openDossier(d.id); } },
+        [el('span', { tekst: naam(d) }), el('small', { tekst: (d.klas ? d.klas + ' · ' : '') + STATUS[d.status].toLowerCase() })])]));
+    });
+    $('namenkop').textContent = S.lijst.length ? 'Leerlingen (' + S.lijst.length + ')' : 'Leerlingen';
+  }
+  function laadLijst(){
+    return api('/dossiers').then(function(j){ S.lijst = j.dossiers; tekenNamen(); });
+  }
+  function scherm(k){ var s = $('scherm'); s.textContent = ''; k.forEach(function(c){ if (c) s.appendChild(c); }); }
+
+  /* ---------- geen dossier open ---------- */
+  function tekenLeeg(){
+    S.d = null; tekenNamen();
+    if (S.lijst.length){
+      scherm([el('div', { class: 'leeg' }, [el('h1', { tekst: 'Kies een leerling' }), el('p', { class: 'zacht', tekst: 'Links staan je dossiers. Kies er een, of maak een nieuw dossier.' })])]);
+      return;
+    }
+    scherm([el('div', { class: 'leeg' }, [
+      el('h1', { tekst: 'Nog geen dossiers' }),
+      el('p', { class: 'zacht', tekst: 'Een dossier is de plek voor alles van een leerling: de hulpvraag, de doelen en je notities per sessie.' }),
+      el('button', { class: 'knop', type: 'button', tekst: 'Nieuw dossier', onclick: tekenNieuw }),
+      S.ik.proef ? el('button', { class: 'knop stil', type: 'button', tekst: 'Vier voorbeelddossiers toevoegen', onclick: function(){
+        stuur('POST', '/proef').then(function(j){ S.lijst = j.dossiers; return laadLijsten(); }).then(tekenLeeg).catch(meld);
+      } }) : null
+    ])]);
+  }
+  function meld(e){ if (e && e.message !== 'uit') alertje(e.message); }
+  function alertje(t){
+    var oud = $('alertje'); if (oud) oud.remove();
+    var a = el('p', { class: 'melding', id: 'alertje', role: 'alert', tekst: t });
+    $('scherm').insertBefore(a, $('scherm').firstChild);
+  }
+
+  /* ---------- nieuw dossier ---------- */
+  function tekenNieuw(){
+    bewaarNu();
+    S.d = null; tekenNamen();
+    var voornaam = el('input', { type: 'text', id: 'n-voornaam', maxlength: '40', autocomplete: 'off', required: true });
+    var letter = el('input', { type: 'text', id: 'n-letter', maxlength: '3', autocomplete: 'off' });
+    var klas = el('input', { type: 'text', id: 'n-klas', maxlength: '12', autocomplete: 'off' });
+    var start = el('input', { type: 'date', id: 'n-start', value: vandaag() });
+    var f = el('form', { class: 'vak', onsubmit: function(ev){
+      ev.preventDefault();
+      if (!voornaam.value.trim()){ voornaam.focus(); return; }
+      stuur('POST', '/dossiers', { voornaam: voornaam.value, letter: letter.value, klas: klas.value, start: start.value, status: 'intake', proef: !!S.ik.proef })
+        .then(function(j){ return laadLijst().then(function(){ toon(j.dossier); }); }).catch(meld);
+    } }, [
+      el('h2', { tekst: 'Nieuw dossier' }),
+      el('p', { class: 'zacht', tekst: 'Alleen de voornaam en de eerste letter van de achternaam. Meer is niet nodig.' }),
+      el('div', { class: 'rij' }, [
+        el('label', {}, ['Voornaam', voornaam]), el('label', {}, ['Eerste letter achternaam', letter]),
+        el('label', {}, ['Klas', klas]), el('label', {}, ['Start', start])]),
+      el('div', { class: 'onder', style: 'margin-top:0' }, [el('button', { class: 'knop', type: 'submit', tekst: 'Dossier maken' }),
+        el('button', { class: 'knop stil', type: 'button', tekst: 'Toch niet', onclick: tekenLeeg })])
+    ]);
+    scherm([f]); voornaam.focus();
+  }
+
+  /* ---------- een dossier ---------- */
+  function openDossier(id){
+    bewaarNu();
+    api('/dossiers/' + id).then(function(j){ toon(j.dossier); }).catch(meld);
+  }
+  function plan(){
+    $('stand').textContent = 'Bezig met opslaan';
+    clearTimeout(S.timer);
+    S.timer = setTimeout(bewaarNu, 700);
+  }
+  function bewaarNu(){
+    clearTimeout(S.timer);
+    if (!S.d || !S.vuil) return;
+    var d = S.d; S.vuil = false;
+    /* de metingen en de codes zijn van de server: die sturen we niet terug */
+    var uit = Object.assign({}, d); delete uit.metingen; delete uit.afnames;
+    stuur('PUT', '/dossiers/' + d.id, uit).then(function(j){
+      if (S.d && S.d.id === d.id && !S.vuil && $('stand')) $('stand').textContent = 'Opgeslagen om ' + new Date(j.dossier.bijgewerkt).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+      S.lijst.forEach(function(x){ if (x.id === d.id){ x.voornaam = j.dossier.voornaam; x.letter = j.dossier.letter; x.klas = j.dossier.klas; x.status = j.dossier.status; } });
+      tekenNamen();
+    }).catch(function(e){ S.vuil = true; if ($('stand')) $('stand').textContent = 'Niet opgeslagen'; meld(e); });
+  }
+  function wijzig(){ S.vuil = true; plan(); }
+  function veld(soort, sleutel, extra){
+    var i = el(soort === 'textarea' ? 'textarea' : 'input', Object.assign({ id: 'v-' + sleutel, value: S.d[sleutel] || '', autocomplete: 'off',
+      oninput: function(){ S.d[sleutel] = i.value; wijzig(); if (sleutel === 'voornaam' || sleutel === 'letter') $('dnaam').textContent = naam(S.d) || 'Zonder naam'; } }, extra || {}));
+    if (soort !== 'textarea') i.type = soort;
+    return i;
+  }
+  function tekenDoelen(){
+    var ul = $('doelen'); ul.textContent = '';
+    S.d.doelen.forEach(function(doel, n){
+      var vink = el('input', { type: 'checkbox', id: 'doel-' + n, 'aria-label': 'Behaald: ' + doel.tekst, onchange: function(){ doel.klaar = vink.checked; wijzig(); tekenDoelen(); } });
+      vink.checked = !!doel.klaar;
+      ul.appendChild(el('li', { class: 'doel' + (doel.klaar ? ' klaar' : '') }, [vink, el('span', { tekst: doel.tekst }),
+        el('button', { class: 'knop stil klein', type: 'button', tekst: 'Weghalen', 'aria-label': 'Doel weghalen: ' + doel.tekst, onclick: function(){ S.d.doelen.splice(n, 1); wijzig(); tekenDoelen(); } })]));
+    });
+    if (!S.d.doelen.length) ul.appendChild(el('li', { class: 'zacht', tekst: 'Nog geen doelen.' }));
+  }
+  function tekenNotities(){
+    var box = $('notities'); box.textContent = '';
+    var rij = S.d.notities.slice().sort(function(a, b){ return a.datum < b.datum ? 1 : a.datum > b.datum ? -1 : 0; });
+    rij.forEach(function(n){
+      box.appendChild(el('div', { class: 'notitie' }, [el('time', { tekst: mooieDatum(n.datum) }), el('p', { tekst: n.tekst }),
+        el('button', { class: 'knop stil klein', type: 'button', tekst: 'Weghalen', onclick: function(ev){
+          var k = ev.currentTarget;
+          if (k.dataset.zeker){ S.d.notities = S.d.notities.filter(function(x){ return x.id !== n.id; }); wijzig(); tekenNotities(); }
+          else { k.dataset.zeker = '1'; k.textContent = 'Zeker weten?'; k.classList.add('weg'); }
+        } })]));
+    });
+    if (!rij.length) box.appendChild(el('p', { class: 'zacht', tekst: 'Nog geen notities.' }));
+  }
+  function toon(d){
+    S.d = d; S.vuil = false; tekenNamen();
+    var status = el('select', { id: 'v-status', onchange: function(){ S.d.status = status.value; wijzig(); chip.className = 'chip ' + status.value; chip.textContent = STATUS[status.value]; } },
+      Object.keys(STATUS).map(function(s){ return el('option', { value: s, tekst: STATUS[s] }); }));
+    status.value = d.status;
+    var chip = el('span', { class: 'chip ' + d.status, tekst: STATUS[d.status] });
+    var doelIn = el('input', { type: 'text', id: 'doel-nieuw', maxlength: '300', autocomplete: 'off' });
+    var nDatum = el('input', { type: 'date', id: 'notitie-datum', value: vandaag() });
+    var nTekst = el('textarea', { id: 'notitie-tekst', maxlength: '4000' });
+    var zeker = el('div', { class: 'zeker', hidden: true }, [
+      el('span', { tekst: 'Het hele dossier van ' + naam(d) + ' gaat weg en komt niet terug.' }),
+      el('button', { class: 'knop weg klein', type: 'button', tekst: 'Ja, voorgoed verwijderen', onclick: function(){
+        clearTimeout(S.timer); S.vuil = false;
+        stuur('DELETE', '/dossiers/' + d.id).then(function(){ S.d = null; return laadLijst(); }).then(tekenLeeg).catch(meld);
+      } }),
+      el('button', { class: 'knop stil klein', type: 'button', tekst: 'Toch niet', onclick: function(){ zeker.hidden = true; } })]);
+
+    scherm([
+      el('div', { class: 'kop' }, [el('h1', { id: 'dnaam', tekst: naam(d) }), chip,
+        d.proef ? el('span', { class: 'chip', tekst: 'voorbeeld' }) : null,
+        el('span', { class: 'stand', id: 'stand', role: 'status', tekst: 'Laatst gewijzigd ' + mooieTijd(d.bijgewerkt) })]),
+      el('section', { class: 'vak' }, [
+        el('h2', { tekst: 'Gegevens' }),
+        el('div', { class: 'rij' }, [
+          el('label', {}, ['Voornaam', veld('text', 'voornaam', { maxlength: '40' })]),
+          el('label', {}, ['Letter', veld('text', 'letter', { maxlength: '3' })]),
+          el('label', {}, ['Klas', veld('text', 'klas', { maxlength: '12' })]),
+          el('label', {}, ['Start', veld('date', 'start')]),
+          el('label', {}, ['Status', status])]),
+        el('label', {}, ['Hulpvraag', veld('textarea', 'hulpvraag', { maxlength: '2000' })])]),
+      el('section', { class: 'vak' }, [
+        el('h2', { tekst: 'Doelen' }),
+        el('ul', { class: 'lijst', id: 'doelen' }),
+        el('form', { class: 'erbij', onsubmit: function(ev){
+          ev.preventDefault();
+          var t = doelIn.value.trim(); if (!t) return;
+          S.d.doelen.push({ tekst: t, klaar: false }); doelIn.value = ''; wijzig(); tekenDoelen();
+        } }, [el('label', {}, ['Nieuw doel', doelIn]), el('button', { class: 'knop stil', type: 'submit', tekst: 'Doel toevoegen' })])]),
+      el('section', { class: 'vak' }, [
+        el('h2', { tekst: 'Notities' }),
+        el('form', { class: 'nieuwnotitie', onsubmit: function(ev){
+          ev.preventDefault();
+          var t = nTekst.value.trim(); if (!t){ nTekst.focus(); return; }
+          S.d.notities.push({ id: 'n' + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36), datum: nDatum.value || vandaag(), tekst: t });
+          nTekst.value = ''; wijzig(); tekenNotities();
+        } }, [el('label', {}, ['Datum', nDatum]), el('label', {}, ['Wat gebeurde er deze sessie?', nTekst]),
+          el('button', { class: 'knop', type: 'submit', tekst: 'Notitie toevoegen' })]),
+        el('div', { id: 'notities' })]),
+      el('section', { class: 'vak' }, [
+        el('div', { class: 'lijstkaart' }, [el('h2', { tekst: 'Vragenlijsten' }),
+          el('button', { class: 'knop stil klein', type: 'button', tekst: 'Vernieuwen', onclick: function(){ herlaadMetingen(); } })]),
+        el('div', { id: 'klaarzet' }),
+        el('div', { id: 'grafieken' }),
+        el('div', { id: 'metingen' })]),
+      el('section', { class: 'vak' }, [el('h2', { tekst: 'Wekelijkse check' }), el('div', { id: 'monitor' })]),
+      el('div', { class: 'onder' }, [
+        el('button', { class: 'knop', type: 'button', tekst: 'Verslag maken', onclick: function(){ tekenVerslag(false); } }),
+        el('a', { class: 'knop stil', href: '/api/pmt/dossiers/' + d.id + '/export', download: 'pmt-dossier.json', tekst: 'Dossier exporteren' }),
+        el('button', { class: 'knop weg', type: 'button', tekst: 'Dossier verwijderen', onclick: function(){ zeker.hidden = false; zeker.querySelector('button').focus(); } })]),
+      zeker
+    ]);
+    tekenDoelen(); tekenNotities(); tekenMetingen();
+    $('hoofd').focus({ preventScroll: true }); window.scrollTo(0, 0);
+  }
+
+  /* ---------- vragenlijsten in het dossier ---------- */
+  function herlaadMetingen(){
+    var id = S.d.id;
+    return api('/dossiers/' + id).then(function(j){
+      if (!S.d || S.d.id !== id) return;
+      S.d.metingen = j.dossier.metingen; S.d.afnames = j.dossier.afnames; tekenMetingen();
+    }).catch(meld);
+  }
+  function tekenMetingen(){
+    var d = S.d, zet = $('klaarzet'), box = $('metingen');
+    zet.textContent = ''; box.textContent = '';
+    if ($('monitor')) tekenMonitor();
+    var bruikbaar = S.lijsten.filter(function(l){ return l.vragen.length && !l.monitor; });
+    if (!bruikbaar.length){
+      zet.appendChild(el('p', { class: 'zacht' }, ['Er is nog geen vragenlijst met vragen. ',
+        el('button', { class: 'knop stil klein', type: 'button', tekst: 'Naar de vragenlijsten', onclick: tekenLijsten })]));
+    } else {
+      var kies = el('select', { id: 'kieslijst' }, bruikbaar.map(function(l){ return el('option', { value: l.id, tekst: l.titel + ' (' + l.vragen.length + ' vragen)' }); }));
+      zet.appendChild(el('form', { class: 'klaarzet', onsubmit: function(ev){
+        ev.preventDefault();
+        stuur('POST', '/dossiers/' + d.id + '/afname', { lijst: kies.value }).then(function(a){ d.afnames.push(a); tekenMetingen(); }).catch(meld);
+      } }, [el('label', {}, ['Welke lijst?', kies]), el('button', { class: 'knop', type: 'submit', tekst: 'Klaarzetten' })]));
+      var gekozen = function(){ for (var i = 0; i < S.lijsten.length; i++) if (S.lijsten[i].id === kies.value) return S.lijsten[i]; return bruikbaar[0]; };
+      zet.appendChild(el('div', { class: 'onder', style: 'margin-top:10px' }, [
+        el('span', { class: 'zacht', tekst: 'Liever op papier?' }),
+        el('button', { class: 'knop stil klein', type: 'button', tekst: 'Printen met bolletjes', onclick: function(){ tekenPapier(gekozen()); } }),
+        el('button', { class: 'knop stil klein', type: 'button', tekst: 'Papier invoeren', onclick: function(){ tekenInvoer(gekozen()); } })]));
+    }
+    d.afnames.filter(function(a){ return !a.vast; }).forEach(function(a){
+      zet.appendChild(el('div', { class: 'code', style: 'margin-top:12px' }, [
+        el('span', { class: 'letters', tekst: a.code }),
+        el('span', { class: 'wat', tekst: a.titel + '. ' + d.voornaam + ' gaat naar ' + location.host + INVUL + ' en tikt deze code in. De code werkt een keer en verloopt vannacht om twaalf uur.' }),
+        el('a', { class: 'knop stil klein', href: INVUL + '#' + a.code, target: '_blank', rel: 'noopener', tekst: 'Hier samen invullen' }),
+        el('button', { class: 'knop stil klein', type: 'button', tekst: 'Intrekken', onclick: function(){
+          stuur('DELETE', '/afname/' + a.code).then(function(){ d.afnames = d.afnames.filter(function(x){ return x.code !== a.code; }); tekenMetingen(); }).catch(meld);
+        } })]));
+    });
+    var gr = $('grafieken'); gr.textContent = '';
+    groepen(gewoon(d.metingen)).forEach(function(g){ gr.appendChild(grafiekVak(g)); });
+    var rij = gewoon(d.metingen).sort(function(a, b){ return b.t - a.t; });
+    if (!rij.length) box.appendChild(el('p', { class: 'zacht', style: 'margin-top:12px', tekst: 'Nog geen ingevulde lijsten.' }));
+    rij.forEach(function(m){
+      var kop = [el('time', { tekst: new Date(m.t).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' }) }), el('span', { tekst: m.titel + (m.papier ? ' (papier)' : '') })];
+      m.schalen.forEach(function(x){ kop.push(el('span', { class: 'score' }, [x.naam + ' ', el('b', { tekst: getal(x.score) })])); });
+      box.appendChild(el('details', { class: 'meting' }, [
+        el('summary', {}, kop),
+        el('p', { class: 'zacht', style: 'padding:8px 0 0 34px', tekst: 'Score per schaal: het gemiddelde, van 1 tot ' + m.max + '. Hoger is meer van wat de schaal zegt; omgekeerde vragen zijn al omgerekend.' }),
+        el('ul', { class: 'antw' }, m.antwoorden.map(function(a){ return el('li', {}, [el('span', { tekst: a.tekst + (a.om ? ' (omgekeerd)' : '') }), el('b', { tekst: a.label })]); })),
+        el('div', { style: 'padding:10px 0 0 34px' }, [el('button', { class: 'knop stil klein', type: 'button', tekst: 'Deze meting verwijderen', onclick: function(ev){
+          var k = ev.currentTarget;
+          if (!k.dataset.zeker){ k.dataset.zeker = '1'; k.textContent = 'Zeker weten? Dit kan niet terug'; k.classList.add('weg'); return; }
+          stuur('DELETE', '/metingen/' + m.id).then(function(){ d.metingen = d.metingen.filter(function(x){ return x.id !== m.id; }); tekenMetingen(); }).catch(meld);
+        } })])]));
+    });
+  }
+
+  /* ---------- de wekelijkse check ---------- */
+  function gewoon(metingen){ return metingen.filter(function(m){ return !m.monitor; }); }
+  /* per weekcheck: de lijst zoals hij nu is, en alles wat ermee is ingevuld */
+  function monitorGroepen(d){
+    var op = {}, rij = [];
+    S.lijsten.forEach(function(l){
+      if (!l.monitor || !l.vragen.length) return;
+      op[l.id] = { id: l.id, titel: l.titel, lijst: l, max: l.antwoorden.length, namen: l.schalen.slice(), metingen: [] }; rij.push(op[l.id]);
+    });
+    d.metingen.filter(function(m){ return m.monitor; }).sort(function(a, b){ return a.t - b.t; }).forEach(function(m){
+      var k = m.lijst || m.titel;
+      if (!op[k]){ op[k] = { id: k, titel: m.titel, lijst: null, max: m.max, namen: [], metingen: [] }; rij.push(op[k]); }
+      var g = op[k]; g.metingen.push(m); g.max = Math.max(g.max, m.max);
+      m.schalen.forEach(function(x){ if (g.namen.indexOf(x.naam) < 0) g.namen.push(x.naam); });
+    });
+    return rij;
+  }
+  function reeks(g, door){ return g.metingen.filter(function(m){ return (m.door || 'leerling') === door; }); }
+  /* Een terugval: de laatste keer twee stappen of meer lager dan de keer ervoor
+     (op een schaal van vijf; bij een andere schaal naar verhouding). */
+  function zakkers(g, door){
+    var ms = reeks(g, door), uit = [];
+    if (ms.length < 2) return uit;
+    var a = ms[ms.length - 2], b = ms[ms.length - 1], grens = 2 * (g.max - 1) / 4;
+    g.namen.forEach(function(n){
+      var s1 = scoreVan(a, n), s2 = scoreVan(b, n);
+      if (s1 != null && s2 != null && s1 - s2 >= grens) uit.push({ naam: n, van: s1, naar: s2 });
+    });
+    return uit;
+  }
+  function lagerDanVorige(g, door, n){
+    var ms = reeks(g, door); if (ms.length < 2) return false;
+    var s1 = scoreVan(ms[ms.length - 2], n), s2 = scoreVan(ms[ms.length - 1], n);
+    return s1 != null && s2 != null && s2 < s1;
+  }
+  function cijfer(sc){ return Math.round(sc) === sc ? String(sc) : getal(sc); }
+  function rasterTabel(g, door){
+    var ms = reeks(g, door).slice(-10); if (!ms.length) return null;
+    var letop = {}; zakkers(g, door).forEach(function(z){ letop[z.naam] = true; });
+    return el('div', { class: 'schuif raster' }, [el('table', {}, [
+      el('thead', {}, [el('tr', {}, [el('th', { class: 'rij', tekst: door === 'mentor' ? 'Wat de mentor zag' : 'Wat de leerling invulde' })].concat(ms.map(function(m){ return el('th', { tekst: kort(m.t) }); })))]),
+      el('tbody', {}, g.namen.map(function(n){
+        return el('tr', {}, [el('th', { class: 'rij', scope: 'row', tekst: n })].concat(ms.map(function(m, i){
+          var sc = scoreVan(m, n);
+          if (sc == null) return el('td', {});
+          var niveau = Math.max(1, Math.min(5, Math.round(1 + (sc - 1) * 4 / (g.max - 1))));
+          var zakt = i === ms.length - 1 && letop[n];
+          return el('td', { class: 't' + niveau + (zakt ? ' let' : ''), tekst: cijfer(sc), title: zakt ? 'Lager dan de vorige keer' : null });
+        })));
+      }))])]);
+  }
+  function monitorVak(g){
+    var delen = [el('h3', { tekst: g.titel })];
+    if (!g.metingen.length) delen.push(el('p', { class: 'zacht', tekst: 'Nog niet ingevuld.' }));
+    else delen.push(el('p', { class: 'zacht', tekst: 'Per week een cijfer van 1 tot ' + g.max + '. Hoe donkerder het vakje, hoe beter het lukte.' }));
+    ['leerling', 'mentor'].forEach(function(door){
+      var t = rasterTabel(g, door); if (t) delen.push(t);
+      var ander = door === 'leerling' ? 'mentor' : 'leerling';
+      zakkers(g, door).forEach(function(z){
+        delen.push(el('div', { class: 'terugval' }, [el('b', { tekst: 'Let op' }), el('span', { tekst: z.naam + ' zakt bij de ' + door + ' van ' + cijfer(z.van) + ' naar ' + cijfer(z.naar) + '.' +
+          (lagerDanVorige(g, ander, z.naam) ? ' De ' + ander + ' scoort hier ook lager dan de vorige keer.' : '') })]));
+      });
+    });
+    return el('div', { class: 'grafiek' }, delen);
+  }
+  function tekenMonitor(){
+    var d = S.d, box = $('monitor'); box.textContent = '';
+    var gs = monitorGroepen(d);
+    if (!gs.length){
+      box.appendChild(el('p', { class: 'zacht' }, ['Een wekelijkse check is een korte vragenlijst van een paar zinnen, die de leerling en de mentor elke week invullen. Je maakt hem bij de vragenlijsten. ',
+        el('button', { class: 'knop stil klein', type: 'button', tekst: 'Naar de vragenlijsten', onclick: tekenLijsten })]));
+      return;
+    }
+    gs.forEach(function(g){
+      var vak = monitorVak(g);
+      if (g.lijst){
+        var codes = el('div', { style: 'display:grid;gap:10px' });
+        ['leerling', 'mentor'].forEach(function(door){
+          var a = d.afnames.filter(function(x){ return x.vast && x.lijst === g.id && x.door === door; })[0];
+          if (!a){
+            codes.appendChild(el('div', {}, [el('button', { class: 'knop stil klein', type: 'button', tekst: 'Vaste code voor de ' + door, onclick: function(){
+              stuur('POST', '/dossiers/' + d.id + '/afname', { lijst: g.id, vast: true, door: door }).then(function(n){ d.afnames.push(n); tekenMonitor(); }).catch(meld);
+            } })]));
+            return;
+          }
+          var tot = new Date(a.tot).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' });
+          codes.appendChild(el('div', { class: 'code' }, [
+            el('span', { class: 'letters', tekst: a.code }),
+            el('span', { class: 'wat', tekst: (door === 'mentor' ? 'Voor de mentor. Die vult elke week in wat hij of zij bij ' + d.voornaam + ' zag, op ' : d.voornaam + ' gaat elke week naar ') +
+              location.host + INVUL + (door === 'mentor' ? '.' : ' en tikt deze code in.') + ' De code blijft geldig tot ' + tot + '.' }),
+            el('a', { class: 'knop stil klein', href: INVUL + '#' + a.code, target: '_blank', rel: 'noopener', tekst: 'Hier invullen' }),
+            el('button', { class: 'knop stil klein', type: 'button', tekst: 'Intrekken', onclick: function(){
+              stuur('DELETE', '/afname/' + a.code).then(function(){ d.afnames = d.afnames.filter(function(x){ return x.code !== a.code; }); tekenMonitor(); }).catch(meld);
+            } })]));
+        });
+        vak.appendChild(codes);
+      }
+      if (g.metingen.length){
+        vak.appendChild(el('details', { class: 'meting' }, [el('summary', {}, [el('span', { tekst: 'Alle ingevulde checks (' + g.metingen.length + ')' })]),
+          el('ul', { class: 'antw' }, g.metingen.slice().reverse().map(function(m){
+            return el('li', {}, [el('span', { tekst: mooieTijd(m.t) + ', ' + (m.door || 'leerling') }),
+              el('button', { class: 'knop stil klein', type: 'button', tekst: 'Verwijderen', onclick: function(ev){
+                var k = ev.currentTarget;
+                if (!k.dataset.zeker){ k.dataset.zeker = '1'; k.textContent = 'Zeker weten?'; k.classList.add('weg'); return; }
+                stuur('DELETE', '/metingen/' + m.id).then(function(){ d.metingen = d.metingen.filter(function(x){ return x.id !== m.id; }); tekenMonitor(); }).catch(meld);
+              } })]);
+          }))]));
+      }
+      box.appendChild(vak);
+    });
+  }
+
+  /* ---------- de vragenlijst op papier ---------- */
+  function terugNaarDossier(id){
+    return api('/dossiers/' + id).then(function(j){ toon(j.dossier); }).catch(meld);
+  }
+  /* het blad dat de leerling met een pen invult: bij elke zin een rij bolletjes */
+  function tekenPapier(l){
+    bewaarNu();
+    var d = S.d;
+    var rijen = l.vragen.map(function(v, n){
+      return el('tr', {}, [el('td', { class: 'tijd', tekst: (n + 1) + '.' }), el('td', { tekst: v.tekst }),
+        el('td', {}, [el('div', { class: 'bollen' }, l.antwoorden.map(function(a, i){ return el('span', { class: 'bol', tekst: String(i + 1) }); }))])]);
+    });
+    scherm([el('div', { class: 'papier' }, [
+      el('div', { class: 'onder geenprint', style: 'margin-top:0' }, [
+        el('button', { class: 'knop', type: 'button', tekst: 'Printen', onclick: function(){ window.print(); } }),
+        el('button', { class: 'knop stil', type: 'button', tekst: 'Terug naar het dossier', onclick: function(){ toon(d); } })]),
+      el('p', { class: 'zacht geenprint', style: 'margin-top:10px', tekst: 'Zo komt de lijst op papier. Is hij ingevuld, kies dan in het dossier "Papier invoeren" om de bolletjes over te nemen.' }),
+      el('div', { class: 'kop', style: 'margin-top:22px' }, [el('h1', { tekst: l.titel })]),
+      el('p', { style: 'margin-top:6px' }, ['Naam: ', el('b', { tekst: naam(d) }), '   Datum: ', el('span', { class: 'lijn' })]),
+      l.uitleg ? el('p', { style: 'margin-top:12px;max-width:70ch', tekst: l.uitleg }) : null,
+      el('p', { style: 'margin-top:12px', tekst: 'Kleur bij elke zin een bolletje in.' }),
+      el('div', { class: 'legenda', style: 'margin-top:6px' }, l.antwoorden.map(function(a, i){ return el('span', {}, [el('b', { tekst: (i + 1) + ' ' }), a]); })),
+      el('div', { class: 'schuif', style: 'margin-top:14px' }, [el('table', {}, [el('tbody', {}, rijen)])])
+    ])]);
+    window.scrollTo(0, 0);
+  }
+  /* de bolletjes van het papier overnemen: klikken, of het cijfer tikken */
+  function tekenInvoer(l){
+    bewaarNu();
+    var d = S.d, antw = {}, rijen = [];
+    var dat = el('input', { type: 'date', id: 'p-datum', value: vandaag(), max: vandaag() });
+    var stand = el('span', { class: 'zacht', role: 'status' });
+    l.vragen.forEach(function(v, n){
+      var rij = el('div', { class: 'rijtje', role: 'radiogroup', 'aria-label': 'Vraag ' + (n + 1) + ': ' + v.tekst }, [
+        el('span', { tekst: (n + 1) + '. ' + v.tekst }),
+        el('div', { class: 'bollen' }, l.antwoorden.map(function(a, i){
+          var r = el('input', { type: 'radio', name: 'p-' + n, id: 'p-' + n + '-' + i, value: String(i + 1), onchange: function(){ antw[v.id] = i + 1; rij.classList.remove('mist'); stand.textContent = ''; } });
+          return el('label', { class: 'kies', title: a }, [r, el('span', { class: 'bol', tekst: String(i + 1) }), el('span', { style: 'position:absolute;left:-9999px', tekst: a })]);
+        }))]);
+      /* een cijfer tikken kiest dat bolletje en springt naar de volgende vraag */
+      rij.addEventListener('keydown', function(ev){
+        var c = +ev.key;
+        if (!(c >= 1 && c <= l.antwoorden.length)) return;
+        ev.preventDefault();
+        var r = rij.querySelectorAll('input')[c - 1]; r.checked = true; antw[v.id] = c; rij.classList.remove('mist'); stand.textContent = '';
+        var volgende = rijen[n + 1];
+        if (volgende) (volgende.querySelector('input:checked') || volgende.querySelector('input')).focus(); else $('p-opslaan').focus();
+      });
+      rijen.push(rij);
+    });
+    scherm([el('div', { class: 'invoer' }, [
+      el('div', { class: 'kop' }, [el('h1', { tekst: 'Papier invoeren voor ' + naam(d) })]),
+      el('p', { class: 'zacht', tekst: l.titel + '. Neem bij elke zin het bolletje over. Het gaat snel met het toetsenbord: tik het cijfer en je staat bij de volgende zin.' }),
+      el('form', { class: 'vak', onsubmit: function(ev){
+        ev.preventDefault();
+        var mist = null;
+        l.vragen.forEach(function(v, n){ if (!antw[v.id]){ rijen[n].classList.add('mist'); mist = mist || rijen[n]; } });
+        if (mist){ stand.textContent = 'Nog niet bij elke zin is een bolletje gekozen.'; mist.querySelector('input').focus(); return; }
+        stand.textContent = 'Bezig met opslaan';
+        stuur('POST', '/dossiers/' + d.id + '/meting', { lijst: l.id, antwoorden: antw, datum: dat.value })
+          .then(function(){ return terugNaarDossier(d.id); }).catch(function(e){ stand.textContent = 'Niet opgeslagen'; meld(e); });
+      } }, [
+        el('label', { style: 'max-width:220px' }, ['Datum op het papier', dat]),
+        el('div', { class: 'legenda papier', style: 'display:flex;flex-wrap:wrap;gap:6px 18px;font-size:.88rem;color:var(--muted)' }, l.antwoorden.map(function(a, i){ return el('span', { tekst: (i + 1) + ' ' + a }); })),
+        el('div', {}, rijen),
+        el('div', { class: 'onder', style: 'margin-top:6px' }, [
+          el('button', { class: 'knop', type: 'submit', id: 'p-opslaan', tekst: 'Opslaan in het dossier' }),
+          el('button', { class: 'knop stil', type: 'button', tekst: 'Terug zonder opslaan', onclick: function(){ toon(d); } }), stand])])
+    ])]);
+    window.scrollTo(0, 0);
+    rijen[0].querySelector('input').focus();
+  }
+
+  /* ---------- de grafiek ---------- */
+  var NS = 'http://www.w3.org/2000/svg';
+  function sv(t, a, k){
+    var e = document.createElementNS(NS, t), n;
+    for (n in (a || {})){ if (n === 'tekst') e.textContent = a[n]; else e.setAttribute(n, a[n]); }
+    (k || []).forEach(function(c){ e.appendChild(c); });
+    return e;
+  }
+  function kort(t){ return new Date(t).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' }); }
+  /* de metingen per vragenlijst, oudste eerst */
+  function groepen(metingen){
+    var op = {}, rij = [];
+    metingen.slice().sort(function(a, b){ return a.t - b.t; }).forEach(function(m){
+      var k = m.lijst || m.titel;
+      if (!op[k]){ op[k] = { titel: m.titel, max: m.max, metingen: [], namen: [] }; rij.push(op[k]); }
+      var g = op[k]; g.metingen.push(m); g.titel = m.titel; g.max = Math.max(g.max, m.max);
+      m.schalen.forEach(function(x){ if (g.namen.indexOf(x.naam) < 0) g.namen.push(x.naam); });
+    });
+    return rij;
+  }
+  function scoreVan(m, naam){ for (var i = 0; i < m.schalen.length; i++) if (m.schalen[i].naam === naam) return m.schalen[i].score; return null; }
+  /* Een lijn per schaal, met de naam en de laatste score aan het eind van de
+     lijn. Elke lijn heeft ook een eigen vorm van punt: de kleur is nooit het
+     enige verschil. */
+  function grafiek(g){
+    var W = 700, H = 290, L = 34, R = 214, T = 16, B = 36, ms = g.metingen, n = ms.length;
+    var x = function(i){ return n === 1 ? L + (W - L - R) / 2 : L + i * (W - L - R) / (n - 1); };
+    var y = function(sc){ return T + (g.max - sc) * (H - T - B) / (g.max - 1); };
+    var kind = [], v, i, zeg = [];
+    for (v = 1; v <= g.max; v++){
+      kind.push(sv('line', { class: 'raster', x1: L, x2: W - R, y1: y(v), y2: y(v) }));
+      kind.push(sv('text', { x: L - 10, y: y(v) + 4, 'text-anchor': 'end', tekst: String(v) }));
+    }
+    var om = Math.ceil(n / 6);
+    for (i = 0; i < n; i++){
+      if (i % om && i !== n - 1) continue;
+      if (i !== n - 1 && (n - 1 - i) < om) continue;
+      kind.push(sv('text', { x: x(i), y: H - 12, 'text-anchor': 'middle', tekst: kort(ms[i].t) }));
+    }
+    var eind = [];
+    g.namen.forEach(function(naam, j){
+      var kl = 'r' + (j % 5), pts = [];
+      ms.forEach(function(m, i){ var sc = scoreVan(m, naam); if (sc != null) pts.push([x(i), y(sc), sc]); });
+      if (!pts.length) return;
+      if (pts.length > 1) kind.push(sv('polyline', { class: 'lijn ' + kl, style: 'fill:none' + (j >= 5 ? ';stroke-dasharray:6 5' : ''), points: pts.map(function(p){ return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ') }));
+      pts.forEach(function(p){
+        var cx = p[0], cy = p[1], vorm = j % 4;
+        kind.push(vorm === 0 ? sv('circle', { class: kl, cx: cx, cy: cy, r: 4.5, 'stroke-width': 0 })
+          : vorm === 1 ? sv('rect', { class: kl, x: cx - 4, y: cy - 4, width: 8, height: 8, 'stroke-width': 0 })
+          : vorm === 2 ? sv('path', { class: kl, d: 'M' + cx + ' ' + (cy - 5.5) + 'l5.5 9.5h-11z', 'stroke-width': 0 })
+          : sv('path', { class: kl, d: 'M' + cx + ' ' + (cy - 5.5) + 'l5.5 5.5l-5.5 5.5l-5.5 -5.5z', 'stroke-width': 0 }));
+      });
+      var laatste = pts[pts.length - 1];
+      eind.push({ y: laatste[1], tekst: (naam.length > 24 ? naam.slice(0, 23) + '…' : naam) + ' ' + getal(laatste[2]) });
+      zeg.push(naam + (pts.length > 1 ? ' van ' + getal(pts[0][2]) + ' naar ' + getal(laatste[2]) : ' ' + getal(laatste[2])));
+    });
+    /* de namen aan het eind mogen niet over elkaar heen staan */
+    eind.sort(function(a, b){ return a.y - b.y; });
+    for (i = 1; i < eind.length; i++) if (eind[i].y - eind[i - 1].y < 16) eind[i].y = eind[i - 1].y + 16;
+    var over = eind.length ? eind[eind.length - 1].y - (H - B + 8) : 0;
+    eind.forEach(function(e){ kind.push(sv('text', { class: 'naam', x: W - R + 14, y: e.y - (over > 0 ? over : 0) + 4, tekst: e.tekst })); });
+    return sv('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': g.titel + ', ' + n + (n === 1 ? ' meting. ' : ' metingen. ') + zeg.join('. ') + '.' }, kind);
+  }
+  /* de eerste meting naast de laatste, met het verschil */
+  function vergelijk(g){
+    var ms = g.metingen; if (ms.length < 2) return null;
+    var a = ms[0], b = ms[ms.length - 1];
+    var rijen = g.namen.map(function(naam){
+      var s1 = scoreVan(a, naam), s2 = scoreVan(b, naam), v = s1 != null && s2 != null ? Math.round((s2 - s1) * 100) / 100 : null;
+      return el('tr', {}, [el('td', { tekst: naam }), el('td', { class: 'num', tekst: s1 == null ? '' : getal(s1) }), el('td', { class: 'num', tekst: s2 == null ? '' : getal(s2) }),
+        el('td', { class: 'num ' + (v > 0 ? 'op' : v < 0 ? 'af' : ''), tekst: v == null ? '' : v === 0 ? 'gelijk' : (v > 0 ? getal(v) + ' hoger' : getal(-v) + ' lager') })]);
+    });
+    return el('div', { class: 'schuif' }, [el('table', {}, [
+      el('thead', {}, [el('tr', {}, [el('th', { tekst: 'Schaal' }), el('th', { class: 'num', tekst: 'Begin, ' + kort(a.t) }), el('th', { class: 'num', tekst: 'Laatste, ' + kort(b.t) }), el('th', { class: 'num', tekst: 'Verschil' })])]),
+      el('tbody', {}, rijen)])]);
+  }
+  function grafiekVak(g){
+    return el('div', { class: 'grafiek' }, [
+      el('h3', { tekst: g.titel }),
+      el('p', { class: 'zacht', tekst: g.metingen.length === 1 ? 'Een meting tot nu toe. Na de volgende meting komt hier een lijn.' : 'Score per schaal over ' + g.metingen.length + ' metingen, van 1 tot ' + g.max + '.' }),
+      grafiek(g), vergelijk(g)]);
+  }
+
+  /* ---------- het verslag ---------- */
+  function tekenVerslag(metNotities){
+    bewaarNu();
+    var d = S.d, delen = [];
+    stuur('POST', '/dossiers/' + d.id + '/verslag').catch(function(){});
+    var vink = el('input', { type: 'checkbox', id: 'metnotities', onchange: function(){ tekenVerslag(vink.checked); } });
+    vink.checked = !!metNotities;
+    delen.push(el('div', { class: 'onder geenprint', style: 'margin-top:0' }, [
+      el('button', { class: 'knop', type: 'button', tekst: 'Printen', onclick: function(){ window.print(); } }),
+      el('button', { class: 'knop stil', type: 'button', tekst: 'Terug naar het dossier', onclick: function(){ toon(d); } }),
+      el('label', { style: 'flex-direction:row;align-items:center;gap:8px;color:var(--ink)' }, [vink, 'Notities meenemen'])]));
+    delen.push(el('p', { class: 'zacht geenprint', style: 'margin-top:10px', tekst: 'Zo komt het verslag op papier. Kies bij het printen "Opslaan als pdf" als je het wilt bewaren of meesturen.' }));
+    delen.push(el('div', { class: 'kop', style: 'margin-top:22px' }, [el('h1', { tekst: 'PMT-verslag ' + naam(d) })]));
+    delen.push(el('div', { class: 'verslagkop' }, [
+      d.klas ? el('span', { tekst: 'Klas ' + d.klas }) : null,
+      d.start ? el('span', { tekst: 'Gestart op ' + mooieDatum(d.start) }) : null,
+      el('span', { tekst: 'Status: ' + STATUS[d.status].toLowerCase() }),
+      el('span', { tekst: 'Gemaakt op ' + mooieDatum(vandaag()) + ' door ' + S.ik.naam }),
+      d.proef ? el('span', { tekst: 'Voorbeeld, geen echte leerling' }) : null]));
+    if (d.hulpvraag) delen.push(el('section', { class: 'vak' }, [el('h2', { tekst: 'Hulpvraag' }), el('p', { style: 'white-space:pre-wrap', tekst: d.hulpvraag })]));
+    if (d.doelen.length) delen.push(el('section', { class: 'vak' }, [el('h2', { tekst: 'Doelen' }),
+      el('ul', { class: 'lijst' }, d.doelen.map(function(x){ return el('li', { tekst: x.tekst + (x.klaar ? ' (behaald)' : ' (loopt nog)') }); }))]));
+    var gs = groepen(gewoon(d.metingen));
+    if (gs.length) delen.push(el('section', { class: 'vak' }, [el('h2', { tekst: 'Ontwikkeling' })].concat(gs.map(grafiekVak))));
+    var mg = monitorGroepen(d).filter(function(g){ return g.metingen.length; });
+    if (mg.length) delen.push(el('section', { class: 'vak' }, [el('h2', { tekst: 'Wekelijkse check' })].concat(mg.map(function(g){ return monitorVak(g); }))));
+    if (metNotities && d.notities.length) delen.push(el('section', { class: 'vak' }, [el('h2', { tekst: 'Notities' })].concat(
+      d.notities.slice().sort(function(a, b){ return a.datum < b.datum ? -1 : a.datum > b.datum ? 1 : 0; }).map(function(n){
+        return el('div', { class: 'notitie', style: 'grid-template-columns:110px 1fr' }, [el('time', { tekst: mooieDatum(n.datum) }), el('p', { tekst: n.tekst })]);
+      }))));
+    var s = $('scherm'); s.textContent = '';
+    var blad = el('div', { class: 'verslag' }, delen.filter(Boolean));
+    s.appendChild(blad);
+    window.scrollTo(0, 0);
+  }
+
+  /* ---------- vragenlijsten maken ---------- */
+  function laadLijsten(){ return api('/lijsten').then(function(j){ S.lijsten = j.lijsten; }); }
+  function tekenLijsten(){
+    bewaarNu(); S.d = null; tekenNamen();
+    var kaarten = S.lijsten.map(function(l){
+      return el('section', { class: 'vak' }, [el('div', { class: 'lijstkaart' }, [
+        el('div', {}, [el('h2', { tekst: l.titel }), el('p', { class: 'zacht', tekst: (l.monitor ? 'Wekelijkse check · ' : '') + l.vragen.length + (l.vragen.length === 1 ? ' vraag' : ' vragen') + ' · ' + l.schalen.join(', ') })]),
+        el('button', { class: 'knop stil', type: 'button', tekst: 'Bewerken', onclick: function(){ tekenLijst(l); } })])]);
+    });
+    scherm([
+      el('div', { class: 'kop' }, [el('h1', { tekst: 'Vragenlijsten' }),
+        el('button', { class: 'knop', type: 'button', style: 'margin-left:auto', tekst: 'Nieuwe vragenlijst', onclick: function(){ tekenLijst(null); } })]),
+      el('p', { class: 'zacht', tekst: 'Zet hier alleen lijsten in die van jezelf zijn of die vrij te gebruiken zijn. Een lijst van een uitgever mag je niet overtypen.' }),
+      !S.lijsten.length ? el('section', { class: 'vak' }, [el('p', { tekst: 'Er zijn nog geen vragenlijsten.' }),
+        S.ik.proef ? el('div', {}, [el('button', { class: 'knop stil', type: 'button', tekst: 'Voorbeeldlijst toevoegen', onclick: function(){
+          stuur('POST', '/proef/lijst').then(function(j){ S.lijsten = j.lijsten; tekenLijsten(); }).catch(meld);
+        } })]) : null]) : null
+    ].concat(kaarten));
+  }
+  function regels(t){ return t.split('\n').map(function(x){ return x.trim(); }).filter(Boolean); }
+  function tekenLijst(bron){
+    var L = bron ? JSON.parse(JSON.stringify(bron)) : { titel: '', uitleg: '', antwoorden: ['Nooit', 'Bijna nooit', 'Soms', 'Vaak', 'Altijd'], schalen: ['Totaal'], vragen: [] };
+    var titel = el('input', { type: 'text', id: 'l-titel', maxlength: '80', autocomplete: 'off', value: L.titel });
+    var uitleg = el('textarea', { id: 'l-uitleg', maxlength: '600', value: L.uitleg });
+    var antwoorden = el('textarea', { id: 'l-antwoorden', value: L.antwoorden.join('\n') });
+    var schalen = el('textarea', { id: 'l-schalen', value: L.schalen.join('\n') });
+    var mon = el('input', { type: 'checkbox', id: 'l-monitor', style: 'width:20px;height:20px;accent-color:var(--ocean)' }); mon.checked = !!L.monitor;
+    var vragen = el('div', { class: 'lijst', id: 'l-vragen' });
+    var stand = el('span', { class: 'zacht', role: 'status' });
+    function tekenVragen(){
+      var namen = regels(schalen.value); if (!namen.length) namen = ['Totaal'];
+      vragen.textContent = '';
+      L.vragen.forEach(function(v, n){
+        if (namen.indexOf(v.schaal) < 0) v.schaal = namen[0];
+        var t = el('input', { type: 'text', maxlength: '300', autocomplete: 'off', 'aria-label': 'Vraag ' + (n + 1), value: v.tekst, oninput: function(){ v.tekst = t.value; } });
+        var sch = el('select', { 'aria-label': 'Schaal van vraag ' + (n + 1), onchange: function(){ v.schaal = sch.value; } }, namen.map(function(x){ return el('option', { value: x, tekst: x }); }));
+        sch.value = v.schaal;
+        var om = el('input', { type: 'checkbox', id: 'om-' + n, onchange: function(){ v.om = om.checked; } }); om.checked = !!v.om;
+        vragen.appendChild(el('div', { class: 'vraagrij' }, [t, sch, el('label', { class: 'om' }, [om, 'Omgekeerd']),
+          el('button', { class: 'knop stil klein', type: 'button', tekst: 'Weghalen', 'aria-label': 'Vraag ' + (n + 1) + ' weghalen', onclick: function(){ L.vragen.splice(n, 1); tekenVragen(); } })]));
+      });
+      if (!L.vragen.length) vragen.appendChild(el('p', { class: 'zacht', tekst: 'Nog geen vragen.' }));
+    }
+    schalen.addEventListener('change', tekenVragen);
+    function bewaar(){
+      L.monitor = mon.checked; L.titel = titel.value; L.uitleg = uitleg.value; L.antwoorden = regels(antwoorden.value); L.schalen = regels(schalen.value);
+      if (!L.titel.trim()){ titel.focus(); stand.textContent = 'Geef de lijst eerst een titel.'; return; }
+      stand.textContent = 'Bezig met opslaan';
+      (L.id ? stuur('PUT', '/lijsten/' + L.id, L) : stuur('POST', '/lijsten', L)).then(function(){ return laadLijsten(); }).then(tekenLijsten)
+        .catch(function(e){ stand.textContent = 'Niet opgeslagen'; meld(e); });
+    }
+    var zeker = el('div', { class: 'zeker', hidden: true }, [
+      el('span', { tekst: 'De lijst gaat weg. Wat leerlingen al invulden blijft in hun dossier staan.' }),
+      el('button', { class: 'knop weg klein', type: 'button', tekst: 'Ja, verwijderen', onclick: function(){
+        stuur('DELETE', '/lijsten/' + L.id).then(function(){ return laadLijsten(); }).then(tekenLijsten).catch(meld);
+      } }),
+      el('button', { class: 'knop stil klein', type: 'button', tekst: 'Toch niet', onclick: function(){ zeker.hidden = true; } })]);
+    scherm([
+      el('div', { class: 'kop' }, [el('h1', { tekst: bron ? 'Vragenlijst bewerken' : 'Nieuwe vragenlijst' })]),
+      el('section', { class: 'vak' }, [
+        el('label', {}, ['Titel', titel]),
+        el('label', {}, ['Uitleg voor de leerling, boven de lijst', uitleg]),
+        el('label', { style: 'flex-direction:row;align-items:center;gap:10px;color:var(--ink)' }, [mon, 'Dit is een korte wekelijkse check. Hij komt in het dossier als raster, met een vaste code voor de leerling en de mentor. Maak dan een schaal per vraag.']),
+        el('div', { class: 'tweevak' }, [
+          el('label', {}, ['Antwoorden, een per regel, van laag naar hoog', antwoorden]),
+          el('label', {}, ['Schalen, een per regel', schalen])]),
+        el('p', { class: 'zacht', tekst: 'Het eerste antwoord telt als 1, het volgende als 2, enzovoort. De score van een schaal is het gemiddelde van de vragen die erbij horen. Bij een omgekeerde vraag telt het andersom, bijvoorbeeld bij een zin als "Ik blijf lang boos".' })]),
+      el('section', { class: 'vak' }, [
+        el('h2', { tekst: 'Vragen' }), vragen,
+        el('div', {}, [el('button', { class: 'knop stil', type: 'button', tekst: 'Vraag toevoegen', onclick: function(){
+          var namen = regels(schalen.value);
+          var vorige = L.vragen[L.vragen.length - 1];
+          L.vragen.push({ tekst: '', schaal: vorige ? vorige.schaal : (namen[0] || 'Totaal'), om: false });
+          tekenVragen();
+          var velden = vragen.querySelectorAll('input[type=text]'); velden[velden.length - 1].focus();
+        } })])]),
+      el('div', { class: 'onder' }, [
+        el('button', { class: 'knop', type: 'button', tekst: 'Opslaan', onclick: bewaar }),
+        el('button', { class: 'knop stil', type: 'button', tekst: 'Terug zonder opslaan', onclick: tekenLijsten }),
+        bron ? el('button', { class: 'knop weg', type: 'button', tekst: 'Lijst verwijderen', onclick: function(){ zeker.hidden = false; } }) : null,
+        stand]),
+      zeker
+    ]);
+    tekenVragen();
+    window.scrollTo(0, 0);
+  }
+
+  /* ---------- logboek ---------- */
+  function tekenLogboek(){
+    bewaarNu();
+    api('/logboek').then(function(j){
+      S.d = null; tekenNamen();
+      var rijen = j.regels.map(function(r){
+        return el('tr', {}, [el('td', { class: 'tijd', tekst: mooieTijd(r.t) }), el('td', { tekst: r.wie }), el('td', { tekst: r.wat }), el('td', { tekst: r.dossier })]);
+      });
+      scherm([
+        el('div', { class: 'kop' }, [el('h1', { tekst: 'Logboek' })]),
+        el('p', { class: 'zacht', tekst: 'Wie heeft wanneer ingelogd, en welk dossier is geopend, gewijzigd, geëxporteerd of verwijderd. De laatste 300 regels.' }),
+        el('section', { class: 'vak' }, [el('div', { class: 'schuif' }, [el('table', {}, [
+          el('thead', {}, [el('tr', {}, [el('th', { tekst: 'Wanneer' }), el('th', { tekst: 'Wie' }), el('th', { tekst: 'Wat' }), el('th', { tekst: 'Dossier' })])]),
+          el('tbody', {}, rijen)])])])
+      ]);
+    }).catch(meld);
+  }
+
+  /* ---------- begin ---------- */
+  $('nieuwknop').addEventListener('click', tekenNieuw);
+  $('logknop').addEventListener('click', tekenLogboek);
+  $('lijstknop').addEventListener('click', tekenLijsten);
+  $('uitknop').addEventListener('click', function(){
+    bewaarNu();
+    setTimeout(function(){ stuur('POST', '/uitloggen').then(function(){ naarDeur('uit'); }).catch(function(){ naarDeur('uit'); }); }, 150);
+  });
+  window.addEventListener('pagehide', bewaarNu);
+
+  var vlag = new URLSearchParams(location.search).get('pmt');
+  if (vlag) history.replaceState(null, '', location.pathname);
+  fetch('/api/pmt', { cache: 'no-store', credentials: 'same-origin' }).then(function(r){ return r.json(); }).then(function(j){
+    if (!j.aan){ naarDeur('dicht'); return; }
+    if (!j.ingelogd){ naarDeur(vlag); return; }
+    S.ik = j; S.minuten = j.minuten || 15; zetKlok();
+    $('ik').textContent = 'Ingelogd als ' + j.naam;
+    $('proef').hidden = !j.proef;
+    $('deur').hidden = true; $('app').hidden = false;
+    return Promise.all([laadLijst(), laadLijsten()]).then(tekenLeeg);
+  }).catch(function(){ naarDeur('fout'); });
+})();
+</script>
+</body>
+</html>

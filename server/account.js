@@ -541,3 +541,6 @@ export class Account extends DurableObject {
     return json({ fout: "onbekend" }, 404);
   }
 }
+
+/* voor pmt.js: dezelfde bouwstenen, een eigen sessie */
+export { teken, lees, koekjes, controleer, basis, willekeur, b64url, vanB64url, sha256 };
