@@ -75,7 +75,11 @@ import { DurableObject } from "cloudflare:workers";
 import { teken, lees, koekjes, controleer, basis, willekeur, b64url, vanB64url, sha256 } from "./account.js";
 
 const SESSIE_MIN = 15, SESSIE_MAX_UUR = 10, AANMELD_SECONDEN = 600;
-const KOEKJE = "pmt_sessie", AANMELD = "pmt_aanmelden";
+const AANMELD = "pmt_aanmelden";
+/* Met __Host- ervoor neemt een browser het koekje alleen aan van dit ene adres,
+   over https en zonder Domain. Een ander adres onder hetzelfde domein kan er
+   dan geen neerzetten. Lokaal (http) kan dat niet, daar heet het gewoon pmt_sessie. */
+function koekNaam(url){ return url.protocol === "https:" ? "__Host-pmt_sessie" : "pmt_sessie"; }
 const MAX_INHOUD = 300000;
 const STATUS = ["intake", "loopt", "afgerond"];
 
@@ -126,10 +130,10 @@ function demoKluis(env, url){
 }
 async function sessieKoekje(env, url, s){
   const pak = await teken(env, { pmt: 1, mail: s.mail, naam: s.naam, demo: s.demo ? 1 : undefined, sinds: s.sinds, tot: Date.now() + SESSIE_MIN * 60000 });
-  return zet(KOEKJE, pak, url, SESSIE_MIN * 60, "/", true);
+  return zet(koekNaam(url), pak, url, SESSIE_MIN * 60, "/", true);
 }
 async function wie(env, req){
-  const s = await lees(env, koekjes(req)[KOEKJE]);
+  const s = await lees(env, koekjes(req)[koekNaam(new URL(req.url))]);
   if (!s || s.pmt !== 1) return null;
   /* een demosessie geldt alleen zolang de demo bestaat; een echte alleen voor wie op de lijst staat */
   if (s.demo ? !demoKan(env) : !magErin(env, s.mail)) return null;
@@ -204,7 +208,11 @@ export async function behandel(req, env, url, hulp){
       if (!r.ok || !j.id_token){ console.warn("pmt: inwisselen mislukt", r.status, j.error); return naar("fout"); }
       claims = await controleer(env, j.id_token, pak.nonce);
     } catch (e){ console.warn("pmt: bewijs afgekeurd", e && e.message); return naar("fout"); }
-    const mail = String(claims.preferred_username || claims.email || claims.upn || "").trim().toLowerCase();
+    /* Alleen preferred_username (de inlognaam van het account, op een domein dat
+       de organisatie bij Microsoft heeft bewezen) of upn. Het veld email doet
+       niet mee: dat kan iemand in een eigen omgeving zelf invullen met het
+       adres van een ander. Zet PMT_TENANT erbij, dan telt ook alleen de school. */
+    const mail = String(claims.preferred_username || claims.upn || "").trim().toLowerCase();
     const vanSchool = !env.PMT_TENANT || claims.tid === env.PMT_TENANT;
     if (!vanSchool || !magErin(env, mail)){
       await kluis(env, url).meld("niet op de lijst: " + halfAdres(mail), "geweigerd", "");
@@ -218,6 +226,10 @@ export async function behandel(req, env, url, hulp){
   if (p === "/api/pmt/demo" && m === "GET"){
     if (!demoKan(env)) return json({ fout: "de demo staat uit" }, 404);
     if (!await hulp.magDoor("pmt-demo", 120, 600)) return json({ fout: "even wachten" }, 429);
+    /* Wie echt is ingelogd blijft dat. Anders kon een andere site je browser
+       hierheen sturen, en zat je daarna ongemerkt in de openbare demo. */
+    const echt = await wie(env, req);
+    if (echt && !echt.demo) return new Response(null, { status: 302, headers: { location: url.origin + thuisPad(url), "cache-control": "no-store" } });
     await demoKluis(env, url).demoKlaar();
     const koek = await sessieKoekje(env, url, { mail: "", naam: "Demo", demo: 1, sinds: Date.now() });
     return new Response(null, { status: 302, headers: { location: url.origin + thuisPad(url), "set-cookie": koek, "cache-control": "no-store" } });
@@ -226,7 +238,7 @@ export async function behandel(req, env, url, hulp){
   if (p === "/api/pmt/uitloggen" && m === "POST"){
     const s = await wie(env, req);
     if (s) await (s.demo ? demoKluis(env, url) : kluis(env, url)).meld(s.naam, "uitgelogd", "");
-    return json({ ok: true }, 200, { "set-cookie": zet(KOEKJE, "", url, 0, "/", true) });
+    return json({ ok: true }, 200, { "set-cookie": zet(koekNaam(url), "", url, 0, "/", true) });
   }
 
   /* De leerling heeft geen account, alleen de code die de therapeut gaf. Een
@@ -246,12 +258,13 @@ export async function behandel(req, env, url, hulp){
     for (const x of kluizen){ uit = await x.vulIn(code, inhoud.antwoorden); if (uit !== null) break; }
     if (uit === null) return mis();
     if (uit === "al") return json({ fout: "Deze check is vandaag al ingevuld. Tot volgende week." }, 409);
+    if (uit === "vol") return json({ fout: "Er passen geen ingevulde lijsten meer bij. Zeg het tegen je therapeut." }, 400);
     return uit ? json({ ok: true }) : json({ fout: "nog niet alle vragen zijn beantwoord" }, 400);
   }
 
   /* vanaf hier alleen voor wie ingelogd is en op de lijst staat */
   const s = await wie(env, req);
-  if (!s) return json({ fout: "niet ingelogd" }, 401, { "set-cookie": zet(KOEKJE, "", url, 0, "/", true) });
+  if (!s) return json({ fout: "niet ingelogd" }, 401, { "set-cookie": zet(koekNaam(url), "", url, 0, "/", true) });
   const k = s.demo ? demoKluis(env, url) : kluis(env, url);
   /* de demo is van iedereen: er zit een grens aan hoeveel erin past */
   const vol = async wat => s.demo && (await k.tel())[wat] >= (wat === "dossiers" ? DEMO_DOSSIERS : DEMO_LIJSTEN);
@@ -291,7 +304,7 @@ export async function behandel(req, env, url, hulp){
   if (zm && m === "POST"){
     let inhoud; try { inhoud = await leesInhoud(req); } catch (e){ return klaar({ fout: "dit kan de server niet lezen" }, 400); }
     const a = await k.zetKlaar(zm[1], String(inhoud.lijst || ""), s.naam, { vast: !!inhoud.vast, door: inhoud.door === "mentor" ? "mentor" : "leerling" });
-    return a ? klaar(a) : klaar({ fout: "klaarzetten lukte niet: de lijst heeft nog geen vragen of bestaat niet" }, 400);
+    return a ? klaar(a) : klaar({ fout: "klaarzetten lukte niet: de lijst heeft nog geen vragen, of er staan al tien codes open bij deze leerling" }, 400);
   }
   const vm = p.match(/^\/api\/pmt\/dossiers\/([A-Za-z0-9_-]{8,24})\/verslag$/);
   if (vm && m === "POST"){ await k.meld(s.naam, "verslag gemaakt", vm[1]); return klaar({ ok: true }); }
@@ -300,6 +313,7 @@ export async function behandel(req, env, url, hulp){
     let inhoud; try { inhoud = await leesInhoud(req); } catch (e){ return klaar({ fout: "dit kan de server niet lezen" }, 400); }
     const uit = await k.voerIn(pm[1], String(inhoud.lijst || ""), inhoud.antwoorden, inhoud.datum, s.naam);
     if (uit === null) return klaar({ fout: "dit dossier of deze lijst bestaat niet" }, 404);
+    if (uit === "vol") return klaar({ fout: "er passen geen metingen meer bij: haal eerst oude metingen weg" }, 400);
     return uit ? klaar({ ok: true }) : klaar({ fout: "nog niet bij elke vraag is een bolletje gekozen" }, 400);
   }
   const im = p.match(/^\/api\/pmt\/afname\/([A-Za-z]{6})$/);
@@ -445,6 +459,8 @@ function voorbeeldMonitor(){
     schalen: vragen.map(x => x.schaal), vragen };
 }
 const WEEK = 7 * 86400000, VAST_WEKEN = 12, VAST_RUST = 6 * 3600000;
+/* zoveel past er: per dossier, in het hele opslagobject, en aan open codes per dossier */
+const MAX_METINGEN_DOSSIER = 400, MAX_METINGEN = 3000, MAX_CODES_DOSSIER = 10;
 
 function dag(verschil){ return new Date(Date.now() + verschil * 86400000).toISOString().slice(0, 10); }
 /* verzonnen leerlingen voor de proefomgeving */
@@ -543,6 +559,11 @@ export class Pmt extends DurableObject {
     await this.zaai("Demo");
     this.sql.exec("INSERT OR REPLACE INTO stand (k, v) VALUES ('gezaaid', ?)", String(Date.now()));
     this.sql.exec("INSERT OR REPLACE INTO stand (k, v) VALUES ('versie', ?)", DEMO_VERSIE);
+  }
+  /* is er nog plek voor een meting bij dit dossier? */
+  plek(dossier){
+    return this.sql.exec("SELECT COUNT(*) AS n FROM meting WHERE dossier = ?", dossier).one().n < MAX_METINGEN_DOSSIER
+      && this.sql.exec("SELECT COUNT(*) AS n FROM meting").one().n < MAX_METINGEN;
   }
   async alles(){
     const uit = [];
@@ -682,6 +703,7 @@ export class Pmt extends DurableObject {
     if (!l.vragen.length) return null;
     const vast = !!(opt.vast && l.monitor), door = vast && opt.door === "mentor" ? "mentor" : "leerling";
     this.sql.exec("DELETE FROM afname WHERE tot < ?", Date.now());
+    if (this.sql.exec("SELECT COUNT(*) AS n FROM afname WHERE dossier = ?", dossier).one().n >= MAX_CODES_DOSSIER) return null;
     /* van een vaste code is er per leerling, per lijst en per invuller maar een */
     if (vast){
       for (const x of this.sql.exec("SELECT code, lijst FROM afname WHERE dossier = ? AND vast = 1 AND door = ?", dossier, door).toArray()){
@@ -715,6 +737,7 @@ export class Pmt extends DurableObject {
     const a = this.geldig(code);
     if (!a) return null;
     if (a.vast && Date.now() - a.laatst < VAST_RUST) return "al";
+    if (!this.plek(a.dossier)) return "vol";
     const l = JSON.parse(a.lijst);
     const m = reken(l, antwoorden);
     if (!m) return false;
@@ -735,6 +758,7 @@ export class Pmt extends DurableObject {
     if (!l.vragen.length) return null;
     const m = reken(l, antwoorden);
     if (!m) return false;
+    if (!this.plek(dossier)) return "vol";
     let t = Date.parse(datum(dat) + "T12:00:00Z");
     if (!Number.isFinite(t) || t > Date.now() + 86400000 || t < Date.UTC(2015, 0, 1)) t = Date.now();
     this.sql.exec("INSERT INTO meting (id, dossier, inhoud, t) VALUES (?, ?, ?, ?)", willekeur(9), dossier, await this.dicht(Object.assign(m, { lijst: lijstId, papier: true })), t);
