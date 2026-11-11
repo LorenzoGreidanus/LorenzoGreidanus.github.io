@@ -526,8 +526,12 @@ export class Pmt extends DurableObject {
     return uit;
   }
   async lijst(){
+    const met = {}, cod = {};
+    for (const r of this.sql.exec("SELECT dossier, COUNT(*) AS n, MAX(t) AS t FROM meting GROUP BY dossier").toArray()) met[r.dossier] = r;
+    for (const r of this.sql.exec("SELECT dossier, COUNT(*) AS n FROM afname WHERE tot >= ? GROUP BY dossier", Date.now()).toArray()) cod[r.dossier] = r.n;
     return (await this.alles()).map(d => ({ id: d.id, voornaam: d.voornaam, letter: d.letter, klas: d.klas, status: d.status, start: d.start,
-      proef: !!d.proef, notities: d.notities.length, bijgewerkt: d.bijgewerkt }))
+      proef: !!d.proef, notities: d.notities.length, bijgewerkt: d.bijgewerkt,
+      metingen: met[d.id] ? met[d.id].n : 0, laatsteMeting: met[d.id] ? met[d.id].t : 0, codes: cod[d.id] || 0 }))
       .sort((a, b) => a.voornaam.localeCompare(b.voornaam, "nl"));
   }
   async haal(id, wie, wat){
