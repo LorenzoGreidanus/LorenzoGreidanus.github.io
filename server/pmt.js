@@ -553,12 +553,25 @@ export class Pmt extends DurableObject {
     return uit;
   }
   async lijst(){
+    /* Per leerling het verloop voor de kleine grafiek op de kaart: van elke
+       gewone meting het gemiddelde over de schalen, tussen 0 en 1. De
+       wekelijkse checks tellen apart. */
     const met = {}, cod = {};
-    for (const r of this.sql.exec("SELECT dossier, COUNT(*) AS n, MAX(t) AS t FROM meting GROUP BY dossier").toArray()) met[r.dossier] = r;
+    for (const r of this.sql.exec("SELECT dossier, inhoud, t FROM meting ORDER BY t").toArray()){
+      try {
+        const m = await this.open(r.inhoud);
+        const p = met[r.dossier] = met[r.dossier] || { trend: [], weken: 0, t: 0 };
+        if (m.monitor){ p.weken++; continue; }
+        if (!m.schalen.length || !(m.max > 1)) continue;
+        const gem = m.schalen.reduce((a, x) => a + x.score, 0) / m.schalen.length;
+        p.trend.push(Math.round(100 * (gem - 1) / (m.max - 1)) / 100); p.t = r.t;
+      } catch (e){ console.error("pmt: meting niet te openen voor de lijst"); }
+    }
     for (const r of this.sql.exec("SELECT dossier, COUNT(*) AS n FROM afname WHERE tot >= ? GROUP BY dossier", Date.now()).toArray()) cod[r.dossier] = r.n;
     return (await this.alles()).map(d => ({ id: d.id, voornaam: d.voornaam, letter: d.letter, klas: d.klas, status: d.status, start: d.start,
       proef: !!d.proef, notities: d.notities.length, bijgewerkt: d.bijgewerkt,
-      metingen: met[d.id] ? met[d.id].n : 0, laatsteMeting: met[d.id] ? met[d.id].t : 0, codes: cod[d.id] || 0 }))
+      metingen: met[d.id] ? met[d.id].trend.length : 0, laatsteMeting: met[d.id] ? met[d.id].t : 0, weekchecks: met[d.id] ? met[d.id].weken : 0,
+      trend: met[d.id] ? met[d.id].trend.slice(-8) : [], codes: cod[d.id] || 0 }))
       .sort((a, b) => a.voornaam.localeCompare(b.voornaam, "nl"));
   }
   async haal(id, wie, wat){

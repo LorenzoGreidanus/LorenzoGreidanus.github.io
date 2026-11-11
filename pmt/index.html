@@ -221,6 +221,9 @@ td.tijd{white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--muted)}
 .kaart ul{list-style:none;margin:0;padding:0;display:grid;gap:3px;font-size:.86rem;color:var(--muted)}
 .kaart li.open{color:var(--ink);font-weight:500}
 
+.vonk{display:flex;align-items:center;gap:10px;border-top:1px solid var(--rand);padding-top:10px;font-size:.78rem;color:var(--muted)}
+.vonk svg{width:120px;height:36px;flex:none}
+.vonk polyline{fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
 .terugknop{display:none;border:0;background:transparent;color:var(--accent);font-weight:600;min-height:44px;padding:0;margin-bottom:2px}
 .kop{gap:12px 16px}
 .koptekst{display:flex;flex-direction:column;gap:4px;min-width:0}
@@ -233,6 +236,10 @@ td.tijd{white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--muted)}
 .tel{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 7px;border-radius:999px;background:var(--kaart2);color:var(--ink);font-size:.74rem;font-weight:600;font-variant-numeric:tabular-nums}
 .tel.let{background:var(--crab);color:#14224C}
 #dossier[data-tab="overzicht"]{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:18px;margin-top:18px;align-items:start}
+#grafieken .grafiek:first-child{margin-top:0}
+/* een brede grafiek schuift in zijn eigen vak en duwt de pagina niet breder */
+#dossier > *,.grafiek,.grafiek > .schuif{min-width:0}
+.grafiek > .schuif{max-width:100%}
 #dossier[data-tab="overzicht"] > .vak,#dossier[data-tab="overzicht"] > .onder{margin-top:0}
 #dossier[data-tab="overzicht"] > .breed,#dossier .tegels{grid-column:1 / -1}
 #dossier[data-tab="overzicht"] > :not(.p-overzicht),
@@ -255,7 +262,7 @@ button.tegel:hover{border-color:var(--accent)}
 @media (max-width:1100px){
   .maker{grid-template-columns:1fr}
   .makerrechts{position:static;margin-top:0}
-  #dossier[data-tab="overzicht"]{grid-template-columns:1fr}
+  #dossier[data-tab="overzicht"]{grid-template-columns:minmax(0,1fr)}
   .tegels{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 /* ---------- de telefoon: de balk gaat naar onderen, de leerlingen staan op het overzicht ---------- */
@@ -457,6 +464,17 @@ button.tegel:hover{border-color:var(--accent)}
     ]);
     tekenKaarten();
   }
+  /* het verloop van een leerling als klein lijntje: het gemiddelde van elke meting */
+  function vonk(d){
+    var t = d.trend || []; if (t.length < 2) return null;
+    var pts = t.map(function(v, i){ return [4 + i * 112 / (t.length - 1), 32 - v * 28]; });
+    var verschil = t[t.length - 1] - t[0];
+    return el('div', { class: 'vonk' }, [
+      sv('svg', { viewBox: '0 0 120 36', role: 'img', 'aria-label': 'Verloop over ' + t.length + ' metingen' }, [
+        sv('polyline', { class: 'r0', style: 'fill:none', points: pts.map(function(p){ return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ') }),
+        sv('circle', { class: 'r0', cx: pts[pts.length - 1][0], cy: pts[pts.length - 1][1], r: 3.5, 'stroke-width': 0 })]),
+      el('span', { tekst: 'Gemiddelde over ' + t.length + ' metingen: ' + (verschil > 0.02 ? 'omhoog' : verschil < -0.02 ? 'omlaag' : 'gelijk') })]);
+  }
   function tekenKaarten(){
     var f = $('filter'), box = $('kaarten'); if (!f || !box) return;
     var kies = S.filter || 'alle', q = (S.zoek || '').trim().toLowerCase();
@@ -476,9 +494,11 @@ button.tegel:hover{border-color:var(--accent)}
           el('span', { class: 'chip ' + d.status, tekst: STATUS[d.status] })]),
         el('ul', {}, [
           el('li', { tekst: d.start ? 'Gestart op ' + mooieDatum(d.start) : 'Nog geen startdatum' }),
-          el('li', { tekst: d.metingen ? d.metingen + ' keer een lijst of check ingevuld, laatste op ' + kort(d.laatsteMeting) : 'Nog niets ingevuld' }),
+          el('li', { tekst: d.metingen ? d.metingen + (d.metingen === 1 ? ' meting' : ' metingen') + ', laatste op ' + kort(d.laatsteMeting) : 'Nog geen metingen' }),
+          d.weekchecks ? el('li', { tekst: d.weekchecks + ' keer de wekelijkse check' }) : null,
           el('li', { tekst: d.notities + (d.notities === 1 ? ' notitie' : ' notities') }),
-          d.codes ? el('li', { class: 'open', tekst: d.codes + (d.codes === 1 ? ' code staat open' : ' codes staan open') }) : null])
+          d.codes ? el('li', { class: 'open', tekst: d.codes + (d.codes === 1 ? ' code staat open' : ' codes staan open') }) : null]),
+        vonk(d)
       ]));
     });
   }
@@ -627,6 +647,7 @@ button.tegel:hover{border-color:var(--accent)}
       el('div', { class: 'tabbalk', id: 'tabbalk', role: 'tablist', 'aria-label': 'Onderdelen van het dossier' }),
       el('div', { id: 'dossier', 'data-tab': S.tab }, [
         el('div', { class: 'tegels p-overzicht', id: 'tegels' }),
+        el('section', { class: 'vak p-overzicht breed' }, [el('h2', { tekst: 'Ontwikkeling' }), el('div', { id: 'grafieken' })]),
         el('section', { class: 'vak p-overzicht' }, [
           el('h2', { tekst: 'Gegevens' }),
           el('div', { class: 'rij' }, [
@@ -658,7 +679,6 @@ button.tegel:hover{border-color:var(--accent)}
           el('div', { class: 'lijstkaart' }, [el('h2', { tekst: 'Vragenlijsten' }),
             el('button', { class: 'knop stil klein', type: 'button', tekst: 'Vernieuwen', onclick: function(){ herlaadMetingen(); } })]),
           el('div', { id: 'klaarzet' }),
-          el('div', { id: 'grafieken' }),
           el('div', { id: 'metingen' })]),
         el('section', { class: 'vak p-week' }, [
           el('div', { class: 'lijstkaart' }, [el('h2', { tekst: 'Wekelijkse check' }),
@@ -713,6 +733,7 @@ button.tegel:hover{border-color:var(--accent)}
     });
     var gr = $('grafieken'); gr.textContent = '';
     groepen(gewoon(d.metingen)).forEach(function(g){ gr.appendChild(grafiekVak(g)); });
+    if (!gr.firstChild) gr.appendChild(el('p', { class: 'zacht', tekst: 'Hier komt de grafiek zodra er een vragenlijst is ingevuld. Klaarzetten doe je onder Vragenlijsten.' }));
     var rij = gewoon(d.metingen).sort(function(a, b){ return b.t - a.t; });
     if (!rij.length) box.appendChild(el('p', { class: 'zacht', style: 'margin-top:12px', tekst: 'Nog geen ingevulde lijsten.' }));
     rij.forEach(function(m){
@@ -1119,7 +1140,7 @@ button.tegel:hover{border-color:var(--accent)}
       var m = model(), rij = L.vragen.filter(function(v){ return v.tekst.trim(); }), n = rij.length;
       if (vbNr >= n) vbNr = Math.max(0, n - 1);
       vb.textContent = '';
-      vb.appendChild(el('div', { class: 'filter', role: 'group', 'aria-label': 'Soort voorbeeld' }, [['scherm', 'Op het scherm'], ['papier', 'Op papier'], ['dossier', 'In het dossier']].map(function(p){
+      vb.appendChild(el('div', { class: 'filter', role: 'group', 'aria-label': 'Soort voorbeeld' }, [['scherm', 'Op het scherm'], ['papier', 'Op papier']].map(function(p){
         return el('button', { type: 'button', 'aria-pressed': vbSoort === p[0] ? 'true' : 'false', tekst: p[1], onclick: function(){ vbSoort = p[0]; tekenVoorbeeld(); } });
       })));
       var uiteinden = m.vorm === 'bollen' ? [el('span', { tekst: '1 = ' + (m.laag || 'het minst') }), el('span', { tekst: m.antwoorden.length + ' = ' + (m.hoog || 'het meest') })] : null;
@@ -1146,23 +1167,6 @@ button.tegel:hover{border-color:var(--accent)}
         }) : [el('span', { tekst: 'Hier komen je vragen, elk met een rij bolletjes.' })])
          .concat(n > 5 ? [el('span', { tekst: 'en nog ' + (n - 5) + (n - 5 === 1 ? ' zin' : ' zinnen') })] : [])));
         vb.appendChild(el('p', { class: 'zacht', tekst: 'Op papier kleurt de leerling bij elke zin een bolletje in. Printen doe je vanuit het dossier.' }));
-      } else {
-        /* Wat je er later van terugziet, met verzonnen cijfers: de grafiek per
-           schaal, of bij een wekelijkse check het raster per week. */
-        var namen = regels(schalen.value); if (!namen.length) namen = ['Totaal'];
-        var hoogste = m.antwoorden.length, keer = mon.checked ? 6 : 3, nu = Date.now(), nep = [];
-        for (var k = 0; k < keer; k++){
-          nep.push({ t: nu - (keer - 1 - k) * (mon.checked ? 7 : 42) * 86400000, door: 'leerling', monitor: mon.checked, max: hoogste,
-            schalen: namen.map(function(naamSchaal, j){
-              var begin = 1 + (hoogste - 1) * (0.2 + 0.09 * (j % 3)), stapje = (hoogste - 1) * (mon.checked ? 0.09 : 0.17 + 0.04 * ((j + 1) % 3));
-              var sc = Math.min(hoogste, begin + k * stapje);
-              return { naam: naamSchaal, score: mon.checked ? Math.round(sc) : Math.round(sc * 10) / 10 };
-            }) });
-        }
-        var g = { titel: titel.value.trim() || 'Titel van de lijst', max: hoogste, namen: namen, metingen: nep };
-        if (mon.checked) vb.appendChild(el('div', { class: 'grafiek', style: 'margin-top:0' }, [rasterTabel(g, 'leerling')]));
-        else vb.appendChild(el('div', { class: 'grafiek', style: 'margin-top:0' }, [grafiek(g, true)]));
-        vb.appendChild(el('p', { class: 'zacht', tekst: (mon.checked ? 'Zo komt de wekelijkse check in het dossier: een vakje per week, hoe donkerder hoe beter het lukte.' : 'Zo komt de ontwikkeling in het dossier te staan na een paar metingen: een lijn per schaal.') + ' De cijfers hier zijn verzonnen.' }));
       }
     }
     function tekenVragen(){
@@ -1223,7 +1227,7 @@ button.tegel:hover{border-color:var(--accent)}
     links.addEventListener('change', tekenVoorbeeld);
     scherm([
       el('div', { class: 'paginakop' }, [el('h1', { tekst: bron ? 'Vragenlijst bewerken' : 'Nieuwe vragenlijst' })]),
-      el('div', { class: 'maker' }, [links, el('aside', { class: 'makerrechts', 'aria-label': 'Voorbeeld' }, [el('h2', { tekst: 'Voorbeeld' }), vb])]),
+      el('div', { class: 'maker' }, [links, el('aside', { class: 'makerrechts', 'aria-label': 'Voorbeeld' }, [el('h2', { tekst: 'Zo ziet de leerling het' }), vb])]),
       el('div', { class: 'onder' }, [
         el('button', { class: 'knop', type: 'button', tekst: 'Opslaan', onclick: bewaar }),
         el('button', { class: 'knop stil', type: 'button', tekst: 'Terug zonder opslaan', onclick: tekenLijsten }),
