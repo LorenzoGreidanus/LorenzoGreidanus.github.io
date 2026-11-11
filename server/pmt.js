@@ -66,6 +66,7 @@
      GET    /api/pmt/rooster?week=DATUM     de tijden van het rooster en de afspraken van die week
      PUT    /api/pmt/rooster/instelling    begin, eind en de lengte van een blok
      POST   /api/pmt/afspraken             een leerling inplannen (weken: zoveel weken achter elkaar)
+     PUT    /api/pmt/afspraken/ID          verplaatsen naar een andere dag of tijd
      DELETE /api/pmt/afspraken/ID
      GET    /api/pmt/logboek
    De wekelijkse check (EF-monitor) is een vragenlijst met monitor aan. Daarvoor is er
@@ -356,6 +357,12 @@ export async function behandel(req, env, url, hulp){
     return u.gemaakt ? klaar(u) : klaar({ fout: "op dit moment staat al een afspraak" }, 409);
   }
   const afm = p.match(/^\/api\/pmt\/afspraken\/([A-Za-z0-9_-]{8,24})$/);
+  if (afm && m === "PUT"){
+    let inhoud; try { inhoud = await leesInhoud(req); } catch (e){ return klaar({ fout: "dit kan de server niet lezen" }, 400); }
+    const u = await k.verplaats(afm[1], inhoud, s.naam);
+    if (u === null) return klaar({ fout: "deze afspraak bestaat niet of het moment klopt niet" }, 404);
+    return u ? klaar({ ok: true }) : klaar({ fout: "op dat moment staat al een afspraak" }, 409);
+  }
   if (afm && m === "DELETE") return (await k.wegAfspraak(afm[1], s.naam)) ? klaar({ ok: true }) : klaar({ fout: "deze afspraak bestaat niet" }, 404);
   if (p === "/api/pmt/logboek" && m === "GET") return klaar({ regels: await k.logboek() });
   if (p === "/api/pmt/proef" && m === "POST"){
@@ -626,6 +633,16 @@ export class Pmt extends DurableObject {
     }
     if (gemaakt) this.meld(wie, gemaakt === 1 ? "afspraak ingepland" : gemaakt + " afspraken ingepland", d.dossier);
     return { gemaakt, overgeslagen };
+  }
+  /* een afspraak naar een andere dag of tijd; de lengte blijft */
+  verplaats(id, d, wie){
+    const a = this.sql.exec("SELECT dossier, duur FROM afspraak WHERE id = ?", id).toArray()[0];
+    const dagNu = echteDag(d && d.dag), begin = Math.round(Number(d && d.begin));
+    if (!a || !dagNu || !(begin >= 0) || begin + a.duur > 1440) return null;
+    if (this.sql.exec("SELECT id FROM afspraak WHERE dag = ? AND begin < ? AND begin + duur > ? AND id <> ?", dagNu, begin + a.duur, begin, id).toArray().length) return false;
+    this.sql.exec("UPDATE afspraak SET dag = ?, begin = ? WHERE id = ?", dagNu, begin, id);
+    this.meld(wie, "afspraak verplaatst", a.dossier);
+    return true;
   }
   wegAfspraak(id, wie){
     const r = this.sql.exec("SELECT dossier FROM afspraak WHERE id = ?", id).toArray()[0];
