@@ -198,6 +198,7 @@ td.tijd{white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--muted)}
     <p class="zacht" id="deurtekst">Log in met je Microsoft-account van school. Alleen wie op de toegangslijst staat komt binnen.</p>
     <p class="melding" id="deurmelding" hidden></p>
     <a class="knop" id="inlogknop" href="/api/pmt/inloggen">Inloggen met Microsoft</a>
+    <a class="zacht" id="msknop" href="/api/pmt/inloggen" hidden>Inloggen met Microsoft, als je op de toegangslijst staat</a>
   </div>
 </div>
 
@@ -287,6 +288,13 @@ td.tijd{white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--muted)}
     var m = $('deurmelding');
     m.hidden = !MELDING[waarom]; m.textContent = MELDING[waarom] || '';
     $('inlogknop').hidden = waarom === 'dicht';
+    /* zolang het een demo is, brengt de knop je zonder Microsoft naar de voorbeelddossiers */
+    var demo = !!S.demoKan && waarom !== 'dicht';
+    $('inlogknop').textContent = demo ? 'Inloggen' : 'Inloggen met Microsoft';
+    $('inlogknop').href = demo ? '/api/pmt/demo' : '/api/pmt/inloggen';
+    $('msknop').hidden = !demo;
+    $('deurtekst').textContent = demo ? 'Dit is nu nog een demo met verzonnen leerlingen. Klik op inloggen en kijk rond. Later log je hier in met je Microsoft-account van school.'
+      : 'Log in met je Microsoft-account van school. Alleen wie op de toegangslijst staat komt binnen.';
   }
 
   /* ---------- de zijbalk ---------- */
@@ -947,10 +955,12 @@ td.tijd{white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--muted)}
   if (vlag) history.replaceState(null, '', location.pathname);
   fetch('/api/pmt', { cache: 'no-store', credentials: 'same-origin' }).then(function(r){ return r.json(); }).then(function(j){
     if (!j.aan){ naarDeur('dicht'); return; }
+    S.demoKan = !!j.demo;
     if (!j.ingelogd){ naarDeur(vlag); return; }
     S.ik = j; S.minuten = j.minuten || 15; zetKlok();
     $('ik').textContent = 'Ingelogd als ' + j.naam;
     $('proef').hidden = !j.proef;
+    if (j.demo) $('proef').textContent = 'Dit is een demo die iedereen kan openen. Wat je hier invult kan iedereen zien, en na een dag is het weer weg. Zet er geen echte namen in.';
     $('deur').hidden = true; $('app').hidden = false;
     return Promise.all([laadLijst(), laadLijsten()]).then(tekenLeeg);
   }).catch(function(){ naarDeur('fout'); });

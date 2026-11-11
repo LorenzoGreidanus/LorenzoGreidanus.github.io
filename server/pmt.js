@@ -34,7 +34,16 @@
      Zolang PMT_ECHT niet op "ja" staat is het een proefomgeving: de pagina
      zegt dat erbij en je kunt voorbeelddossiers laten maken.
 
+   De demo
+     Zolang het een proefomgeving is (PMT_ECHT staat niet op "ja") kan iedereen
+     zonder Microsoft naar binnen via /api/pmt/demo. Die bezoeker komt in een
+     eigen opslagobject (pmt-demo) met voorbeelddossiers, nooit in de echte
+     opslag. Iedereen deelt die ene demo, dus er hoort niets echts in; na een
+     dag wordt hij leeggemaakt en opnieuw gevuld. Uitzetten kan met
+     PMT_DEMO=nee. Staat PMT_ECHT op "ja", dan bestaat de demo niet meer.
+
    Routes (alleen op pmt.* en lokaal, zie index.js):
+     GET    /api/pmt/demo                  de demo in, zonder inloggen (alleen in de proefomgeving)
      GET    /api/pmt                       { aan, ingelogd, naam, proef }
      GET    /api/pmt/inloggen              door naar Microsoft
      GET    /api/pmt/terug                 Microsoft komt hier terug
@@ -83,6 +92,10 @@ function toegangslijst(env){
 }
 function magErin(env, mail){ return !!mail && toegangslijst(env).indexOf(mail) >= 0; }
 function proef(env){ return env.PMT_ECHT !== "ja"; }
+/* de demo kan alleen in de proefomgeving, en gaat uit met PMT_DEMO=nee */
+function demoKan(env){ return proef(env) && env.PMT_DEMO !== "nee"; }
+const DEMO_DOSSIERS = 40, DEMO_LIJSTEN = 20, DEMO_DAG = 86400000;
+function thuisPad(url){ return url.hostname === "localhost" || url.hostname === "127.0.0.1" ? "/pmt/" : "/"; }
 function huurder(env){ return String(env.PMT_TENANT || env.MS_TENANT || "common"); }
 function terugAdres(url){ return url.origin + "/api/pmt/terug"; }
 /* het sessiekoekje is Strict: het gaat alleen mee met verzoeken van de eigen pagina.
@@ -105,13 +118,21 @@ function kluis(env, url){
   const ns = lokaal ? env.PMT : env.PMT.jurisdiction("eu");
   return ns.get(ns.idFromName("pmt"));
 }
+/* de opslag van de demo: een ander object dan de echte, met dezelfde vorm */
+function demoKluis(env, url){
+  const lokaal = url.hostname === "localhost" || url.hostname === "127.0.0.1";
+  const ns = lokaal ? env.PMT : env.PMT.jurisdiction("eu");
+  return ns.get(ns.idFromName("pmt-demo"));
+}
 async function sessieKoekje(env, url, s){
-  const pak = await teken(env, { pmt: 1, mail: s.mail, naam: s.naam, sinds: s.sinds, tot: Date.now() + SESSIE_MIN * 60000 });
+  const pak = await teken(env, { pmt: 1, mail: s.mail, naam: s.naam, demo: s.demo ? 1 : undefined, sinds: s.sinds, tot: Date.now() + SESSIE_MIN * 60000 });
   return zet(KOEKJE, pak, url, SESSIE_MIN * 60, "/", true);
 }
 async function wie(env, req){
   const s = await lees(env, koekjes(req)[KOEKJE]);
-  if (!s || s.pmt !== 1 || !magErin(env, s.mail)) return null;
+  if (!s || s.pmt !== 1) return null;
+  /* een demosessie geldt alleen zolang de demo bestaat; een echte alleen voor wie op de lijst staat */
+  if (s.demo ? !demoKan(env) : !magErin(env, s.mail)) return null;
   if (!(Date.now() - s.sinds < SESSIE_MAX_UUR * 3600000)) return null;
   return s;
 }
@@ -139,8 +160,8 @@ export async function behandel(req, env, url, hulp){
 
   if (p === "/api/pmt" && m === "GET"){
     const s = await wie(env, req);
-    if (!s) return json({ aan: true, ingelogd: false });
-    return json({ aan: true, ingelogd: true, naam: s.naam, proef: proef(env), minuten: SESSIE_MIN }, 200, { "set-cookie": await sessieKoekje(env, url, s) });
+    if (!s) return json({ aan: true, ingelogd: false, demo: demoKan(env) });
+    return json({ aan: true, ingelogd: true, naam: s.naam, proef: proef(env), demo: !!s.demo, minuten: SESSIE_MIN }, 200, { "set-cookie": await sessieKoekje(env, url, s) });
   }
 
   if (p === "/api/pmt/inloggen" && m === "GET"){
@@ -194,9 +215,17 @@ export async function behandel(req, env, url, hulp){
     return naar("", await sessieKoekje(env, url, { mail, naam, sinds: Date.now() }));
   }
 
+  if (p === "/api/pmt/demo" && m === "GET"){
+    if (!demoKan(env)) return json({ fout: "de demo staat uit" }, 404);
+    if (!await hulp.magDoor("pmt-demo", 120, 600)) return json({ fout: "even wachten" }, 429);
+    await demoKluis(env, url).demoKlaar();
+    const koek = await sessieKoekje(env, url, { mail: "", naam: "Demo", demo: 1, sinds: Date.now() });
+    return new Response(null, { status: 302, headers: { location: url.origin + thuisPad(url), "set-cookie": koek, "cache-control": "no-store" } });
+  }
+
   if (p === "/api/pmt/uitloggen" && m === "POST"){
     const s = await wie(env, req);
-    if (s) await kluis(env, url).meld(s.naam, "uitgelogd", "");
+    if (s) await (s.demo ? demoKluis(env, url) : kluis(env, url)).meld(s.naam, "uitgelogd", "");
     return json({ ok: true }, 200, { "set-cookie": zet(KOEKJE, "", url, 0, "/", true) });
   }
 
@@ -207,12 +236,14 @@ export async function behandel(req, env, url, hulp){
     const code = am[1].toUpperCase();
     if (!await hulp.magDoor("pmt-code-mis", 30, 600, true)) return json({ fout: "even wachten" }, 429);
     const mis = async () => { await hulp.magDoor("pmt-code-mis", 30, 600); return json({ fout: "deze code klopt niet of is verlopen" }, 404); };
+    const kluizen = demoKan(env) ? [kluis(env, url), demoKluis(env, url)] : [kluis(env, url)];
     if (m === "GET"){
-      const a = await kluis(env, url).afname(code);
-      return a ? json(a) : mis();
+      for (const x of kluizen){ const a = await x.afname(code); if (a) return json(a); }
+      return mis();
     }
     let inhoud; try { inhoud = await leesInhoud(req); } catch (e){ return json({ fout: "dit kan de server niet lezen" }, 400); }
-    const uit = await kluis(env, url).vulIn(code, inhoud.antwoorden);
+    let uit = null;
+    for (const x of kluizen){ uit = await x.vulIn(code, inhoud.antwoorden); if (uit !== null) break; }
     if (uit === null) return mis();
     if (uit === "al") return json({ fout: "Deze check is vandaag al ingevuld. Tot volgende week." }, 409);
     return uit ? json({ ok: true }) : json({ fout: "nog niet alle vragen zijn beantwoord" }, 400);
@@ -221,12 +252,15 @@ export async function behandel(req, env, url, hulp){
   /* vanaf hier alleen voor wie ingelogd is en op de lijst staat */
   const s = await wie(env, req);
   if (!s) return json({ fout: "niet ingelogd" }, 401, { "set-cookie": zet(KOEKJE, "", url, 0, "/", true) });
-  const k = kluis(env, url);
+  const k = s.demo ? demoKluis(env, url) : kluis(env, url);
+  /* de demo is van iedereen: er zit een grens aan hoeveel erin past */
+  const vol = async wat => s.demo && (await k.tel())[wat] >= (wat === "dossiers" ? DEMO_DOSSIERS : DEMO_LIJSTEN);
   const klaar = async (obj, status, extra) => json(obj, status, Object.assign({ "set-cookie": await sessieKoekje(env, url, s) }, extra || {}));
 
   if (p === "/api/pmt/dossiers" && m === "GET") return klaar({ dossiers: await k.lijst() });
   if (p === "/api/pmt/dossiers" && m === "POST"){
     let inhoud; try { inhoud = await leesInhoud(req); } catch (e){ return klaar({ fout: "dit kan de server niet lezen" }, 400); }
+    if (await vol("dossiers")) return klaar({ fout: "de demo zit vol: haal eerst een dossier weg" }, 400);
     const d = await k.bewaar(null, inhoud, s.naam);
     return d ? klaar({ dossier: d }) : klaar({ fout: "een dossier heeft een voornaam nodig" }, 400);
   }
@@ -275,6 +309,7 @@ export async function behandel(req, env, url, hulp){
   if (p === "/api/pmt/lijsten" && m === "GET") return klaar({ lijsten: await k.lijsten() });
   if (p === "/api/pmt/lijsten" && m === "POST"){
     let inhoud; try { inhoud = await leesInhoud(req); } catch (e){ return klaar({ fout: "dit kan de server niet lezen" }, 400); }
+    if (await vol("lijsten")) return klaar({ fout: "de demo zit vol: haal eerst een lijst weg" }, 400);
     const l = await k.bewaarLijst(null, inhoud, s.naam);
     return l ? klaar({ lijst: l }) : klaar({ fout: "een vragenlijst heeft een titel nodig" }, 400);
   }
@@ -293,6 +328,7 @@ export async function behandel(req, env, url, hulp){
   if (p === "/api/pmt/logboek" && m === "GET") return klaar({ regels: await k.logboek() });
   if (p === "/api/pmt/proef" && m === "POST"){
     if (!proef(env)) return klaar({ fout: "dit is geen proefomgeving" }, 403);
+    if (await vol("dossiers")) return klaar({ fout: "de demo zit vol: haal eerst een dossier weg" }, 400);
     await k.zaai(s.naam);
     return klaar({ dossiers: await k.lijst() });
   }
@@ -437,6 +473,7 @@ export class Pmt extends DurableObject {
       try { this.sql.exec("ALTER TABLE afname ADD COLUMN " + kolom); } catch (e){ /* de kolom is er al */ }
     }
     this.sql.exec("CREATE TABLE IF NOT EXISTS meting (id TEXT PRIMARY KEY, dossier TEXT NOT NULL, inhoud TEXT NOT NULL, t INTEGER NOT NULL)");
+    this.sql.exec("CREATE TABLE IF NOT EXISTS stand (k TEXT PRIMARY KEY, v TEXT NOT NULL)");
     this.sql.exec("CREATE TABLE IF NOT EXISTS logboek (n INTEGER PRIMARY KEY AUTOINCREMENT, t INTEGER NOT NULL, wie TEXT NOT NULL, wat TEXT NOT NULL, dossier TEXT NOT NULL)");
   }
   async sleutel(){
@@ -466,6 +503,19 @@ export class Pmt extends DurableObject {
       this.sql.exec("INSERT INTO logboek (t, wie, wat, dossier) VALUES (?, ?, ?, ?)", nu, String(wie).slice(0, 80), wat, dossier || "");
       this.sql.exec("DELETE FROM logboek WHERE n <= (SELECT MAX(n) FROM logboek) - 5000");
     }
+  }
+  tel(){
+    return { dossiers: this.sql.exec("SELECT COUNT(*) AS n FROM dossier").one().n, lijsten: this.sql.exec("SELECT COUNT(*) AS n FROM lijst").one().n };
+  }
+  /* Alleen voor het demo-object: is de demo leeg of ouder dan een dag, dan
+     gaat alles weg en komen de voorbeelden er opnieuw in. Wat bezoekers er
+     achterlieten blijft zo nooit lang staan. */
+  async demoKlaar(){
+    const r = this.sql.exec("SELECT v FROM stand WHERE k = 'gezaaid'").toArray()[0];
+    if (r && Date.now() - Number(r.v) < DEMO_DAG && this.tel().dossiers) return;
+    for (const t of ["dossier", "meting", "afname", "lijst", "logboek"]) this.sql.exec("DELETE FROM " + t);
+    await this.zaai("Demo");
+    this.sql.exec("INSERT OR REPLACE INTO stand (k, v) VALUES ('gezaaid', ?)", String(Date.now()));
   }
   async alles(){
     const uit = [];
