@@ -295,19 +295,46 @@
     if (b && zinBeeld(b) && zonderLabels(b) === gelijkTekst(v)) return b;
     return (v ? '<span class="vr">' + v + '</span>' : '') + b;
   }
-  function opgaveHtml(it){
+  /* Soort vragen (open, meerkeuze, door elkaar): een opgave met keuzes kan ook open op het blad.
+     OPENVRAAG.vorm (werkblad-spellen.js) zegt wat er dan moet staan: een lijn, een lijn met
+     "Kies uit", of toch de keuzes om te omcirkelen als de vraag zonder keuzes niet te maken is.
+     Bij door elkaar wordt om en om een opgave met keuzes open, te beginnen bij de eerste. */
+  function vormen(w, lijst){
+    var tel = 0;
+    return lijst.map(function(x){
+      if (!x || !x.o) return null;
+      var open = w.vorm === 'open' || (w.vorm === 'mix' && tel % 2 === 0); tel++;
+      if (!open || !window.OPENVRAAG) return { soort:'mk' };
+      try { return OPENVRAAG.vorm({ v:x.v, o:x.o, g:x.g }); } catch (e){ return { soort:'mk' }; }
+    });
+  }
+  function keuzesHtml(p, o, letters){
+    if (p.soort === 'open') return (p.opdr ? '<span class="opdr">' + schoon(p.opdr) + '</span>' : '') + '<span class="lijn" aria-hidden="true"></span>';
+    if (p.soort === 'kies') return (p.opdr ? '<span class="opdr">' + schoon(p.opdr) + '</span>' : '') + OPENVRAAG.kiesUit(o) + '<span class="lijn" aria-hidden="true"></span>';
+    return (p.opdr ? '<span class="opdr">' + schoon(p.opdr) + '</span>' : '') + '<div class="opties">' + o.map(function(t, i){ return '<span><b>' + letters.charAt(i) + '</b>' + schoon(t) + '</span>'; }).join('') + '</div>';
+  }
+  function metLetter(p){ return p.soort === 'mk' || p.soort === 'omcirkel'; }
+  /* wat een opgave met keuzes is, voor vormen(): de vraag als tekst, de keuzes en de goede */
+  function alsKeuze(it){
     var B = OPDRACHTENBOEK;
-    if (it.soort === 'bank') return '<span class="vr">' + schoon(it.q.v) + '</span><div class="opties">' + it.o.map(function(o, i){ return '<span><b>' + LETTERS.charAt(i) + '</b>' + schoon(o) + '</span>'; }).join('') + '</div>';
+    if (it.soort === 'bank') return { v:it.q.v, o:it.o, g:it.g };
+    if (it.soort === 'lezen' || !it.op) return null;
+    var kz = B.keuzes(it.op);
+    return kz ? { v:(B.kaal(B.vraagHtml(it.op)) + (kz.uitStap ? ' ' + B.kaal(kz.tekst) : '')).trim(), o:kz.opties, g:kz.goed } : null;
+  }
+  function opgaveHtml(it){
+    var B = OPDRACHTENBOEK, p = it.p || { soort:'mk' };
+    if (it.soort === 'bank') return '<span class="vr">' + schoon(it.q.v) + '</span>' + keuzesHtml(p, it.o, LETTERS);
     var op = it.op, kz = B.keuzes(op);
     return (op.context ? '<span class="lr-context">' + op.context + '</span>' : '') + vraagEnBeeld(op, 0) +
-      (kz ? (kz.uitStap ? '<span class="opdr">' + schoon(B.kaal(kz.tekst)) + '</span>' : '') + '<div class="opties">' + kz.opties.map(function(o, i){ return '<span><b>' + LETTERS.charAt(i) + '</b>' + schoon(o) + '</span>'; }).join('') + '</div>'
+      (kz ? (kz.uitStap ? '<span class="opdr">' + schoon(B.kaal(kz.tekst)) + '</span>' : '') + keuzesHtml(p, kz.opties, LETTERS)
         : '<p class="ob-ant">Antwoord: <span class="lijn kort" aria-hidden="true"></span>' + (op.eenheid ? ' ' + schoon(op.eenheid) : '') + '</p>');
   }
   function antwoordHtml(it, metStappen){
-    var B = OPDRACHTENBOEK;
-    if (it.soort === 'bank') return '<span class="goed">' + LETTERS.charAt(it.g) + '. ' + schoon(it.o[it.g]) + '</span>' + (metStappen && it.q.u ? '<small>' + schoon(it.q.u) + '</small>' : '');
+    var B = OPDRACHTENBOEK, letter = metLetter(it.p || { soort:'mk' });
+    if (it.soort === 'bank') return '<span class="goed">' + (letter ? LETTERS.charAt(it.g) + '. ' : '') + schoon(it.o[it.g]) + '</span>' + (metStappen && it.q.u ? '<small>' + schoon(it.q.u) + '</small>' : '');
     var op = it.op, kz = B.keuzes(op), e = B.eind(op);
-    return '<span class="goed">' + (kz ? LETTERS.charAt(kz.goed) + '. ' : '') + schoon(e) + (op.eenheid && !kz ? ' ' + schoon(op.eenheid) : '') + '</span>' +
+    return '<span class="goed">' + (kz && letter ? LETTERS.charAt(kz.goed) + '. ' : '') + schoon(e) + (op.eenheid && !kz ? ' ' + schoon(op.eenheid) : '') + '</span>' +
       (metStappen ? '<ol class="ob-stappen">' + B.echteStappen(op).map(function(s){ return '<li>' + schoon(B.kaal(s.tekst)) + ' <b>' + schoon(B.stapAntwoord(s)) + '</b></li>'; }).join('') + '</ol>' : '');
   }
   function voorbeeldHtml(vb){
@@ -350,7 +377,7 @@
     window.SPELBLAD['boek-' + wvak] = {
       naam:'Opdrachtenboek', vak:wvak, eigenNiveau:true,
       genoeg:function(items){ return items.some(function(it){ return it.bl; }); },
-      aantallen:[4, 6, 8, 10, 12, 15, 20], standaard:6, aantalNaam:'Opgaven per paragraaf',
+      aantallen:[4, 6, 8, 10, 12, 15, 20], standaard:6, aantalNaam:'Opgaven per paragraaf', vormen:true, vormStandaard:'mix',
       delenKop:'Kies uit het boek',
       delenTip:'Zoals in een opdrachtenboek: thema, hoofdstuk en paragraaf. Elke paragraaf maakt nieuwe opgaven uit de leerroute, met uitleg en figuren.',
       delen:function(aan){
@@ -393,6 +420,8 @@
       },
       teken:function(w){
         var B = OPDRACHTENBOEK, k = w.items[0].keuze, vak = k.vak, items = w.items;
+        /* open of meerkeuze per opgave: een keer bepaald, voor het blad en de antwoorden */
+        vormen(w, items.map(alsKeuze)).forEach(function(p, i){ items[i].p = p; });
         var pars = [], themas = [], hfds = [];
         items.forEach(function(it){
           if (pars.indexOf(it.par) < 0) pars.push(it.par);

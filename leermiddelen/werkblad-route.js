@@ -61,6 +61,25 @@
   function antw(x){ return [].concat(x)[0]; }
   function beeld(op, n){ var b = op.beeld; if (!b) return ''; if (typeof b === 'function'){ try { return b(n) || ''; } catch (e){ return ''; } } return b; }
   function vraagHtml(op){ return op.vraagHtml || schoon(op.vraag || ''); }
+  /* Soort vragen (open, meerkeuze, door elkaar): een opgave met keuzes kan ook open op het blad.
+     OPENVRAAG.vorm (werkblad-spellen.js) zegt wat er dan moet staan: een lijn, een lijn met
+     "Kies uit", of toch de keuzes om te omcirkelen als de vraag zonder keuzes niet te maken is.
+     Bij door elkaar wordt om en om een opgave met keuzes open, te beginnen bij de eerste. */
+  function vormen(w, lijst){
+    var tel = 0;
+    return lijst.map(function(x){
+      if (!x || !x.o) return null;
+      var open = w.vorm === 'open' || (w.vorm === 'mix' && tel % 2 === 0); tel++;
+      if (!open || !window.OPENVRAAG) return { soort:'mk' };
+      try { return OPENVRAAG.vorm({ v:x.v, o:x.o, g:x.g }); } catch (e){ return { soort:'mk' }; }
+    });
+  }
+  function keuzesHtml(p, o, letters){
+    if (p.soort === 'open') return (p.opdr ? '<span class="opdr">' + schoon(p.opdr) + '</span>' : '') + '<span class="lijn" aria-hidden="true"></span>';
+    if (p.soort === 'kies') return (p.opdr ? '<span class="opdr">' + schoon(p.opdr) + '</span>' : '') + OPENVRAAG.kiesUit(o) + '<span class="lijn" aria-hidden="true"></span>';
+    return (p.opdr ? '<span class="opdr">' + schoon(p.opdr) + '</span>' : '') + '<div class="opties">' + o.map(function(t, i){ return '<span><b>' + letters.charAt(i) + '</b>' + schoon(t) + '</span>'; }).join('') + '</div>';
+  }
+  function metLetter(p){ return p.soort === 'mk' || p.soort === 'omcirkel'; }
   function stapAntwoord(s){ if (s.info) return ''; if (s.opties) return s.opties[s.goed]; return s.antwoord == null ? '' : String(antw(s.antwoord)); }
   function eindAntwoord(op){
     if (op.opties) return op.opties[op.goed];
@@ -144,7 +163,7 @@
     if (MET_INHOUD.indexOf(vak) < 0) return;
     window.SPELBLAD['route-' + wvak] = {
       naam:'Stap voor stap: een vaardigheid of regel', vak:wvak, eigenNiveau:true,
-      aantallen:[4, 6, 8, 10], standaard:6, aantalNaam:'Aantal opgaven',
+      aantallen:[4, 6, 8, 10], standaard:6, aantalNaam:'Aantal opgaven', vormen:true, vormStandaard:'mix',
       delenKop:'Welke vaardigheid',
       delenTip:'Uit de leerroute: elke vaardigheid en regel met uitleg en stappen. Bovenaan het voorbeeld, bij elke opgave de stappen om in te vullen, en op het antwoordblad elke stap.',
       delen:function(aan){
@@ -179,16 +198,17 @@
           '<p style="margin:10px 0 2px;font-weight:600">Voorbeeld' + (vb.op.vraag ? ': ' + vraagHtml(vb.op) : '') + '</p>' + (vb.op.context ? '<span class="lr-context">' + vb.op.context + '</span>' : '') +
           beeld(vb.op, vb.op.stappen.length) +
           '<ol>' + vb.op.stappen.filter(function(s){ return !s.info; }).map(function(s){ return '<li>' + s.tekst + ' <b>' + schoon(stapAntwoord(s)) + '</b></li>'; }).join('') + '</ol></div>';
-        var vragen = w.items.map(function(x){
+        var pv = vormen(w, w.items.map(function(x){ return x.op.opties ? { v:kaal(vraagHtml(x.op)), o:x.op.opties, g:x.op.goed } : null; }));
+        var vragen = w.items.map(function(x, i){
           var op = x.op;
           return '<li class="rw-opgave">' + (op.context ? '<span class="lr-context">' + op.context + '</span>' : '') + '<span class="vr">' + vraagHtml(op) + '</span>' + beeld(op, 0) +
             (k.stappen ? '<ol class="rw-stappen">' + stappenOpPapier(op.stappen) + '</ol>' : '') +
-            (op.opties ? '<div class="opties">' + op.opties.map(function(o, i){ return '<span><b>' + 'abcdef'.charAt(i) + '</b>' + schoon(o) + '</span>'; }).join('') + '</div>'
+            (op.opties ? keuzesHtml(pv[i], op.opties, 'abcdef')
               : '<p class="rw-eind">Antwoord: <span class="lijn kort" aria-hidden="true"></span>' + (op.eenheid ? ' ' + schoon(op.eenheid) : '') + '</p>') + '</li>';
         }).join('');
-        var antwoorden = w.items.map(function(x){
+        var antwoorden = w.items.map(function(x, i){
           var op = x.op, eind = eindAntwoord(op);
-          return '<li><span class="goed">' + (op.opties ? 'abcdef'.charAt(op.goed) + '. ' : '') + schoon(eind) + (op.eenheid ? ' ' + schoon(op.eenheid) : '') + '</span>' +
+          return '<li><span class="goed">' + (op.opties && metLetter(pv[i]) ? 'abcdef'.charAt(op.goed) + '. ' : '') + schoon(eind) + (op.eenheid ? ' ' + schoon(op.eenheid) : '') + '</span>' +
             (w.uitleg ? '<div class="rw-ant"><ol>' + op.stappen.filter(function(s){ return !s.info; }).map(function(s){ return '<li>' + schoon(kaal(s.tekst)) + ' <b>' + schoon(stapAntwoord(s)) + '</b></li>'; }).join('') + '</ol></div>' : '') + '</li>';
         }).join('');
         return { titel:'Werkblad stap voor stap: ' + d.naam, sub:niveauNaam(vak, d.groep.niveau) + ' · ' + d.groep.naam + ' · ' + w.items.length + ' opgaven', klasse:'stappen',
