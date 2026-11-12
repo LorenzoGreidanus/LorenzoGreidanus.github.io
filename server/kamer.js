@@ -106,7 +106,7 @@ const SPELLEN_ROLLEN = { feodalisme: "Feodalisme", polis: "De vergadering van de
   markt: "De markt", ecosysteem: "Het ecosysteem", rivier: "Langs de rivier", gemeenteraad: "De gemeenteraad",
   uitbraak: "De uitbraak", klimaattop: "De klimaattop", fabriek: "De fabriek", gerucht: "Het gerucht", eiland: "Het eiland", voc: "De VOC-beurs", tijdbalk: "De tijdbalk", archief: "Het archief", republiek: "De republiek",
   schoolreis: "De schoolreis", schoolplein: "Het nieuwe schoolplein", peiling: "De peiling", kermis: "De kermis", abonnement: "De abonnementenoorlog",
-  zinsdelen: "De zin in stukken", redactie: "De redactie", debat: "Het debat", mysterie: "Het mysterie", arrivals: "Arrivals" };
+  zinsdelen: "De zin in stukken", redactie: "De redactie", debat: "Het debat", mysterie: "Het mysterie", arrivals: "Arrivals", lineup: "The Line-up" };
 const KAART_MAX = 12000, BORD_MAX = 40000, ACTIE_MAX = 4000;
 const KLAS_SLAAPT = 400 * 24 * 60 * 60 * 1000; /* een klascode blijft tot de docent hem opheft, of tot hij ruim een jaar niet gebruikt is */
 const KLAS_MAX = 3000, KLAS_BYTES = 700000;   /* uitslagen: hoogstens zoveel, en samen hoogstens zoveel tekens */
