@@ -70,6 +70,8 @@
      POST   /api/pmt/afspraken             een leerling inplannen (weken: zoveel weken achter elkaar)
      PUT    /api/pmt/afspraken/ID          verplaatsen naar een andere dag of tijd
      DELETE /api/pmt/afspraken/ID          met ?reeks=1 ook alle latere op dezelfde weekdag en tijd
+     GET    /api/pmt/toestemming           de tekst van het toestemmingsformulier
+     PUT    /api/pmt/toestemming           die tekst aanpassen
      GET    /api/pmt/logboek
    De wekelijkse check (EF-monitor) is een vragenlijst met monitor aan. Daarvoor is er
    een vaste code: twaalf weken geldig, steeds opnieuw te gebruiken, hooguit een keer
@@ -312,6 +314,7 @@ export async function behandel(req, env, url, hulp){
   if (zm && m === "POST"){
     let inhoud; try { inhoud = await leesInhoud(req); } catch (e){ return klaar({ fout: "dit kan de server niet lezen" }, 400); }
     const a = await k.zetKlaar(zm[1], String(inhoud.lijst || ""), s.naam, { vast: !!inhoud.vast, door: inhoud.door === "mentor" ? "mentor" : "leerling" });
+    if (a === "toestemming") return klaar({ fout: "er is nog geen toestemming van de ouders vastgelegd" }, 403);
     return a ? klaar(a) : klaar({ fout: "klaarzetten lukte niet: de lijst heeft nog geen vragen, of er staan al tien codes open bij deze leerling" }, 400);
   }
   const vm = p.match(/^\/api\/pmt\/dossiers\/([A-Za-z0-9_-]{8,24})\/verslag$/);
@@ -320,6 +323,7 @@ export async function behandel(req, env, url, hulp){
   if (pm && m === "POST"){
     let inhoud; try { inhoud = await leesInhoud(req); } catch (e){ return klaar({ fout: "dit kan de server niet lezen" }, 400); }
     const uit = await k.voerIn(pm[1], String(inhoud.lijst || ""), inhoud.antwoorden, inhoud.datum, s.naam);
+    if (uit === "toestemming") return klaar({ fout: "er is nog geen toestemming van de ouders vastgelegd" }, 403);
     if (uit === null) return klaar({ fout: "dit dossier of deze lijst bestaat niet" }, 404);
     if (uit === "vol") return klaar({ fout: "er passen geen metingen meer bij: haal eerst oude metingen weg" }, 400);
     return uit ? klaar({ ok: true }) : klaar({ fout: "nog niet bij elke vraag is een bolletje gekozen" }, 400);
@@ -396,6 +400,11 @@ export async function behandel(req, env, url, hulp){
     return u ? klaar({ ok: true }) : klaar({ fout: "op dat moment staat al een afspraak" }, 409);
   }
   if (afm && m === "DELETE") return (await k.wegAfspraak(afm[1], s.naam, url.searchParams.get("reeks") === "1")) ? klaar({ ok: true }) : klaar({ fout: "deze afspraak bestaat niet" }, 404);
+  if (p === "/api/pmt/toestemming" && m === "GET") return klaar({ tekst: await k.toestemmingstekst() });
+  if (p === "/api/pmt/toestemming" && m === "PUT"){
+    let inhoud; try { inhoud = await leesInhoud(req); } catch (e){ return klaar({ fout: "dit kan de server niet lezen" }, 400); }
+    return klaar({ tekst: await k.zetToestemmingstekst(inhoud.tekst, s.naam) });
+  }
   if (p === "/api/pmt/logboek" && m === "GET") return klaar({ regels: await k.logboek() });
   if (p === "/api/pmt/proef" && m === "POST"){
     if (!proef(env)) return klaar({ fout: "dit is geen proefomgeving" }, 403);
@@ -411,13 +420,43 @@ function tekst(v, n){
   return String(v == null ? "" : v).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "").slice(0, n).trim();
 }
 function datum(v){ return /^\d{4}-\d{2}-\d{2}$/.test(String(v || "")) ? String(v) : ""; }
+/* De toestemming van de ouders (of van de leerling zelf vanaf zestien jaar).
+   geen: nog niet gevraagd, gevraagd: het formulier is mee, ja: getekend, nee: geweigerd.
+   Zonder ja legt het dossier alleen de aanmelding vast: geen notities, doelen,
+   vragenlijsten of wekelijkse check. De server houdt dat zelf tegen. */
+const TOESTEMMING = ["geen", "gevraagd", "ja", "nee"];
+function schoonToestemming(t){
+  t = t && typeof t === "object" ? t : {};
+  return { status: TOESTEMMING.indexOf(t.status) >= 0 ? t.status : "geen", datum: datum(t.datum), door: tekst(t.door, 80) };
+}
+/* De tekst van het formulier, tot de school hem zelf aanpast. Een voorstel:
+   de privacyfunctionaris van de school hoort hem na te kijken. */
+const TOESTEMMINGSTEKST = [
+  "Uw kind krijgt op school psychomotorische therapie (PMT). Om uw kind goed te begeleiden houdt de therapeut een dossier bij. Daarvoor vragen wij uw toestemming.",
+  "",
+  "Wat wij vastleggen",
+  "- de voornaam, de eerste letter van de achternaam en de klas",
+  "- de reden van de aanmelding en de doelen waaraan uw kind werkt",
+  "- korte notities van de sessies",
+  "- de antwoorden op vragenlijsten die uw kind invult, en de uitkomsten daarvan",
+  "",
+  "Wie het kan zien",
+  "De therapeut. De technisch beheerder van het systeem kan er alleen bij als dat voor het beheer nodig is. Met anderen delen wij niets zonder dat u daar apart toestemming voor geeft.",
+  "",
+  "Hoe het bewaard wordt",
+  "De gegevens staan versleuteld opgeslagen binnen de Europese Unie. Na afloop van de therapie bewaart de school ze niet langer dan nodig is en worden ze daarna verwijderd.",
+  "",
+  "Uw rechten",
+  "U mag het dossier inzien, laten verbeteren en laten verwijderen. U kunt uw toestemming altijd intrekken. Dat heeft geen gevolgen voor het onderwijs aan uw kind."
+].join("\n");
 function schoon(d){
   d = d && typeof d === "object" ? d : {};
   const uit = {
     voornaam: tekst(d.voornaam, 40), letter: tekst(d.letter, 3), klas: tekst(d.klas, 12),
     start: datum(d.start), status: STATUS.indexOf(d.status) >= 0 ? d.status : "intake",
     hulpvraag: tekst(d.hulpvraag, 2000), proef: !!d.proef, doelen: [], notities: [],
-    aangemeld: datum(d.aangemeld), door: tekst(d.door, 60), voorrang: !!d.voorrang
+    aangemeld: datum(d.aangemeld), door: tekst(d.door, 60), voorrang: !!d.voorrang,
+    toestemming: schoonToestemming(d.toestemming)
   };
   for (const x of (Array.isArray(d.doelen) ? d.doelen : []).slice(0, 20)){
     const t = tekst(x && x.tekst, 300);
@@ -551,23 +590,23 @@ function dag(verschil){ return new Date(Date.now() + verschil * 86400000).toISOS
 /* verzonnen leerlingen voor de proefomgeving */
 function voorbeelden(){
   return [
-    { voornaam: "Sam", letter: "K", klas: "2B", start: dag(-84), status: "loopt", proef: true,
+    { voornaam: "Sam", letter: "K", klas: "2B", start: dag(-84), status: "loopt", proef: true, toestemming: { status: "ja", datum: dag(-30), door: "ouder" },
       hulpvraag: "Sam raakt snel gespannen in de klas en merkt dat pas als het te laat is.",
       doelen: [{ tekst: "Spanning eerder opmerken in het lijf", klaar: true }, { tekst: "Zelf een ademoefening doen in de les", klaar: false }],
       notities: [{ datum: dag(-84), tekst: "Intake en beginmeting. Sam vertelt weinig maar doet goed mee met de oefeningen." },
         { datum: dag(-42), tekst: "Tweede meting. Doel bijgesteld: eerst opmerken, dan pas iets doen." },
         { datum: dag(-7), tekst: "Sessie 9: de ademoefening lukt nu zonder hulp." }] },
-    { voornaam: "Noor", letter: "B", klas: "1A", start: dag(-28), status: "loopt", proef: true,
+    { voornaam: "Noor", letter: "B", klas: "1A", start: dag(-28), status: "loopt", proef: true, toestemming: { status: "ja", datum: dag(-30), door: "ouder" },
       hulpvraag: "Noor durft weinig ruimte in te nemen en trekt zich terug bij drukte.",
       doelen: [{ tekst: "Stevig staan en de eigen ruimte aangeven", klaar: false }],
       notities: [{ datum: dag(-28), tekst: "Intake. Noor kiest zelf de oefeningen met de bal." }] },
-    { voornaam: "Jesse", letter: "V", klas: "3C", start: dag(-3), status: "intake", proef: true,
+    { voornaam: "Jesse", letter: "V", klas: "3C", start: dag(-3), status: "intake", proef: true, toestemming: { status: "ja", datum: dag(-3), door: "ouder" },
       hulpvraag: "Aangemeld door de mentor: veel boosheid na de pauze.", doelen: [], notities: [] },
-    { voornaam: "Daan", letter: "R", klas: "1C", status: "wacht", proef: true, aangemeld: dag(-34), door: "mentor 1C", voorrang: true,
+    { voornaam: "Daan", letter: "R", klas: "1C", status: "wacht", proef: true, toestemming: { status: "gevraagd", datum: "", door: "" }, aangemeld: dag(-34), door: "mentor 1C", voorrang: true,
       hulpvraag: "Daan loopt vaak de klas uit als het druk wordt en komt dan moeilijk terug.", doelen: [], notities: [] },
     { voornaam: "Lotte", letter: "H", klas: "3A", status: "wacht", proef: true, aangemeld: dag(-12), door: "zorgcoördinator",
       hulpvraag: "Lotte heeft veel buikpijn voor toetsen en meldt zich dan ziek.", doelen: [], notities: [] },
-    { voornaam: "Mila", letter: "D", klas: "2A", start: dag(-200), status: "afgerond", proef: true,
+    { voornaam: "Mila", letter: "D", klas: "2A", start: dag(-200), status: "afgerond", proef: true, toestemming: { status: "ja", datum: dag(-200), door: "ouder" },
       hulpvraag: "Mila wilde leren omgaan met spanning bij toetsen.",
       doelen: [{ tekst: "Voor een toets zelf tot rust komen", klaar: true }],
       notities: [{ datum: dag(-60), tekst: "Eindgesprek met Mila en de mentor. Traject afgerond." }] }
@@ -589,7 +628,7 @@ const VOORBEELDCIJFERS = {
   Jesse: { metingen: [[-3, [2, 2, 4, 2, 2, 4, 3, 2, 4]]], weken: {} }
 };
 /* verandert dit getal, dan vult de demo zich opnieuw, ook als hij nog geen dag oud is */
-const DEMO_VERSIE = "8";
+const DEMO_VERSIE = "9";
 
 export class Pmt extends DurableObject {
   constructor(ctx, env){
@@ -810,6 +849,7 @@ export class Pmt extends DurableObject {
       if (!volgende[r.dossier]) volgende[r.dossier] = { dag: r.dag, begin: r.begin };
     }
     return (await this.alles()).map(d => ({ id: d.id, volgende: volgende[d.id] || null,
+      toestemming: (d.toestemming && d.toestemming.status) || "geen",
       aangemeld: d.aangemeld || "", door: d.door || "", voorrang: !!d.voorrang, reden: d.status === "wacht" ? String(d.hulpvraag || "").slice(0, 160) : "", voornaam: d.voornaam, letter: d.letter, klas: d.klas, status: d.status, start: d.start,
       proef: !!d.proef, notities: d.notities.length, bijgewerkt: d.bijgewerkt,
       metingen: met[d.id] ? met[d.id].trend.length : 0, laatsteMeting: met[d.id] ? met[d.id].t : 0, weekchecks: met[d.id] ? met[d.id].weken : 0,
@@ -838,10 +878,15 @@ export class Pmt extends DurableObject {
     if (!d) return null;
     const nu = Date.now();
     if (id){
-      if (!this.sql.exec("SELECT id FROM dossier WHERE id = ?", id).toArray().length) return null;
+      const oudRij = this.sql.exec("SELECT inhoud FROM dossier WHERE id = ?", id).toArray()[0];
+      if (!oudRij) return null;
+      const oud = await this.open(oudRij.inhoud), was = (oud.toestemming && oud.toestemming.status) || "geen";
+      if (d.toestemming.status !== "ja"){ d.notities = oud.notities || []; d.doelen = oud.doelen || []; }
       this.sql.exec("UPDATE dossier SET inhoud = ?, bijgewerkt = ? WHERE id = ?", await this.dicht(d), nu, id);
       this.meld(wie, "gewijzigd", id);
+      if (was !== d.toestemming.status) this.meld(wie, "toestemming van de ouders: " + { geen: "nog niet gevraagd", gevraagd: "formulier meegegeven", ja: "getekend", nee: "geweigerd" }[d.toestemming.status], id);
     } else {
+      if (d.toestemming.status !== "ja"){ d.notities = []; d.doelen = []; }
       id = willekeur(9);
       this.sql.exec("INSERT INTO dossier (id, inhoud, gemaakt, bijgewerkt) VALUES (?, ?, ?, ?)", id, await this.dicht(d), nu, nu);
       this.meld(wie, "gemaakt", id);
@@ -928,9 +973,28 @@ export class Pmt extends DurableObject {
   }
   /* Klaarzetten: de lijst zoals hij nu is gaat mee met de code. Wie de lijst
      daarna nog aanpast, verandert niets aan wat de leerling te zien krijgt. */
-  zetKlaar(dossier, lijstId, wie, opt){
+  /* mag er voor dit dossier iets verwerkt worden: is de toestemming getekend? */
+  async magVerwerken(dossier){
+    const r = this.sql.exec("SELECT inhoud FROM dossier WHERE id = ?", dossier).toArray()[0];
+    if (!r) return false;
+    const d = await this.open(r.inhoud);
+    return !!(d.toestemming && d.toestemming.status === "ja");
+  }
+  toestemmingstekst(){
+    const r = this.sql.exec("SELECT v FROM stand WHERE k = 'toestemming'").toArray()[0];
+    return r && r.v ? r.v : TOESTEMMINGSTEKST;
+  }
+  zetToestemmingstekst(t, wie){
+    const schoonT = String(t == null ? "" : t).replace(/\r/g, "").replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "").slice(0, 6000).trim();
+    if (schoonT) this.sql.exec("INSERT OR REPLACE INTO stand (k, v) VALUES ('toestemming', ?)", schoonT);
+    else this.sql.exec("DELETE FROM stand WHERE k = 'toestemming'");
+    this.meld(wie, "tekst van het toestemmingsformulier aangepast", "");
+    return this.toestemmingstekst();
+  }
+  async zetKlaar(dossier, lijstId, wie, opt){
     opt = opt || {};
     if (!this.sql.exec("SELECT id FROM dossier WHERE id = ?", dossier).toArray().length) return null;
+    if (!await this.magVerwerken(dossier)) return "toestemming";
     const r = this.sql.exec("SELECT inhoud FROM lijst WHERE id = ?", lijstId).toArray()[0];
     if (!r) return null;
     const l = Object.assign(JSON.parse(r.inhoud), { id: lijstId });
@@ -986,6 +1050,7 @@ export class Pmt extends DurableObject {
      De meting krijgt de datum van het papier, niet die van het invoeren. */
   async voerIn(dossier, lijstId, antwoorden, dat, wie){
     if (!this.sql.exec("SELECT id FROM dossier WHERE id = ?", dossier).toArray().length) return null;
+    if (!await this.magVerwerken(dossier)) return "toestemming";
     const r = this.sql.exec("SELECT inhoud FROM lijst WHERE id = ?", lijstId).toArray()[0];
     if (!r) return null;
     const l = JSON.parse(r.inhoud);

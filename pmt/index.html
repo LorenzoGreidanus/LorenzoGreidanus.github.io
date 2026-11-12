@@ -35,10 +35,6 @@ button{cursor:pointer}
 ::selection{background:#FCDED6;color:#14224C}
 .pen{font-family:'Caveat','Segoe Script',cursive;font-size:1.5rem;color:var(--crab);line-height:1}
 .zacht{color:var(--muted);font-size:.9rem}
-/* een grapje op de inlogkaart: met de muis erop staat er de volle naam */
-.wissel{align-self:flex-start;cursor:default}
-.wissel .twee,.wissel:hover .een,.wissel:focus .een{display:none}
-.wissel:hover .twee,.wissel:focus .twee{display:inline}
 
 /* ---------- niet ingelogd ---------- */
 .deur{min-height:100svh;display:grid;place-items:center;padding:24px 16px}
@@ -279,6 +275,20 @@ td.tijd{white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--muted)}
 .wachtlijst .doe{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
 .chip.voorrang{background:var(--crab);color:#14224C;border-color:transparent}
 .bak b{font-weight:600;color:var(--ink)}
+/* ---------- toestemming ---------- */
+.toest.nodig{border:2px solid var(--crab);background:var(--let)}
+.vak.slot{border-style:dashed;box-shadow:none;background:transparent}
+.vak.slot p{color:var(--muted)}
+.formulier{max-width:760px}
+.formulier h1{font-size:1.6rem}
+.formulier p,.formulier li{font-size:.98rem;line-height:1.55}
+.formulier ul{margin:4px 0 0;padding-left:1.2em}
+.formulier .kopje{font-weight:600;margin-top:14px}
+.kruisjes{display:grid;gap:8px;margin-top:18px}
+.kruisjes span{display:flex;align-items:center;gap:10px}
+.kruisjes i{width:18px;height:18px;border:1.5px solid var(--ink);border-radius:4px;display:block;flex:none}
+.tekenvak{display:grid;grid-template-columns:1fr 1fr 150px;gap:10px 22px;margin-top:18px;font-size:.86rem;color:var(--muted)}
+.tekenvak div{border-bottom:1.5px solid var(--ink);height:52px;display:flex;align-items:flex-start}
 .terugknop{display:none;border:0;background:transparent;color:var(--accent);font-weight:600;min-height:44px;padding:0;margin-bottom:2px}
 .kop{gap:12px 16px}
 .koptekst{display:flex;flex-direction:column;gap:4px;min-width:0}
@@ -352,6 +362,7 @@ button.tegel:hover{border-color:var(--accent)}
   .rooster{grid-template-columns:50px minmax(0,1fr)}
   .dagkolom{display:none}
   .bak{display:none}
+  .tekenvak{grid-template-columns:1fr}
   .vrijrij,.pauzerij{grid-template-columns:1fr 1fr}
   .pauzerij input[type=text]{grid-column:1 / -1}
   .vrijrij input[type=text]{grid-column:1 / -1}
@@ -378,7 +389,6 @@ button.tegel:hover{border-color:var(--accent)}
 
 <div class="deur" id="deur" hidden>
   <div class="kaart">
-    <span class="pen wissel" tabindex="0"><span class="een">voor Marithtje</span><span class="twee">Hermina Schipper</span></span>
     <h1>PMT-dossiers</h1>
     <p class="zacht" id="deurtekst">Log in met je Microsoft-account van school. Alleen wie op de toegangslijst staat komt binnen.</p>
     <p class="melding" id="deurmelding" hidden></p>
@@ -577,6 +587,7 @@ button.tegel:hover{border-color:var(--accent)}
         el('ul', {}, [
           el('li', { tekst: d.start ? 'Gestart op ' + mooieDatum(d.start) : 'Nog geen startdatum' }),
           el('li', { tekst: d.metingen ? d.metingen + (d.metingen === 1 ? ' meting' : ' metingen') + ', laatste op ' + kort(d.laatsteMeting) : 'Nog geen metingen' }),
+          d.toestemming !== 'ja' ? el('li', { class: 'open', tekst: d.toestemming === 'nee' ? 'Geen toestemming van de ouders' : d.toestemming === 'gevraagd' ? 'Toestemmingsformulier is mee, nog niet terug' : 'Nog geen toestemming van de ouders' }) : null,
           d.weekchecks ? el('li', { tekst: d.weekchecks + ' keer de wekelijkse check' }) : null,
           d.volgende ? el('li', { class: 'open', tekst: 'Volgende afspraak: ' + korteDag(d.volgende.dag) + ' om ' + uur(d.volgende.begin) }) : null,
           el('li', { tekst: d.notities + (d.notities === 1 ? ' notitie' : ' notities') }),
@@ -647,7 +658,7 @@ button.tegel:hover{border-color:var(--accent)}
     return i;
   }
   function tekenDoelen(){
-    var ul = $('doelen'); ul.textContent = '';
+    var ul = $('doelen'); if (!ul) return; ul.textContent = '';
     S.d.doelen.forEach(function(doel, n){
       var vink = el('input', { type: 'checkbox', id: 'doel-' + n, 'aria-label': 'Behaald: ' + doel.tekst, onchange: function(){ doel.klaar = vink.checked; wijzig(); tekenDoelen(); } });
       vink.checked = !!doel.klaar;
@@ -657,7 +668,7 @@ button.tegel:hover{border-color:var(--accent)}
     if (!S.d.doelen.length) ul.appendChild(el('li', { class: 'zacht', tekst: 'Nog geen doelen.' }));
   }
   function tekenNotities(){
-    var box = $('notities'); box.textContent = '';
+    var box = $('notities'); if (!box) return; box.textContent = '';
     var rij = S.d.notities.slice().sort(function(a, b){ return a.datum < b.datum ? 1 : a.datum > b.datum ? -1 : 0; });
     rij.forEach(function(n){
       box.appendChild(el('div', { class: 'notitie' }, [el('time', { tekst: mooieDatum(n.datum) }), el('p', { tekst: n.tekst }),
@@ -701,7 +712,29 @@ button.tegel:hover{border-color:var(--accent)}
     tg.appendChild(tegel('Notities', String(d.notities.length), ln ? 'Laatste op ' + mooieDatum(ln.datum) : 'Nog geen notities', 'notities'));
     tg.appendChild(tegel('Doelen', d.doelen.length ? behaald + ' van ' + d.doelen.length : 'Nog geen', d.doelen.length ? 'behaald' : 'Voeg hieronder een doel toe', null));
   }
+  var TOEST = { geen: 'Nog niet gevraagd', gevraagd: 'Formulier meegegeven', ja: 'Getekend: toestemming gegeven', nee: 'Geen toestemming gegeven' };
+  function slot(titel, klasse){
+    return el('section', { class: 'vak slot ' + klasse }, [el('h2', { tekst: titel }),
+      el('p', { tekst: 'Dit gaat open zodra de toestemming van de ouders is vastgelegd. Dat doe je op het tabblad Overzicht.' })]);
+  }
+  function toestemmingVak(d, mag){
+    var t = d.toestemming;
+    var st = el('select', { id: 't-status', onchange: function(){
+      t.status = st.value; if (t.status === 'ja' && !t.datum) t.datum = vandaag();
+      S.vuil = true; bewaarNu(); toon(S.d);
+    } }, Object.keys(TOEST).map(function(k){ return el('option', { value: k, tekst: TOEST[k] }); }));
+    st.value = t.status;
+    var dt = el('input', { type: 'date', id: 't-datum', value: t.datum || '', max: vandaag(), onchange: function(){ t.datum = dt.value; wijzig(); } });
+    var door = el('input', { type: 'text', id: 't-door', maxlength: '80', autocomplete: 'off', value: t.door || '', placeholder: 'Bijvoorbeeld: moeder', oninput: function(){ t.door = door.value; wijzig(); } });
+    return el('section', { class: 'vak p-overzicht breed toest' + (mag ? '' : ' nodig') }, [
+      el('div', { class: 'lijstkaart' }, [el('h2', { tekst: 'Toestemming van de ouders' }),
+        el('button', { class: 'knop stil klein', type: 'button', tekst: 'Formulier printen', onclick: tekenToestemming })]),
+      mag ? null : el('p', { tekst: 'Zonder getekende toestemming leg je alleen de aanmelding vast. Notities, doelen, vragenlijsten en de wekelijkse check gaan open zodra je hier vastlegt dat er getekend is.' }),
+      el('div', { class: 'rij' }, [el('label', {}, ['Hoe staat het ermee?', st]), el('label', {}, ['Getekend op', dt]), el('label', {}, ['Getekend door', door])])]);
+  }
   function toon(d){
+    if (!d.toestemming) d.toestemming = { status: 'geen', datum: '', door: '' };
+    var mag = d.toestemming.status === 'ja';
     S.d = d; S.vuil = false; S.zicht = 'dossier'; if (!S.tab) S.tab = 'overzicht';
     tekenNamen();
     var status = el('select', { id: 'v-status', onchange: function(){ S.d.status = status.value; wijzig(); chip.className = 'chip ' + status.value; chip.textContent = STATUS[status.value]; } },
@@ -731,7 +764,8 @@ button.tegel:hover{border-color:var(--accent)}
       el('div', { class: 'tabbalk', id: 'tabbalk', role: 'tablist', 'aria-label': 'Onderdelen van het dossier' }),
       el('div', { id: 'dossier', 'data-tab': S.tab }, [
         el('div', { class: 'tegels p-overzicht', id: 'tegels' }),
-        el('section', { class: 'vak p-overzicht breed' }, [el('h2', { tekst: 'Ontwikkeling' }), el('div', { id: 'grafieken' })]),
+        toestemmingVak(d, mag),
+        mag ? el('section', { class: 'vak p-overzicht breed' }, [el('h2', { tekst: 'Ontwikkeling' }), el('div', { id: 'grafieken' })]) : null,
         el('section', { class: 'vak p-overzicht' }, [
           el('h2', { tekst: 'Gegevens' }),
           el('div', { class: 'rij' }, [
@@ -743,7 +777,7 @@ button.tegel:hover{border-color:var(--accent)}
             el('label', {}, ['Aangemeld op', veld('date', 'aangemeld')]),
             el('label', {}, ['Aangemeld door', veld('text', 'door', { maxlength: '60' })])]),
           el('label', {}, ['Hulpvraag', veld('textarea', 'hulpvraag', { maxlength: '2000' })])]),
-        el('section', { class: 'vak p-overzicht' }, [
+        !mag ? slot('Doelen', 'p-overzicht') : el('section', { class: 'vak p-overzicht' }, [
           el('h2', { tekst: 'Doelen' }),
           el('ul', { class: 'lijst', id: 'doelen' }),
           el('form', { class: 'erbij', onsubmit: function(ev){
@@ -751,7 +785,7 @@ button.tegel:hover{border-color:var(--accent)}
             var t = doelIn.value.trim(); if (!t) return;
             S.d.doelen.push({ tekst: t, klaar: false }); doelIn.value = ''; wijzig(); tekenDoelen();
           } }, [el('label', {}, ['Nieuw doel', doelIn]), el('button', { class: 'knop stil', type: 'submit', tekst: 'Doel toevoegen' })])]),
-        el('section', { class: 'vak p-notities' }, [
+        !mag ? slot('Notities', 'p-notities') : el('section', { class: 'vak p-notities' }, [
           el('h2', { tekst: 'Notities' }),
           el('form', { class: 'nieuwnotitie', onsubmit: function(ev){
             ev.preventDefault();
@@ -761,12 +795,12 @@ button.tegel:hover{border-color:var(--accent)}
           } }, [el('label', {}, ['Datum', nDatum]), el('label', {}, ['Wat gebeurde er deze sessie?', nTekst]),
             el('button', { class: 'knop', type: 'submit', tekst: 'Notitie toevoegen' })]),
           el('div', { id: 'notities' })]),
-        el('section', { class: 'vak p-lijsten' }, [
+        !mag ? slot('Vragenlijsten', 'p-lijsten') : el('section', { class: 'vak p-lijsten' }, [
           el('div', { class: 'lijstkaart' }, [el('h2', { tekst: 'Vragenlijsten' }),
             el('button', { class: 'knop stil klein', type: 'button', tekst: 'Vernieuwen', onclick: function(){ herlaadMetingen(); } })]),
           el('div', { id: 'klaarzet' }),
           el('div', { id: 'metingen' })]),
-        el('section', { class: 'vak p-week' }, [
+        !mag ? slot('Wekelijkse check', 'p-week') : el('section', { class: 'vak p-week' }, [
           el('div', { class: 'lijstkaart' }, [el('h2', { tekst: 'Wekelijkse check' }),
             el('button', { class: 'knop stil klein', type: 'button', tekst: 'Vernieuwen', onclick: function(){ herlaadMetingen(); } })]),
           el('div', { id: 'monitor' })]),
@@ -790,6 +824,7 @@ button.tegel:hover{border-color:var(--accent)}
   }
   function tekenMetingen(){
     var d = S.d, zet = $('klaarzet'), box = $('metingen');
+    if (!zet) return;
     zet.textContent = ''; box.textContent = '';
     if ($('monitor')) tekenMonitor();
     var bruikbaar = S.lijsten.filter(function(l){ return l.vragen.length && !l.monitor; });
@@ -835,6 +870,58 @@ button.tegel:hover{border-color:var(--accent)}
           stuur('DELETE', '/metingen/' + m.id).then(function(){ d.metingen = d.metingen.filter(function(x){ return x.id !== m.id; }); tekenMetingen(); }).catch(meld);
         } })])]));
     });
+  }
+
+  /* ---------- het toestemmingsformulier ---------- */
+  /* de tekst in alinea's: een regel met een streepje ervoor is een opsomming,
+     een korte regel zonder punt boven een alinea is een kopje */
+  function tekstBlokken(tekst){
+    var uit = [], lijst = null;
+    tekst.split('\n').forEach(function(regel, n, alle){
+      var r = regel.trim();
+      if (!r){ lijst = null; return; }
+      if (r.indexOf('- ') === 0){ if (!lijst){ lijst = el('ul'); uit.push(lijst); } lijst.appendChild(el('li', { tekst: r.slice(2) })); return; }
+      lijst = null;
+      var volgende = (alle[n + 1] || '').trim();
+      uit.push(el('p', { class: r.length < 45 && !/[.?!:]$/.test(r) && volgende ? 'kopje' : null, tekst: r }));
+    });
+    return uit;
+  }
+  function tekenToestemming(){
+    bewaarNu();
+    var d = S.d;
+    api('/toestemming').then(function(j){
+      var veld = el('textarea', { id: 'f-tekst', maxlength: '6000', style: 'min-height:260px', value: j.tekst });
+      var stand = el('span', { class: 'zacht', role: 'status' });
+      var bewerk = el('form', { class: 'planpaneel geenprint', hidden: true, onsubmit: function(ev){
+        ev.preventDefault();
+        stuur('PUT', '/toestemming', { tekst: veld.value }).then(tekenToestemming).catch(function(e){ if (e.message !== 'uit') stand.textContent = e.message; });
+      } }, [
+        el('h2', { style: 'font-size:1.05rem', tekst: 'Tekst van het formulier' }),
+        el('p', { class: 'zacht', tekst: 'Deze tekst geldt voor alle leerlingen. Een regel met een streepje ervoor wordt een opsomming, een korte regel boven een alinea een kopje. Maak je het veld leeg, dan komt de standaardtekst terug.' }),
+        el('label', {}, ['Tekst', veld]),
+        el('div', { class: 'onder', style: 'margin-top:0' }, [el('button', { class: 'knop', type: 'submit', tekst: 'Opslaan' }),
+          el('button', { class: 'knop stil', type: 'button', tekst: 'Toch niet', onclick: function(){ bewerk.hidden = true; } }), stand])]);
+      function lijn(tekstOnder){ return el('span', {}, [el('div'), tekstOnder]); }
+      scherm([el('div', { class: 'formulier' }, [
+        el('div', { class: 'onder geenprint', style: 'margin-top:0' }, [
+          el('button', { class: 'knop', type: 'button', tekst: 'Printen', onclick: function(){ window.print(); } }),
+          el('button', { class: 'knop stil', type: 'button', tekst: 'Terug naar het dossier', onclick: function(){ toon(d); } }),
+          el('button', { class: 'knop stil', type: 'button', tekst: 'Tekst aanpassen', onclick: function(){ bewerk.hidden = false; veld.focus(); } })]),
+        el('p', { class: 'melding geenprint', style: 'margin-top:12px', tekst: 'Dit is een voorstel. Laat de tekst nakijken door de privacyfunctionaris van de school voordat je het formulier meegeeft. Komt het getekend terug, leg dat dan vast in het dossier.' }),
+        bewerk,
+        el('div', { class: 'kop', style: 'margin-top:22px' }, [el('h1', { tekst: 'Toestemming voor psychomotorische therapie' })]),
+        el('p', { style: 'margin-top:6px' }, ['Leerling: ', el('b', { tekst: naam(d) }), d.klas ? '   Klas: ' : '', d.klas ? el('b', { tekst: d.klas }) : null])
+      ].concat(tekstBlokken(j.tekst)).concat([
+        el('div', { class: 'kruisjes' }, [
+          el('span', {}, [el('i'), 'Ik geef toestemming voor het bijhouden van dit dossier.']),
+          el('span', {}, [el('i'), 'Ik geef geen toestemming.'])]),
+        el('div', { class: 'tekenvak' }, [lijn('Naam ouder of verzorger'), lijn('Handtekening'), lijn('Datum'),
+          lijn('Naam tweede ouder of verzorger'), lijn('Handtekening'), lijn('Datum'),
+          lijn('Naam leerling (vanaf 12 jaar)'), lijn('Handtekening'), lijn('Datum')])
+      ]))]);
+      window.scrollTo(0, 0);
+    }).catch(meld);
   }
 
   /* ---------- de wachtrij ---------- */
