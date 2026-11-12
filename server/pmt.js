@@ -35,12 +35,11 @@
      zegt dat erbij en je kunt voorbeelddossiers laten maken.
 
    De demo
-     Zolang het een proefomgeving is (PMT_ECHT staat niet op "ja") kan iedereen
-     zonder Microsoft naar binnen via /api/pmt/demo. Die bezoeker komt in een
-     eigen opslagobject (pmt-demo) met voorbeelddossiers, nooit in de echte
-     opslag. Iedereen deelt die ene demo, dus er hoort niets echts in; na een
-     dag wordt hij leeggemaakt en opnieuw gevuld. Uitzetten kan met
-     PMT_DEMO=nee. Staat PMT_ECHT op "ja", dan bestaat de demo niet meer.
+     Binnenkomen gaat alleen via Microsoft en de toegangslijst. Een openbare demo
+     zonder inloggen bestaat alleen als PMT_DEMO op "ja" staat, en alleen in de
+     proefomgeving. Die bezoeker komt dan in een eigen opslagobject (pmt-demo) met
+     voorbeelddossiers, nooit in de echte opslag; na een dag wordt die leeggemaakt
+     en opnieuw gevuld. Staat PMT_ECHT op "ja", dan bestaat de demo niet.
 
    Routes (alleen op pmt.* en lokaal, zie index.js):
      GET    /api/pmt/demo                  de demo in, zonder inloggen (alleen in de proefomgeving)
@@ -112,8 +111,9 @@ function toegangslijst(env){
 }
 function magErin(env, mail){ return !!mail && toegangslijst(env).indexOf(mail) >= 0; }
 function proef(env){ return env.PMT_ECHT !== "ja"; }
-/* de demo kan alleen in de proefomgeving, en gaat uit met PMT_DEMO=nee */
-function demoKan(env){ return proef(env) && env.PMT_DEMO !== "nee"; }
+/* De demo zonder inloggen staat uit: binnenkomen gaat via Microsoft en de toegangslijst.
+   Alleen met PMT_DEMO=ja, en alleen in de proefomgeving, is er een openbare demo. */
+function demoKan(env){ return proef(env) && env.PMT_DEMO === "ja"; }
 const DEMO_DOSSIERS = 40, DEMO_LIJSTEN = 20, DEMO_DAG = 86400000;
 function thuisPad(url){ return url.hostname === "localhost" || url.hostname === "127.0.0.1" ? "/pmt/" : "/"; }
 function huurder(env){ return String(env.PMT_TENANT || env.MS_TENANT || "common"); }
