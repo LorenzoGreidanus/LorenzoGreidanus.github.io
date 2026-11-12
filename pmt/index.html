@@ -276,7 +276,9 @@ td.tijd{white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--muted)}
 .dagkolom.nu .dagkop small{color:#fff;opacity:.85}
 .tijd{height:52px;font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums;text-align:right;padding:2px 6px 0 0}
 .blok{height:52px;width:100%;border-radius:10px;border:1.5px dashed var(--rand2);background:transparent;display:flex;align-items:center;gap:8px;padding:0 8px;min-width:0;text-align:left;font-size:.84rem;color:var(--ink)}
-.blok.leeg{justify-content:center;font-size:1.2rem;color:transparent}
+.blok.leeg{position:relative;justify-content:center;font-size:.78rem;line-height:1;color:var(--muted);font-variant-numeric:tabular-nums}
+.blok.leeg::before{content:'+';position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:1.15rem;line-height:1;opacity:0}
+.blok.leeg:hover::before,.blok.leeg:focus-visible::before{opacity:1}
 .blok.leeg:hover,.blok.leeg:focus-visible{color:var(--accent);border-color:var(--accent);border-style:solid}
 .blok.vol{border:1px solid var(--rand);background:var(--kaart);box-shadow:var(--schaduw)}
 .blok.vol:hover{border-color:var(--accent)}
@@ -1392,6 +1394,10 @@ button.tegel:hover{border-color:var(--accent)}
         if (I.blokken && I.blokken.length) return vanLijst(I.blokken);
         return maakBlokken(I.van, I.tot, I.blok, I.pauzes);
       }
+      /* Hoe lang een blok duurt staat erin, en een langer blok is ook hoger:
+         1,6 beeldpunt per minuut, met een ondergrens zodat een kort blok aan te klikken blijft. */
+      function minTekst(m){ return m < 60 ? m + ' min' : (m % 60 ? Math.floor(m / 60) + ' u ' + (m % 60) + ' min' : (m / 60) + ' uur'); }
+      function hoog(b){ return 'height:' + Math.max(32, Math.min(120, Math.round(b.duur * 1.6))) + 'px'; }
       /* wijkt er een dag af, dan staat de tijd in elk blok in plaats van in een kolom links */
       var perDagAnders = !!(I.perDag && Object.keys(I.perDag).length);
       var blokken = blokkenVoor(-1);
@@ -1472,7 +1478,7 @@ button.tegel:hover{border-color:var(--accent)}
         paneel.appendChild(el('div', { class: 'planpaneel' }, [
           el('h2', { style: 'font-size:1.05rem', tekst: wieTekst + ', ' + langeDag(a.dag) + ' van ' + uur(a.begin) + ' tot ' + uur(a.begin + a.duur) }),
           el('p', { class: 'zacht', tekst: isDicht ? 'Dit blok staat dicht.' : SOORT[a.soort] || 'Afspraak' }),
-          isDicht ? null : el('div', { style: 'display:flex;flex-wrap:wrap;align-items:center;gap:10px' }, [el('span', { tekst: 'Was ' + (d ? d.voornaam : 'de leerling') + ' er?' }), komstVak(a, function(){ knop.classList.toggle('afw', a.komst === 'afwezig'); var kl = knop.querySelector('small'); if (kl) kl.textContent = (SOORT[a.soort] || '') + (a.komst ? ' · ' + a.komst : ''); })]),
+          isDicht ? null : el('div', { style: 'display:flex;flex-wrap:wrap;align-items:center;gap:10px' }, [el('span', { tekst: 'Was ' + (d ? d.voornaam : 'de leerling') + ' er?' }), komstVak(a, function(){ knop.classList.toggle('afw', a.komst === 'afwezig'); var kl = knop.querySelector('small'); if (kl) kl.textContent = (SOORT[a.soort] || '') + ' · ' + minTekst(a.duur) + (a.komst ? ' · ' + a.komst : ''); })]),
           el('div', { class: 'onder', style: 'margin-top:0' }, [
             d && !isDicht ? el('button', { class: 'knop', type: 'button', tekst: 'Dossier openen', onclick: function(){ openDossier(a.dossier); } }) : null,
             el('button', { class: 'knop stil', type: 'button', tekst: 'Verplaatsen', onclick: function(){
@@ -1649,7 +1655,7 @@ button.tegel:hover{border-color:var(--accent)}
           el('button', { class: 'knop stil', type: 'button', tekst: 'Toch niet', onclick: function(){ S.instelOpen = false; instel.hidden = true; } }), iStand])]);
 
       raster = el('div', { class: 'rooster' + (perDagAnders ? ' zondertijd' : ''), 'data-dag': String(S.roosterDag) }, (perDagAnders ? [] : [
-        el('div', { class: 'tijdkolom' }, [el('div', { class: 'dagkop' })].concat(blokken.map(function(b){ return el('div', { class: 'tijd' + (b.pauze ? ' kort' : ''), tekst: uur(b.begin) }); })))
+        el('div', { class: 'tijdkolom' }, [el('div', { class: 'dagkop' })].concat(blokken.map(function(b){ return el('div', { class: 'tijd' + (b.pauze ? ' kort' : ''), style: hoog(b), tekst: uur(b.begin) }); })))
       ]).concat(DAGEN.map(function(dagnaam, i){
         var dag = plusDag(S.week, i), vd = vrijOp(dag);
         /* een dag zonder afspraken toont alleen wat er toch nog staat */
@@ -1660,10 +1666,10 @@ button.tegel:hover{border-color:var(--accent)}
         ].concat(dagUit && !vd ? [el('div', { class: 'blok vrijdag', tekst: 'Geen afspraken' })] : []).concat(dagBlokken.map(function(b, bi){
           var a = null;
           j.afspraken.forEach(function(x){ if (!a && x.dag === dag && x.begin < b.begin + b.duur && x.begin + x.duur > b.begin) a = x; });
-          if (!a && vd) return el('div', { class: 'blok vrijdag' + (b.pauze ? ' kort' : ''), tekst: bi === 0 ? vd.naam : '' });
-          if (!a && b.pauze) return el('div', { class: 'blok pauze kort', tekst: b.naam + (perDagAnders ? ' ' + uur(b.begin) : '') + ' tot ' + uur(b.begin + b.duur) });
+          if (!a && vd) return el('div', { class: 'blok vrijdag' + (b.pauze ? ' kort' : ''), style: hoog(b), tekst: bi === 0 ? vd.naam : '' });
+          if (!a && b.pauze) return el('div', { class: 'blok pauze kort', style: hoog(b), tekst: b.naam + (perDagAnders ? ' ' + uur(b.begin) : '') + ' tot ' + uur(b.begin + b.duur) + ' · ' + minTekst(b.duur) });
           if (!a){
-            var leeg = el('button', { class: 'blok leeg' + (perDagAnders ? ' mettijd' : ''), type: 'button', tekst: perDagAnders ? uur(b.begin) + ' tot ' + uur(b.begin + b.duur) : '+', 'aria-label': dagnaam + ' ' + uur(b.begin) + ' inplannen', onclick: function(ev){
+            var leeg = el('button', { class: 'blok leeg', type: 'button', style: hoog(b), tekst: (perDagAnders ? uur(b.begin) + ' tot ' + uur(b.begin + b.duur) + ' · ' : '') + minTekst(b.duur), title: uur(b.begin) + ' tot ' + uur(b.begin + b.duur) + ', ' + minTekst(b.duur), 'aria-label': dagnaam + ' ' + uur(b.begin) + ' inplannen', onclick: function(ev){
               /* ben je een afspraak aan het verplaatsen, dan komt hij hier */
               if (S.verplaats){ var id = S.verplaats; S.verplaats = null; zetNeer(dag, b, 'a:' + id); return; }
               toonPlan(dag, b, ev.currentTarget);
@@ -1673,11 +1679,11 @@ button.tegel:hover{border-color:var(--accent)}
             leeg.addEventListener('drop', function(ev){ ev.preventDefault(); leeg.classList.remove('over'); var wat = ev.dataTransfer.getData('text/plain'); if (/^[ad]:[A-Za-z0-9_-]{8,24}$/.test(wat)) zetNeer(dag, b, wat); });
             return leeg;
           }
-          if (a.soort === 'dicht') return sleepbaar(el('button', { class: 'blok dicht', type: 'button', title: 'Dicht. Sleep om te verplaatsen', 'aria-label': dagnaam + ' ' + uur(a.begin) + ' dicht' + (a.tekst ? ', ' + a.tekst : ''), onclick: function(ev){ toonAfspraak(a, ev.currentTarget); } },
-            [el('span', { tekst: (a.tekst || 'Dicht') + (a.begin !== b.begin ? ' · vanaf ' + uur(a.begin) : '') })]), 'a:' + a.id);
+          if (a.soort === 'dicht') return sleepbaar(el('button', { class: 'blok dicht', type: 'button', style: hoog(b), title: 'Dicht. Sleep om te verplaatsen', 'aria-label': dagnaam + ' ' + uur(a.begin) + ' dicht' + (a.tekst ? ', ' + a.tekst : ''), onclick: function(ev){ toonAfspraak(a, ev.currentTarget); } },
+            [el('span', { tekst: (a.tekst || 'Dicht') + ' · ' + minTekst(a.duur) + (a.begin !== b.begin ? ' · vanaf ' + uur(a.begin) : '') })]), 'a:' + a.id);
           var d = dossierVan(a.dossier);
-          return sleepbaar(el('button', { class: 'blok vol' + (a.komst === 'afwezig' ? ' afw' : ''), type: 'button', title: 'Sleep naar een ander blok om te verplaatsen', 'aria-label': dagnaam + ' ' + uur(a.begin) + ', ' + (d ? naam(d) : 'een leerling'), onclick: function(ev){ toonAfspraak(a, ev.currentTarget); } },
-            [d ? avatar(d) : null, el('span', { class: 'wie' }, [el('b', { tekst: d ? naam(d) : 'Onbekend' }), el('small', { tekst: (perDagAnders ? uur(a.begin) + ' · ' : '') + (SOORT[a.soort] || '') + (a.komst ? ' · ' + a.komst : '') + (!perDagAnders && a.begin !== b.begin ? ' · vanaf ' + uur(a.begin) : '') })])]), 'a:' + a.id);
+          return sleepbaar(el('button', { class: 'blok vol' + (a.komst === 'afwezig' ? ' afw' : ''), type: 'button', style: hoog(b), title: 'Sleep naar een ander blok om te verplaatsen', 'aria-label': dagnaam + ' ' + uur(a.begin) + ', ' + (d ? naam(d) : 'een leerling'), onclick: function(ev){ toonAfspraak(a, ev.currentTarget); } },
+            [d ? avatar(d) : null, el('span', { class: 'wie' }, [el('b', { tekst: d ? naam(d) : 'Onbekend' }), el('small', { tekst: (perDagAnders ? uur(a.begin) + ' · ' : '') + (SOORT[a.soort] || '') + ' · ' + minTekst(a.duur) + (a.komst ? ' · ' + a.komst : '') + (!perDagAnders && a.begin !== b.begin ? ' · vanaf ' + uur(a.begin) : '') })])]), 'a:' + a.id);
         })));
       })));
       var dagkiezer = el('div', { class: 'filter dagkiezer', role: 'group', 'aria-label': 'Dag' }, DAGEN.map(function(dagnaam, i){
