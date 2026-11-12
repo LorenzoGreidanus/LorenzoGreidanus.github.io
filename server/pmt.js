@@ -35,11 +35,12 @@
      zegt dat erbij en je kunt voorbeelddossiers laten maken.
 
    De demo
-     Binnenkomen gaat alleen via Microsoft en de toegangslijst. Een openbare demo
-     zonder inloggen bestaat alleen als PMT_DEMO op "ja" staat, en alleen in de
-     proefomgeving. Die bezoeker komt dan in een eigen opslagobject (pmt-demo) met
-     voorbeelddossiers, nooit in de echte opslag; na een dag wordt die leeggemaakt
-     en opnieuw gevuld. Staat PMT_ECHT op "ja", dan bestaat de demo niet.
+     Wie met Microsoft inlogt komt in de echte omgeving: zonder balk, zonder
+     voorbeelden. Daarnaast is er tijdelijk een openbare demo zonder inloggen
+     (/api/pmt/demo, een knop op het inlogscherm). Die bezoeker komt in een eigen
+     opslagobject (pmt-demo) met verzonnen leerlingen, nooit in de echte opslag;
+     na een dag wordt die leeggemaakt en opnieuw gevuld. De demo gaat uit met
+     PMT_DEMO=nee.
 
    Routes (alleen op pmt.* en lokaal, zie index.js):
      GET    /api/pmt/demo                  de demo in, zonder inloggen (alleen in de proefomgeving)
@@ -111,9 +112,8 @@ function toegangslijst(env){
 }
 function magErin(env, mail){ return !!mail && toegangslijst(env).indexOf(mail) >= 0; }
 function proef(env){ return env.PMT_ECHT !== "ja"; }
-/* De demo zonder inloggen staat uit: binnenkomen gaat via Microsoft en de toegangslijst.
-   Alleen met PMT_DEMO=ja, en alleen in de proefomgeving, is er een openbare demo. */
-function demoKan(env){ return proef(env) && env.PMT_DEMO === "ja"; }
+/* De openbare demo is tijdelijk en staat aan tot PMT_DEMO op "nee" wordt gezet. */
+function demoKan(env){ return env.PMT_DEMO !== "nee"; }
 const DEMO_DOSSIERS = 40, DEMO_LIJSTEN = 20, DEMO_DAG = 86400000;
 function thuisPad(url){ return url.hostname === "localhost" || url.hostname === "127.0.0.1" ? "/pmt/" : "/"; }
 function huurder(env){ return String(env.PMT_TENANT || env.MS_TENANT || "common"); }
@@ -181,7 +181,7 @@ export async function behandel(req, env, url, hulp){
   if (p === "/api/pmt" && m === "GET"){
     const s = await wie(env, req);
     if (!s) return json({ aan: true, ingelogd: false, demo: demoKan(env) });
-    return json({ aan: true, ingelogd: true, naam: s.naam, proef: proef(env), demo: !!s.demo, minuten: SESSIE_MIN }, 200, { "set-cookie": await sessieKoekje(env, url, s) });
+    return json({ aan: true, ingelogd: true, naam: s.naam, proef: !!s.demo, demo: !!s.demo, minuten: SESSIE_MIN }, 200, { "set-cookie": await sessieKoekje(env, url, s) });
   }
 
   if (p === "/api/pmt/inloggen" && m === "GET"){
@@ -356,7 +356,7 @@ export async function behandel(req, env, url, hulp){
   }
   if (lm && m === "DELETE") return (await k.wegLijst(lm[1], s.naam)) ? klaar({ ok: true }) : klaar({ fout: "deze lijst bestaat niet" }, 404);
   if (p === "/api/pmt/proef/lijst" && m === "POST"){
-    if (!proef(env)) return klaar({ fout: "dit is geen proefomgeving" }, 403);
+    if (!s.demo) return klaar({ fout: "voorbeelden zijn er alleen in de demo" }, 403);
     await k.zaaiLijst(s.naam);
     return klaar({ lijsten: await k.lijsten() });
   }
@@ -434,7 +434,7 @@ export async function behandel(req, env, url, hulp){
   }
   if (p === "/api/pmt/logboek" && m === "GET") return klaar({ regels: await k.logboek() });
   if (p === "/api/pmt/proef" && m === "POST"){
-    if (!proef(env)) return klaar({ fout: "dit is geen proefomgeving" }, 403);
+    if (!s.demo) return klaar({ fout: "voorbeelden zijn er alleen in de demo" }, 403);
     if (await vol("dossiers")) return klaar({ fout: "de demo zit vol: haal eerst een dossier weg" }, 400);
     await k.zaai(s.naam);
     return klaar({ dossiers: await k.lijst() });
