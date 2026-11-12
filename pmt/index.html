@@ -457,6 +457,7 @@ button.tegel:hover{border-color:var(--accent)}
     <p class="melding" id="deurmelding" hidden></p>
     <a class="knop" id="inlogknop" href="/api/pmt/inloggen">Inloggen met Microsoft</a>
     <a class="zacht" id="msknop" href="/api/pmt/inloggen" hidden>Inloggen met Microsoft, als je op de toegangslijst staat</a>
+    <a class="zacht" id="privacylink" href="/privacy">Privacy: wat er wordt vastgelegd en wat je rechten zijn</a>
   </div>
 </div>
 
@@ -468,7 +469,7 @@ button.tegel:hover{border-color:var(--accent)}
       <button type="button" id="roosterknop"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg><span>Rooster</span></button>
       <button type="button" id="wachtknop"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10M7 20h10M8 4c0 5 8 5 8 8s-8 3-8 8M16 4c0 5-8 5-8 8s8 3 8 8"/></svg><span>Wachtrij</span><span class="tel" id="wachttel" hidden></span></button>
       <button type="button" id="lijstknop"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg><span>Vragenlijsten</span></button>
-      <button type="button" id="logknop"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Logboek</span></button>
+      <button type="button" id="logknop"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg><span>Privacy</span></button>
     </div>
     <div class="zijkop" id="namenkop">Leerlingen</div>
     <ul class="namen" id="namen"></ul>
@@ -491,6 +492,8 @@ button.tegel:hover{border-color:var(--accent)}
   var S = { ik: null, lijst: [], lijsten: [], d: null, timer: null, klok: null, minuten: 15, bezig: null };
   /* op het echte adres staat het leerlingscherm op /invullen, lokaal onder /pmt/ */
   var INVUL = location.pathname.indexOf('/pmt/') === 0 ? '/pmt/invullen' : '/invullen';
+  var PRIVACY = location.pathname.indexOf('/pmt/') === 0 ? '/pmt/privacy' : '/privacy';
+  $('privacylink').setAttribute('href', PRIVACY);
   function getal(x){ return Number(x).toLocaleString('nl-NL', { minimumFractionDigits: 1, maximumFractionDigits: 1 }); }
   var STATUS = { wacht: 'Wachtrij', intake: 'Intake', loopt: 'Loopt', afgerond: 'Afgerond' };
   /* de leerlingen die een plek hebben; wie nog wacht staat op de wachtrij */
@@ -789,6 +792,7 @@ button.tegel:hover{border-color:var(--accent)}
           d.toestemming !== 'ja' ? el('li', { class: 'open', tekst: d.toestemming === 'nee' ? 'Geen toestemming van de ouders' : d.toestemming === 'gevraagd' ? 'Toestemmingsformulier is mee, nog niet terug' : 'Nog geen toestemming van de ouders' }) : null,
           d.weekchecks ? el('li', { tekst: d.weekchecks + ' keer de wekelijkse check' }) : null,
           d.nieuw ? el('li', { class: 'open' }, [el('span', { class: 'stip' }), ' Nieuw ingevuld, nog niet bekeken']) : null,
+          d.wegOp ? el('li', { tekst: 'Wordt verwijderd op ' + mooieDatum(d.wegOp) }) : null,
           d.volgende ? el('li', { class: 'open', tekst: 'Volgende afspraak: ' + korteDag(d.volgende.dag) + ' om ' + uur(d.volgende.begin) }) : null,
           el('li', { tekst: d.notities + (d.notities === 1 ? ' notitie' : ' notities') }),
           d.codes ? el('li', { class: 'open', tekst: d.codes + (d.codes === 1 ? ' code staat open' : ' codes staan open') }) : null]),
@@ -943,7 +947,15 @@ button.tegel:hover{border-color:var(--accent)}
       el('div', { class: 'lijstkaart' }, [el('h2', { tekst: 'Toestemming van de ouders' }),
         el('button', { class: 'knop stil klein', type: 'button', tekst: 'Formulier printen', onclick: tekenToestemming })]),
       mag ? null : el('p', { tekst: 'Zonder getekende toestemming leg je alleen de aanmelding vast. Notities, doelen, vragenlijsten en de wekelijkse check gaan open zodra je hier vastlegt dat er getekend is.' }),
-      el('div', { class: 'rij' }, [el('label', {}, ['Hoe staat het ermee?', st]), el('label', {}, ['Getekend op', dt]), el('label', {}, ['Getekend door', door])])]);
+      el('div', { class: 'rij' }, [el('label', {}, ['Hoe staat het ermee?', st]), el('label', {}, ['Getekend op', dt]), el('label', {}, ['Getekend door', door])]),
+      t.status === 'nee' ? el('div', { class: 'zeker' }, [
+        el('span', { tekst: 'Is de toestemming ingetrokken? Dan kun je alles wissen wat er al was vastgelegd: notities, doelen, de hulpvraag, ingevulde lijsten en afspraken. De aanmelding blijft staan.' }),
+        el('button', { class: 'knop weg klein', type: 'button', tekst: 'Verwerkte gegevens wissen', onclick: function(ev){
+          var k = ev.currentTarget;
+          if (!k.dataset.zeker){ k.dataset.zeker = '1'; k.textContent = 'Zeker weten? Dit kan niet terug'; return; }
+          clearTimeout(S.timer); S.vuil = false;
+          stuur('POST', '/dossiers/' + d.id + '/wis').then(function(j){ toon(j.dossier); toast('De verwerkte gegevens zijn gewist.'); return laadLijst(); }).catch(meld);
+        } })]) : null]);
   }
   function toon(d){
     if (!d.toestemming) d.toestemming = { status: 'geen', datum: '', door: '' };
@@ -1020,6 +1032,7 @@ button.tegel:hover{border-color:var(--accent)}
             el('button', { class: 'knop stil klein', type: 'button', tekst: 'Vernieuwen', onclick: function(){ herlaadMetingen(); } })]),
           el('div', { id: 'monitor' })]),
         el('div', { class: 'onder p-overzicht breed' }, [
+          el('button', { class: 'knop stil', type: 'button', tekst: 'Alles uitdraaien voor inzage', onclick: tekenInzage }),
           el('a', { class: 'knop stil', href: '/api/pmt/dossiers/' + d.id + '/export', download: 'pmt-dossier.json', tekst: 'Dossier exporteren' }),
           el('button', { class: 'knop weg', type: 'button', tekst: 'Dossier verwijderen', onclick: function(){ zeker.hidden = false; zeker.querySelector('button').focus(); } })]),
         zeker
@@ -1085,6 +1098,48 @@ button.tegel:hover{border-color:var(--accent)}
           stuur('DELETE', '/metingen/' + m.id).then(function(){ d.metingen = d.metingen.filter(function(x){ return x.id !== m.id; }); tekenMetingen(); }).catch(meld);
         } })])]));
     });
+  }
+
+  /* ---------- inzage: alles van een leerling op papier ---------- */
+  /* Voor een inzageverzoek: alles wat er over de leerling is vastgelegd, en wie
+     wanneer iets met het dossier deed. Het uitdraaien zelf komt ook in het logboek. */
+  function tekenInzage(){
+    bewaarNu();
+    var d = S.d;
+    api('/dossiers/' + d.id + '/logboek').then(function(j){
+      var t = d.toestemming || {}, delen = [];
+      function vak(titel, kinderen){ delen.push(el('section', { class: 'vak' }, [el('h2', { tekst: titel })].concat(kinderen))); }
+      function regel(k, v){ return el('li', {}, [el('b', { tekst: k + ': ' }), v || 'niet ingevuld']); }
+      delen.push(el('div', { class: 'onder geenprint', style: 'margin-top:0' }, [
+        el('button', { class: 'knop', type: 'button', tekst: 'Printen', onclick: function(){ window.print(); } }),
+        el('button', { class: 'knop stil', type: 'button', tekst: 'Terug naar het dossier', onclick: function(){ toon(d); } })]));
+      delen.push(el('p', { class: 'zacht geenprint', style: 'margin-top:10px', tekst: 'Dit is alles wat er over deze leerling is vastgelegd. Geef het mee bij een verzoek om inzage. Dat je dit hebt uitgedraaid staat in het logboek.' }));
+      delen.push(el('div', { class: 'kop', style: 'margin-top:22px' }, [el('h1', { tekst: 'Inzage in het dossier van ' + naam(d) })]));
+      delen.push(el('p', { class: 'zacht', tekst: 'Uitgedraaid op ' + mooieDatum(vandaag()) + ' door ' + S.ik.naam + '.' }));
+      vak('Gegevens', [el('ul', { class: 'lijst' }, [regel('Naam', naam(d)), regel('Klas', d.klas), regel('Status', STATUS[d.status]), regel('Start', d.start ? mooieDatum(d.start) : ''),
+        regel('Aangemeld op', d.aangemeld ? mooieDatum(d.aangemeld) : ''), regel('Aangemeld door', d.door),
+        regel('Toestemming van de ouders', TOEST[t.status || 'geen'] + (t.datum ? ', ' + mooieDatum(t.datum) : '') + (t.door ? ', door ' + t.door : ''))])]);
+      vak('Hulpvraag', [el('p', { style: 'white-space:pre-wrap', tekst: d.hulpvraag || 'Niet ingevuld.' })]);
+      vak('Doelen', [d.doelen.length ? el('ul', { class: 'lijst' }, d.doelen.map(function(x){ return el('li', { tekst: x.tekst + (x.klaar ? ' (behaald)' : ' (loopt nog)') }); })) : el('p', { tekst: 'Geen doelen.' })]);
+      vak('Notities', d.notities.length ? d.notities.slice().sort(function(a, b){ return a.datum < b.datum ? -1 : 1; }).map(function(n){
+        return el('div', { class: 'notitie', style: 'grid-template-columns:110px 1fr' }, [el('time', { tekst: mooieDatum(n.datum) }), el('p', { tekst: n.tekst })]);
+      }) : [el('p', { tekst: 'Geen notities.' })]);
+      vak('Ingevulde lijsten', d.metingen.length ? d.metingen.slice().sort(function(a, b){ return a.t - b.t; }).map(function(m){
+        return el('div', { style: 'break-inside:avoid;border-top:1px solid var(--rand);padding-top:8px' }, [
+          el('p', {}, [el('b', { tekst: mooieTijd(m.t) + ' · ' + m.titel }), ' (ingevuld door de ' + (m.door || 'leerling') + (m.papier ? ', op papier' : '') + ')']),
+          el('p', { class: 'zacht', tekst: m.schalen.map(function(x){ return x.naam + ' ' + getal(x.score); }).join(' · ') }),
+          el('ul', { class: 'antw', style: 'padding-left:0' }, m.antwoorden.map(function(a){ return el('li', {}, [el('span', { tekst: a.tekst }), el('b', { tekst: a.label })]); }))]);
+      }) : [el('p', { tekst: 'Geen ingevulde lijsten.' })]);
+      var afspraken = (d.geweest || []).concat((d.afspraken || []).filter(function(a){ return a.dag > vandaag(); })).sort(function(a, b){ return a.dag < b.dag ? -1 : a.dag > b.dag ? 1 : a.begin - b.begin; });
+      vak('Afspraken en aanwezigheid', [afspraken.length ? el('ul', { class: 'lijst' }, afspraken.map(function(a){
+        return el('li', { tekst: korteDag(a.dag) + ', ' + uur(a.begin) + ' tot ' + uur(a.begin + a.duur) + ' · ' + (SOORT[a.soort] || 'afspraak') + (a.komst ? ' · ' + a.komst + (a.reden ? ' (' + a.reden.toLowerCase() + ')' : '') : '') });
+      })) : el('p', { tekst: 'Geen afspraken.' })]);
+      vak('Wie deed wat met dit dossier', [j.regels.length ? el('div', { class: 'schuif' }, [el('table', {}, [
+        el('thead', {}, [el('tr', {}, [el('th', { tekst: 'Wanneer' }), el('th', { tekst: 'Wie' }), el('th', { tekst: 'Wat' })])]),
+        el('tbody', {}, j.regels.map(function(r){ return el('tr', {}, [el('td', { class: 'tijd', tekst: mooieTijd(r.t) }), el('td', { tekst: r.wie }), el('td', { tekst: r.wat })]); }))])]) : el('p', { tekst: 'Nog niets.' })]);
+      scherm([el('div', { class: 'verslag' }, delen)]);
+      window.scrollTo(0, 0);
+    }).catch(meld);
   }
 
   /* ---------- het toestemmingsformulier ---------- */
@@ -1963,8 +2018,24 @@ button.tegel:hover{border-color:var(--accent)}
   /* ---------- logboek ---------- */
   function tekenLogboek(){
     bewaarNu();
-    api('/logboek').then(function(j){
+    Promise.all([api('/logboek'), api('/privacy'), laadLijst()]).then(function(beide){
+      var j = beide[0], pv = beide[1];
       S.d = null; S.zicht = 'log'; tekenNamen();
+      var iMaanden = el('input', { type: 'number', id: 'pv-maanden', min: '0', max: '240', step: '1', value: String(pv.maanden), style: 'width:120px;min-height:42px;padding:8px 12px;border-radius:10px;border:1.5px solid var(--rand2);background:var(--kaart);color:var(--ink)' });
+      var pvStand = el('span', { class: 'zacht', role: 'status' });
+      var gaanWeg = S.lijst.filter(function(d){ return d.status === 'afgerond'; });
+      var privacyVak = el('section', { class: 'vak' }, [
+        el('h2', { tekst: 'Bewaartermijn' }),
+        el('p', { tekst: 'Een afgerond dossier blijft staan tot de termijn voorbij is. Daarna verwijdert het systeem het vanzelf, met alles wat erbij hoort. Dat komt in het logboek.' }),
+        el('form', { class: 'onder', style: 'margin-top:0', onsubmit: function(ev){
+          ev.preventDefault();
+          stuur('PUT', '/privacy', { maanden: +iMaanden.value }).then(function(){ toast('De bewaartermijn is opgeslagen.'); tekenLogboek(); }).catch(function(e){ if (e.message !== 'uit') pvStand.textContent = e.message; });
+        } }, [el('label', {}, ['Maanden na het afronden (0 is nooit vanzelf)', iMaanden]), el('button', { class: 'knop', type: 'submit', tekst: 'Opslaan' }), pvStand]),
+        el('p', { class: 'zacht', tekst: pv.maanden ? 'Nu: ' + pv.maanden + (pv.maanden === 1 ? ' maand' : ' maanden') + ' na het afronden.' : 'Nu staat er geen termijn: er verdwijnt niets vanzelf. Vraag de school welke termijn geldt.' }),
+        gaanWeg.length ? el('ul', { class: 'lijst' }, gaanWeg.map(function(d){
+          return el('li', { tekst: naam(d) + ': afgerond' + (d.afgerondOp ? ' op ' + mooieDatum(d.afgerondOp) : '') + (d.wegOp ? ', wordt verwijderd op ' + mooieDatum(d.wegOp) : ', blijft staan') });
+        })) : null,
+        el('p', {}, [el('a', { href: PRIVACY, target: '_blank', rel: 'noopener', tekst: 'De privacyverklaring voor ouders en leerlingen bekijken' })])]);
       var WAT = { geopend: 'Dossier geopend', gewijzigd: 'Dossier gewijzigd', gemaakt: 'Dossier gemaakt', verwijderd: 'Dossier verwijderd', 'geëxporteerd': 'Dossier geëxporteerd',
         ingelogd: 'Ingelogd', uitgelogd: 'Uitgelogd', geweigerd: 'Inloggen geweigerd' };
       var rijen = [], dagVorige = '';
@@ -1979,7 +2050,9 @@ button.tegel:hover{border-color:var(--accent)}
           el('td', { tekst: WAT[r.wat] || r.wat.charAt(0).toUpperCase() + r.wat.slice(1) }), el('td', { tekst: r.dossier })]));
       });
       scherm([
-        el('div', { class: 'kop' }, [el('h1', { tekst: 'Logboek' })]),
+        el('div', { class: 'paginakop' }, [el('h1', { tekst: 'Privacy' })]),
+        privacyVak,
+        el('h2', { style: 'font-size:1.5rem;margin-top:26px', tekst: 'Logboek' }),
         el('p', { class: 'zacht', tekst: 'Wie heeft wanneer ingelogd, en welk dossier is geopend, gewijzigd, geëxporteerd of verwijderd. De laatste 300 regels.' }),
         el('section', { class: 'vak' }, [el('div', { class: 'schuif' }, [el('table', {}, [
           el('thead', {}, [el('tr', {}, [el('th', { tekst: 'Wanneer' }), el('th', { tekst: 'Wie' }), el('th', { tekst: 'Wat' }), el('th', { tekst: 'Dossier' })])]),

@@ -72,6 +72,10 @@
      PUT    /api/pmt/afspraken/ID          verplaatsen naar een andere dag of tijd
      PUT    /api/pmt/afspraken/ID/komst    aanwezig of afwezig, met een reden
      DELETE /api/pmt/afspraken/ID          met ?reeks=1 ook alle latere op dezelfde weekdag en tijd
+     GET    /api/pmt/privacy               de bewaartermijn
+     PUT    /api/pmt/privacy               de bewaartermijn zetten (maanden na afronden; 0 is uit)
+     POST   /api/pmt/dossiers/ID/wis       wat er verwerkt is wissen, na het intrekken van de toestemming
+     GET    /api/pmt/dossiers/ID/logboek   wie er wat met dit dossier deed, voor een inzageverzoek
      GET    /api/pmt/toestemming           de tekst van het toestemmingsformulier
      PUT    /api/pmt/toestemming           die tekst aanpassen
      GET    /api/pmt/logboek
@@ -411,6 +415,18 @@ export async function behandel(req, env, url, hulp){
     return u ? klaar({ ok: true }) : klaar({ fout: "op dat moment staat al een afspraak" }, 409);
   }
   if (afm && m === "DELETE") return (await k.wegAfspraak(afm[1], s.naam, url.searchParams.get("reeks") === "1")) ? klaar({ ok: true }) : klaar({ fout: "deze afspraak bestaat niet" }, 404);
+  if (p === "/api/pmt/privacy" && m === "GET") return klaar({ maanden: await k.bewaartermijn() });
+  if (p === "/api/pmt/privacy" && m === "PUT"){
+    let inhoud; try { inhoud = await leesInhoud(req); } catch (e){ return klaar({ fout: "dit kan de server niet lezen" }, 400); }
+    return klaar({ maanden: await k.zetBewaartermijn(inhoud.maanden, s.naam) });
+  }
+  const wm = p.match(/^\/api\/pmt\/dossiers\/([A-Za-z0-9_-]{8,24})\/wis$/);
+  if (wm && m === "POST"){
+    const d = await k.wisVerwerkt(wm[1], s.naam);
+    return d ? klaar({ dossier: d }) : klaar({ fout: "dit dossier bestaat niet" }, 404);
+  }
+  const dl = p.match(/^\/api\/pmt\/dossiers\/([A-Za-z0-9_-]{8,24})\/logboek$/);
+  if (dl && m === "GET") return klaar({ regels: await k.logboekVan(dl[1], s.naam) });
   if (p === "/api/pmt/toestemming" && m === "GET") return klaar({ tekst: await k.toestemmingstekst() });
   if (p === "/api/pmt/toestemming" && m === "PUT"){
     let inhoud; try { inhoud = await leesInhoud(req); } catch (e){ return klaar({ fout: "dit kan de server niet lezen" }, 400); }
@@ -639,12 +655,13 @@ const VOORBEELDCIJFERS = {
   Jesse: { metingen: [[-3, [2, 2, 4, 2, 2, 4, 3, 2, 4]]], weken: {} }
 };
 /* verandert dit getal, dan vult de demo zich opnieuw, ook als hij nog geen dag oud is */
-const DEMO_VERSIE = "11";
+const DEMO_VERSIE = "12";
 
 export class Pmt extends DurableObject {
   constructor(ctx, env){
     super(ctx, env);
     this.sql = ctx.storage.sql;
+    ctx.blockConcurrencyWhile(async () => { if ((await ctx.storage.getAlarm()) == null) await ctx.storage.setAlarm(Date.now() + 3600000); });
     this.sql.exec("CREATE TABLE IF NOT EXISTS dossier (id TEXT PRIMARY KEY, inhoud TEXT NOT NULL, gemaakt INTEGER NOT NULL, bijgewerkt INTEGER NOT NULL)");
     this.sql.exec("CREATE TABLE IF NOT EXISTS lijst (id TEXT PRIMARY KEY, inhoud TEXT NOT NULL, bijgewerkt INTEGER NOT NULL)");
     this.sql.exec("CREATE TABLE IF NOT EXISTS afname (code TEXT PRIMARY KEY, dossier TEXT NOT NULL, lijst TEXT NOT NULL, gemaakt INTEGER NOT NULL, tot INTEGER NOT NULL)");
@@ -856,6 +873,64 @@ export class Pmt extends DurableObject {
     }
     return uit;
   }
+  /* ---------- bewaartermijn ---------- */
+  /* Hoeveel maanden na het afronden een dossier blijft staan. 0 betekent dat er
+     niets vanzelf verdwijnt; de school hoort de termijn zelf vast te stellen. */
+  bewaartermijn(){
+    const r = this.sql.exec("SELECT v FROM stand WHERE k = 'bewaar'").toArray()[0];
+    const n = Math.round(Number(r && r.v));
+    return n >= 1 && n <= 240 ? n : 0;
+  }
+  zetBewaartermijn(m, wie){
+    let n = Math.round(Number(m)); n = n >= 1 && n <= 240 ? n : 0;
+    this.sql.exec("INSERT OR REPLACE INTO stand (k, v) VALUES ('bewaar', ?)", String(n));
+    this.meld(wie, n ? "bewaartermijn op " + n + " maanden gezet" : "bewaartermijn uitgezet", "");
+    return n;
+  }
+  /* Sinds wanneer een dossier is afgerond. Een dossier dat al afgerond was voordat
+     dit werd bijgehouden, telt vanaf de laatste wijziging. */
+  afgerondSinds(d){
+    if (d.status !== "afgerond") return "";
+    return d.afgerondOp || (d.bijgewerkt ? new Date(d.bijgewerkt).toISOString().slice(0, 10) : "");
+  }
+  /* de dag waarop een afgerond dossier weggaat, of leeg */
+  wegOp(d, maanden){
+    const sinds = this.afgerondSinds(d);
+    if (!maanden || !sinds) return "";
+    const t = new Date(sinds + "T12:00:00Z"); t.setUTCMonth(t.getUTCMonth() + maanden);
+    return t.toISOString().slice(0, 10);
+  }
+  async ruimOp(){
+    const maanden = this.bewaartermijn(); if (!maanden) return 0;
+    let n = 0;
+    for (const d of await this.alles()){
+      const w = this.wegOp(d, maanden);
+      if (w && w <= vandaagNL()){ this.weg(d.id, "het systeem, na de bewaartermijn"); n++; }
+    }
+    return n;
+  }
+  async alarm(){
+    try { await this.ruimOp(); } catch (e){ console.error("pmt: opruimen mislukt", e && e.message); }
+    await this.ctx.storage.setAlarm(Date.now() + 86400000);
+  }
+  /* Na het intrekken van de toestemming: alles wat er verwerkt is weg. De
+     aanmelding (naam, klas, datum) blijft staan tot het dossier zelf weggaat. */
+  async wisVerwerkt(id, wie){
+    const r = this.sql.exec("SELECT inhoud FROM dossier WHERE id = ?", id).toArray()[0];
+    if (!r) return null;
+    const d = await this.open(r.inhoud);
+    d.notities = []; d.doelen = []; d.hulpvraag = "";
+    this.sql.exec("UPDATE dossier SET inhoud = ?, bijgewerkt = ? WHERE id = ?", await this.dicht(d), Date.now(), id);
+    this.sql.exec("DELETE FROM meting WHERE dossier = ?", id);
+    this.sql.exec("DELETE FROM afname WHERE dossier = ?", id);
+    this.sql.exec("DELETE FROM afspraak WHERE dossier = ?", id);
+    this.meld(wie, "verwerkte gegevens gewist", id);
+    return this.haal(id);
+  }
+  logboekVan(id, wie){
+    this.meld(wie, "inzage uitgedraaid", id);
+    return this.sql.exec("SELECT t, wie, wat FROM logboek WHERE dossier = ? ORDER BY n DESC LIMIT 500", id).toArray();
+  }
   /* wat er is ingevuld en nog niet bekeken, nieuwste eerst */
   async nieuweMetingen(){
     const uit = [];
@@ -867,6 +942,7 @@ export class Pmt extends DurableObject {
   }
   zetGezien(dossier){ this.sql.exec("UPDATE meting SET gezien = 1 WHERE dossier = ? AND gezien = 0", dossier); }
   async lijst(){
+    const bewaar = this.bewaartermijn();
     const nw = {};
     for (const r of this.sql.exec("SELECT dossier, COUNT(*) AS n FROM meting WHERE gezien = 0 GROUP BY dossier").toArray()) nw[r.dossier] = r.n;
     /* Per leerling het verloop voor de kleine grafiek op de kaart: van elke
@@ -893,7 +969,7 @@ export class Pmt extends DurableObject {
       aangemeld: d.aangemeld || "", door: d.door || "", voorrang: !!d.voorrang, reden: d.status === "wacht" ? String(d.hulpvraag || "").slice(0, 160) : "", voornaam: d.voornaam, letter: d.letter, klas: d.klas, status: d.status, start: d.start,
       proef: !!d.proef, notities: d.notities.length, bijgewerkt: d.bijgewerkt,
       metingen: met[d.id] ? met[d.id].trend.length : 0, laatsteMeting: met[d.id] ? met[d.id].t : 0, weekchecks: met[d.id] ? met[d.id].weken : 0,
-      trend: met[d.id] ? met[d.id].trend.slice(-8) : [], codes: cod[d.id] || 0, nieuw: nw[d.id] || 0 }))
+      trend: met[d.id] ? met[d.id].trend.slice(-8) : [], codes: cod[d.id] || 0, nieuw: nw[d.id] || 0, afgerondOp: this.afgerondSinds(d), wegOp: this.wegOp(d, bewaar) }))
       .sort((a, b) => a.voornaam.localeCompare(b.voornaam, "nl"));
   }
   async haal(id, wie, wat){
@@ -924,11 +1000,13 @@ export class Pmt extends DurableObject {
       if (!oudRij) return null;
       const oud = await this.open(oudRij.inhoud), was = (oud.toestemming && oud.toestemming.status) || "geen";
       if (d.toestemming.status !== "ja"){ d.notities = oud.notities || []; d.doelen = oud.doelen || []; }
+      d.afgerondOp = d.status === "afgerond" ? (oud.afgerondOp || vandaagNL()) : "";
       this.sql.exec("UPDATE dossier SET inhoud = ?, bijgewerkt = ? WHERE id = ?", await this.dicht(d), nu, id);
       this.meld(wie, "gewijzigd", id);
       if (was !== d.toestemming.status) this.meld(wie, "toestemming van de ouders: " + { geen: "nog niet gevraagd", gevraagd: "formulier meegegeven", ja: "getekend", nee: "geweigerd" }[d.toestemming.status], id);
     } else {
       if (d.toestemming.status !== "ja"){ d.notities = []; d.doelen = []; }
+      d.afgerondOp = d.status === "afgerond" ? vandaagNL() : "";
       id = willekeur(9);
       this.sql.exec("INSERT INTO dossier (id, inhoud, gemaakt, bijgewerkt) VALUES (?, ?, ?, ?)", id, await this.dicht(d), nu, nu);
       this.meld(wie, "gemaakt", id);

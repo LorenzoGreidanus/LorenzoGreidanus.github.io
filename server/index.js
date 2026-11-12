@@ -200,6 +200,8 @@ async function verdeel(req, env, ctx){
       if (p === "/") return pmtPagina(env, req, url, "index.html");
       /* hier vult de leerling een vragenlijst in, met de code van vandaag */
       if (p === "/invullen") return pmtPagina(env, req, url, "invullen.html");
+      /* de privacyverklaring voor ouders en leerlingen */
+      if (p === "/privacy") return pmtPagina(env, req, url, "privacy.html");
       if (p === "/fonts.css" || p.startsWith("/fonts/") || ["/favicon.ico", "/favicon.svg", "/apple-touch-icon.png"].indexOf(p) >= 0) return env.ASSETS.fetch(req);
       return new Response(null, { status: 302, headers: { location: "/", "cache-control": "no-store" } });
     }
@@ -208,6 +210,7 @@ async function verdeel(req, env, ctx){
       if (p === "/pmt") return new Response(null, { status: 302, headers: { location: "/pmt/", "cache-control": "no-store" } });
       if (p === "/pmt/" || p === "/pmt/index.html") return pmtPagina(env, req, url, "index.html");
       if (p === "/pmt/invullen" || p === "/pmt/invullen.html") return pmtPagina(env, req, url, "invullen.html");
+      if (p === "/pmt/privacy" || p === "/pmt/privacy.html") return pmtPagina(env, req, url, "privacy.html");
     }
 
     /* korte weg voor docenten: meneergreidanus.nl/docent */
