@@ -53,6 +53,7 @@
      GET    /api/pmt/dossiers/ID           een dossier (komt in het logboek)
      PUT    /api/pmt/dossiers/ID           bewaren
      DELETE /api/pmt/dossiers/ID           weg, voorgoed
+     POST   /api/pmt/dossiers/ID/gezien    wat er nieuw was ingevuld is bekeken
      GET    /api/pmt/dossiers/ID/export    het hele dossier als bestand
      GET    /api/pmt/lijsten               de vragenlijsten
      POST   /api/pmt/lijsten               een nieuwe vragenlijst
@@ -281,7 +282,10 @@ export async function behandel(req, env, url, hulp){
   const vol = async wat => s.demo && (await k.tel())[wat] >= (wat === "dossiers" ? DEMO_DOSSIERS : DEMO_LIJSTEN);
   const klaar = async (obj, status, extra) => json(obj, status, Object.assign({ "set-cookie": await sessieKoekje(env, url, s) }, extra || {}));
 
-  if (p === "/api/pmt/dossiers" && m === "GET") return klaar({ dossiers: await k.lijst() });
+  /* de lijst, en wat er door een leerling of mentor is ingevuld en nog niet bekeken */
+  if (p === "/api/pmt/dossiers" && m === "GET") return klaar({ dossiers: await k.lijst(), nieuw: await k.nieuweMetingen() });
+  const gm = p.match(/^\/api\/pmt\/dossiers\/([A-Za-z0-9_-]{8,24})\/gezien$/);
+  if (gm && m === "POST"){ await k.zetGezien(gm[1]); return klaar({ ok: true }); }
   if (p === "/api/pmt/dossiers" && m === "POST"){
     let inhoud; try { inhoud = await leesInhoud(req); } catch (e){ return klaar({ fout: "dit kan de server niet lezen" }, 400); }
     if (await vol("dossiers")) return klaar({ fout: "de demo zit vol: haal eerst een dossier weg" }, 400);
@@ -635,7 +639,7 @@ const VOORBEELDCIJFERS = {
   Jesse: { metingen: [[-3, [2, 2, 4, 2, 2, 4, 3, 2, 4]]], weken: {} }
 };
 /* verandert dit getal, dan vult de demo zich opnieuw, ook als hij nog geen dag oud is */
-const DEMO_VERSIE = "10";
+const DEMO_VERSIE = "11";
 
 export class Pmt extends DurableObject {
   constructor(ctx, env){
@@ -653,6 +657,8 @@ export class Pmt extends DurableObject {
     /* een dichtgezet blok is een afspraak zonder leerling, met een korte tekst erbij */
     try { this.sql.exec("ALTER TABLE afspraak ADD COLUMN tekst TEXT NOT NULL DEFAULT ''"); } catch (e){ /* de kolom is er al */ }
     /* was de leerling er: komst is leeg, aanwezig of afwezig; bij afwezig hoort een reden */
+    /* gezien: 0 zolang de therapeut een door de leerling of mentor ingevulde lijst nog niet heeft bekeken */
+    try { this.sql.exec("ALTER TABLE meting ADD COLUMN gezien INTEGER NOT NULL DEFAULT 1"); } catch (e){ /* de kolom is er al */ }
     for (const kolom of ["komst TEXT NOT NULL DEFAULT ''", "reden TEXT NOT NULL DEFAULT ''"]){
       try { this.sql.exec("ALTER TABLE afspraak ADD COLUMN " + kolom); } catch (e){ /* de kolom is er al */ }
     }
@@ -850,7 +856,19 @@ export class Pmt extends DurableObject {
     }
     return uit;
   }
+  /* wat er is ingevuld en nog niet bekeken, nieuwste eerst */
+  async nieuweMetingen(){
+    const uit = [];
+    for (const r of this.sql.exec("SELECT id, dossier, inhoud, t FROM meting WHERE gezien = 0 ORDER BY t DESC LIMIT 30").toArray()){
+      try { const m = await this.open(r.inhoud); uit.push({ id: r.id, dossier: r.dossier, t: r.t, titel: m.titel, monitor: !!m.monitor, door: m.door || "leerling" }); }
+      catch (e){ console.error("pmt: nieuwe meting niet te openen"); }
+    }
+    return uit;
+  }
+  zetGezien(dossier){ this.sql.exec("UPDATE meting SET gezien = 1 WHERE dossier = ? AND gezien = 0", dossier); }
   async lijst(){
+    const nw = {};
+    for (const r of this.sql.exec("SELECT dossier, COUNT(*) AS n FROM meting WHERE gezien = 0 GROUP BY dossier").toArray()) nw[r.dossier] = r.n;
     /* Per leerling het verloop voor de kleine grafiek op de kaart: van elke
        gewone meting het gemiddelde over de schalen, tussen 0 en 1. De
        wekelijkse checks tellen apart. */
@@ -875,7 +893,7 @@ export class Pmt extends DurableObject {
       aangemeld: d.aangemeld || "", door: d.door || "", voorrang: !!d.voorrang, reden: d.status === "wacht" ? String(d.hulpvraag || "").slice(0, 160) : "", voornaam: d.voornaam, letter: d.letter, klas: d.klas, status: d.status, start: d.start,
       proef: !!d.proef, notities: d.notities.length, bijgewerkt: d.bijgewerkt,
       metingen: met[d.id] ? met[d.id].trend.length : 0, laatsteMeting: met[d.id] ? met[d.id].t : 0, weekchecks: met[d.id] ? met[d.id].weken : 0,
-      trend: met[d.id] ? met[d.id].trend.slice(-8) : [], codes: cod[d.id] || 0 }))
+      trend: met[d.id] ? met[d.id].trend.slice(-8) : [], codes: cod[d.id] || 0, nieuw: nw[d.id] || 0 }))
       .sort((a, b) => a.voornaam.localeCompare(b.voornaam, "nl"));
   }
   async haal(id, wie, wat){
@@ -885,8 +903,8 @@ export class Pmt extends DurableObject {
     /* de ingevulde lijsten en de codes die nog openstaan horen erbij, maar staan apart:
        wat de leerling instuurt kan zo nooit overschreven worden door een dossier dat openstaat */
     d.metingen = [];
-    for (const x of this.sql.exec("SELECT id, inhoud, t FROM meting WHERE dossier = ? ORDER BY t", id).toArray()){
-      try { d.metingen.push(Object.assign(await this.open(x.inhoud), { id: x.id, t: x.t })); } catch (e){ console.error("pmt: meting niet te openen", x.id); }
+    for (const x of this.sql.exec("SELECT id, inhoud, t, gezien FROM meting WHERE dossier = ? ORDER BY t", id).toArray()){
+      try { d.metingen.push(Object.assign(await this.open(x.inhoud), { id: x.id, t: x.t, nieuw: !x.gezien })); } catch (e){ console.error("pmt: meting niet te openen", x.id); }
     }
     this.sql.exec("DELETE FROM afname WHERE tot < ?", Date.now());
     d.afnames = this.sql.exec("SELECT code, lijst, tot, vast, door FROM afname WHERE dossier = ? ORDER BY gemaakt", id).toArray()
@@ -964,6 +982,8 @@ export class Pmt extends DurableObject {
         for (let i = 0; i < weken.length; i++) await erbij(d.id, mon, weken[i], Date.now() - (weken.length - 1 - i) * WEEK - 3600000, door);
       }
     }
+    /* zodat er in het voorbeeld iets nieuws te zien is: de twee laatst ingevulde lijsten zijn nog niet bekeken */
+    this.sql.exec("UPDATE meting SET gezien = 0 WHERE id IN (SELECT id FROM meting ORDER BY t DESC LIMIT 2)");
   }
   /* ---------- vragenlijsten ---------- */
   lijsten(){
@@ -1066,7 +1086,7 @@ export class Pmt extends DurableObject {
     const l = JSON.parse(a.lijst);
     const m = reken(l, antwoorden);
     if (!m) return false;
-    this.sql.exec("INSERT INTO meting (id, dossier, inhoud, t) VALUES (?, ?, ?, ?)", willekeur(9), a.dossier, await this.dicht(Object.assign(m, { lijst: l.id, door: a.door })), Date.now());
+    this.sql.exec("INSERT INTO meting (id, dossier, inhoud, t, gezien) VALUES (?, ?, ?, ?, 0)", willekeur(9), a.dossier, await this.dicht(Object.assign(m, { lijst: l.id, door: a.door })), Date.now());
     /* een gewone code is op na een keer; de vaste code blijft, maar rust even */
     if (a.vast) this.sql.exec("UPDATE afname SET laatst = ? WHERE code = ?", Date.now(), code);
     else this.sql.exec("DELETE FROM afname WHERE code = ?", code);

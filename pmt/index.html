@@ -331,6 +331,20 @@ button.regel:hover{border-color:var(--accent)}
 .p-afspraken{display:grid;gap:18px;margin-top:18px}
 .p-afspraken .vak{margin-top:0}
 .logdag th{background:var(--kaart2);color:var(--ink);font-size:.82rem;border-bottom:0;border-radius:8px}
+/* ---------- nieuw ---------- */
+dialog.nieuw{border:2px solid var(--ink);border-radius:22px;box-shadow:8px 8px 0 var(--vista);background:var(--kaart);color:var(--ink);padding:26px 26px 22px;width:min(520px,calc(100vw - 32px));max-height:calc(100svh - 48px);overflow:auto}
+dialog.nieuw::backdrop{background:rgba(20,34,76,.5)}
+dialog.nieuw h2{font-size:1.5rem}
+dialog.nieuw h3{font-size:.78rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-top:18px}
+dialog.nieuw ul{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:6px}
+dialog.nieuw li.punt{padding-left:18px;position:relative}
+dialog.nieuw li.punt::before{content:'';position:absolute;left:2px;top:.62em;width:7px;height:7px;border-radius:50%;background:var(--crab)}
+dialog.nieuw .ingevuld{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:1px solid var(--rand);border-radius:12px;background:transparent;padding:8px 12px;min-height:52px}
+dialog.nieuw .ingevuld:hover{border-color:var(--accent)}
+dialog.nieuw .ingevuld span{display:flex;flex-direction:column;line-height:1.3;min-width:0}
+dialog.nieuw .ingevuld small{color:var(--muted);font-size:.8rem}
+.stip{width:9px;height:9px;border-radius:50%;background:var(--crab);display:inline-block;flex:none}
+.tel.nw{background:var(--ocean);color:#fff}
 .terugknop{display:none;border:0;background:transparent;color:var(--accent);font-weight:600;min-height:44px;padding:0;margin-bottom:2px}
 .kop{gap:12px 16px}
 .koptekst{display:flex;flex-direction:column;gap:4px;min-width:0}
@@ -556,7 +570,8 @@ button.tegel:hover{border-color:var(--accent)}
   };
   function naarDeur(waarom){
     clearTimeout(S.klok); clearTimeout(S.timer);
-    S.d = null; S.lijst = [];
+    S.d = null; S.lijst = []; S.nieuw = [];
+    var nv = $('nieuwvenster'); if (nv) nv.remove();
     $('scherm').textContent = ''; $('namen').textContent = '';
     $('app').hidden = true; $('deur').hidden = false;
     var m = $('deurmelding');
@@ -580,7 +595,7 @@ button.tegel:hover{border-color:var(--accent)}
       ul.appendChild(el('li', { class: 'groep', tekst: STATUS[st] }));
       rij.forEach(function(d){
         ul.appendChild(el('li', {}, [el('button', { type: 'button', 'aria-current': S.d && S.d.id === d.id ? 'true' : null, onclick: function(){ openDossier(d.id); } },
-          [el('span', { tekst: naam(d) }), el('small', { tekst: d.klas || '' })])]));
+          [el('span', { tekst: naam(d) }), d.nieuw ? el('span', { class: 'stip', title: 'Nieuw ingevuld', 'aria-label': 'nieuw ingevuld' }) : null, el('small', { tekst: d.klas || '' })])]));
       });
     });
     $('namenkop').textContent = actief().length ? 'Leerlingen (' + actief().length + ')' : 'Leerlingen';
@@ -594,7 +609,7 @@ button.tegel:hover{border-color:var(--accent)}
     return el('span', { class: 'avatar ' + k + (groot ? ' groot' : ''), 'aria-hidden': 'true', tekst: (d.voornaam.charAt(0) + (d.letter || '').charAt(0)).toUpperCase() });
   }
   function laadLijst(){
-    return api('/dossiers').then(function(j){ S.lijst = j.dossiers; tekenNamen(); });
+    return api('/dossiers').then(function(j){ S.lijst = j.dossiers; S.nieuw = j.nieuw || []; tekenNamen(); });
   }
   function scherm(k){ var s = $('scherm'); s.textContent = ''; k.forEach(function(c){ if (c) s.appendChild(c); }); }
 
@@ -773,6 +788,7 @@ button.tegel:hover{border-color:var(--accent)}
           el('li', { tekst: d.metingen ? d.metingen + (d.metingen === 1 ? ' meting' : ' metingen') + ', laatste op ' + kort(d.laatsteMeting) : 'Nog geen metingen' }),
           d.toestemming !== 'ja' ? el('li', { class: 'open', tekst: d.toestemming === 'nee' ? 'Geen toestemming van de ouders' : d.toestemming === 'gevraagd' ? 'Toestemmingsformulier is mee, nog niet terug' : 'Nog geen toestemming van de ouders' }) : null,
           d.weekchecks ? el('li', { tekst: d.weekchecks + ' keer de wekelijkse check' }) : null,
+          d.nieuw ? el('li', { class: 'open' }, [el('span', { class: 'stip' }), ' Nieuw ingevuld, nog niet bekeken']) : null,
           d.volgende ? el('li', { class: 'open', tekst: 'Volgende afspraak: ' + korteDag(d.volgende.dag) + ' om ' + uur(d.volgende.begin) }) : null,
           el('li', { tekst: d.notities + (d.notities === 1 ? ' notitie' : ' notities') }),
           d.codes ? el('li', { class: 'open', tekst: d.codes + (d.codes === 1 ? ' code staat open' : ' codes staan open') }) : null]),
@@ -817,6 +833,11 @@ button.tegel:hover{border-color:var(--accent)}
       if (tab && !(j.dossier.toestemming && j.dossier.toestemming.status === 'ja')) S.tab = 'overzicht';
       toon(j.dossier);
       if (S.tab === 'notities' && $('notitie-tekst')) $('notitie-tekst').focus();
+      var inLijst = dossierVan(id);
+      if (inLijst && inLijst.nieuw){
+        inLijst.nieuw = 0; S.nieuw = (S.nieuw || []).filter(function(n){ return n.dossier !== id; }); tekenNamen();
+        stuur('POST', '/dossiers/' + id + '/gezien').catch(function(){});
+      }
     }).catch(meld);
   }
   function plan(){
@@ -877,9 +898,9 @@ button.tegel:hover{border-color:var(--accent)}
     var gew = gewoon(d.metingen), mon = d.metingen.filter(function(m){ return m.monitor; }), zak = [];
     monitorGroepen(d).forEach(function(g){ ['leerling', 'mentor'].forEach(function(door){ zakkers(g, door).forEach(function(z){ if (zak.indexOf(z.naam) < 0) zak.push(z.naam); }); }); });
     tb.textContent = '';
-    [['overzicht', 'Overzicht', ''], ['afspraken', 'Afspraken', (d.afspraken || []).length], ['notities', 'Notities', d.notities.length], ['lijsten', 'Vragenlijsten', gew.length], ['week', 'Wekelijkse check', zak.length ? '!' : '']].forEach(function(t){
+    [['overzicht', 'Overzicht', ''], ['afspraken', 'Afspraken', (d.afspraken || []).length], ['notities', 'Notities', d.notities.length], ['lijsten', 'Vragenlijsten', gew.some(function(x){ return x.nieuw; }) ? 'nieuw' : gew.length], ['week', 'Wekelijkse check', zak.length ? '!' : mon.some(function(x){ return x.nieuw; }) ? 'nieuw' : '']].forEach(function(t){
       tb.appendChild(el('button', { type: 'button', role: 'tab', 'aria-selected': S.tab === t[0] ? 'true' : 'false', onclick: function(){ kiesTab(t[0]); } },
-        [t[1], t[2] !== '' && t[2] !== 0 ? el('span', { class: 'tel' + (t[2] === '!' ? ' let' : ''), tekst: String(t[2]), 'aria-label': t[2] === '!' ? 'let op' : null }) : null]));
+        [t[1], t[2] !== '' && t[2] !== 0 ? el('span', { class: 'tel' + (t[2] === '!' ? ' let' : t[2] === 'nieuw' ? ' nw' : ''), tekst: String(t[2]), 'aria-label': t[2] === '!' ? 'let op' : null }) : null]));
     });
     /* op een smal scherm schuift het gekozen tabblad in beeld */
     var gekozen = tb.querySelector('[aria-selected="true"]');
@@ -1052,7 +1073,7 @@ button.tegel:hover{border-color:var(--accent)}
     var rij = gewoon(d.metingen).sort(function(a, b){ return b.t - a.t; });
     if (!rij.length) box.appendChild(el('p', { class: 'zacht', style: 'margin-top:12px', tekst: 'Nog geen ingevulde lijsten.' }));
     rij.forEach(function(m){
-      var kop = [el('time', { tekst: new Date(m.t).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' }) }), el('span', { tekst: m.titel + (m.papier ? ' (papier)' : '') })];
+      var kop = [el('time', { tekst: new Date(m.t).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' }) }), el('span', { tekst: m.titel + (m.papier ? ' (papier)' : '') + (m.nieuw ? ' · nieuw' : '') })];
       m.schalen.forEach(function(x){ kop.push(el('span', { class: 'score' }, [x.naam + ' ', el('b', { tekst: getal(x.score) })])); });
       box.appendChild(el('details', { class: 'meting' }, [
         el('summary', {}, kop),
@@ -1967,6 +1988,53 @@ button.tegel:hover{border-color:var(--accent)}
     }).catch(meld);
   }
 
+  /* ---------- nieuw: een venster na het inloggen ---------- */
+  /* Wat er nieuw is in PMT zelf. Komt er iets bij dat de moeite van het melden
+     waard is, zet dan hier een nieuwe id en nieuwe punten neer: wie het vorige
+     venster heeft weggeklikt, krijgt het nieuwe een keer te zien. */
+  var NIEUWS = { id: '2026-11-12', punten: [
+    'Het hoofdscherm begint met Vandaag: wie er komt en wie nu aan de beurt is.',
+    'Bij elke afspraak kruis je aan of de leerling er was, met een reden bij afwezig.',
+    'Het rooster kent pauzes, vakanties en studiedagen.',
+    'Er is een wachtrij voor leerlingen die nog geen plek hebben.',
+    'Per leerling leg je de toestemming van de ouders vast, met een formulier om te printen.'
+  ] };
+  function onthoud(k, v){ try { localStorage.setItem(k, v); } catch (e){ /* dan onthoudt hij het niet */ } }
+  function onthouden(k){ try { return localStorage.getItem(k) || ''; } catch (e){ return ''; } }
+  function toonNieuw(){
+    var al = []; try { al = JSON.parse(onthouden('pmt-nieuw-ingevuld') || '[]'); } catch (e){ al = []; }
+    var ingevuld = (S.nieuw || []).filter(function(n){ return al.indexOf(n.id) < 0 && dossierVan(n.dossier); });
+    var punten = onthouden('pmt-nieuws') !== NIEUWS.id ? NIEUWS.punten : [];
+    if (!ingevuld.length && !punten.length) return;
+    var oud = $('nieuwvenster'); if (oud) oud.remove();
+    var dlg = el('dialog', { class: 'nieuw', id: 'nieuwvenster', 'aria-labelledby': 'nieuwkop' });
+    /* wegklikken onthoudt hij op dit apparaat: hetzelfde komt niet opnieuw */
+    function dicht(){
+      onthoud('pmt-nieuws', NIEUWS.id);
+      onthoud('pmt-nieuw-ingevuld', JSON.stringify(al.concat(ingevuld.map(function(n){ return n.id; })).slice(-300)));
+      if (dlg.open) dlg.close(); dlg.remove();
+    }
+    dlg.addEventListener('cancel', function(ev){ ev.preventDefault(); dicht(); });
+    dlg.appendChild(el('h2', { id: 'nieuwkop', tekst: 'Nieuw' }));
+    if (ingevuld.length){
+      dlg.appendChild(el('h3', { tekst: 'Ingevuld sinds je er was' }));
+      dlg.appendChild(el('ul', {}, ingevuld.map(function(n){
+        var d = dossierVan(n.dossier), wat = n.monitor ? 'de wekelijkse check' : n.titel;
+        return el('li', {}, [el('button', { class: 'ingevuld', type: 'button', onclick: function(){ dicht(); openDossier(n.dossier, n.monitor ? 'week' : 'lijsten'); } }, [avatar(d),
+          el('span', {}, [el('b', { tekst: n.door === 'mentor' ? 'De mentor van ' + naam(d) : naam(d) }), el('small', { tekst: 'vulde ' + wat + ' in · ' + mooieTijd(n.t) })])])]);
+      })));
+    }
+    if (punten.length){
+      dlg.appendChild(el('h3', { tekst: 'Nieuw in PMT' }));
+      dlg.appendChild(el('ul', {}, punten.map(function(p){ return el('li', { class: 'punt', tekst: p }); })));
+    }
+    var klaarKnop = el('button', { class: 'knop', type: 'button', tekst: 'Begrepen', onclick: dicht });
+    dlg.appendChild(el('div', { class: 'onder' }, [klaarKnop, el('span', { class: 'zacht', tekst: 'Je krijgt dit niet opnieuw te zien.' })]));
+    document.body.appendChild(dlg);
+    if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+    klaarKnop.focus();
+  }
+
   /* ---------- begin ---------- */
   $('nieuwknop').addEventListener('click', tekenNieuw);
   $('logknop').addEventListener('click', tekenLogboek);
@@ -1997,7 +2065,7 @@ button.tegel:hover{border-color:var(--accent)}
     $('proef').hidden = !j.proef;
     if (j.demo) $('proef').textContent = 'Dit is een demo die iedereen kan openen. Wat je hier invult kan iedereen zien, en na een dag is het weer weg. Zet er geen echte namen in.';
     $('deur').hidden = true; $('app').hidden = false;
-    return Promise.all([laadLijst(), laadLijsten()]).then(tekenLeeg);
+    return Promise.all([laadLijst(), laadLijsten()]).then(tekenLeeg).then(toonNieuw);
   }).catch(function(){ naarDeur('fout'); });
 })();
 </script>
