@@ -197,6 +197,11 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
 .omroep .knoprij{margin-top:10px}
 .omroep .knop{min-height:44px}
 .omroep .tip:empty{display:none}
+/* drie berichten na elkaar: het bericht dat nu klinkt, licht op */
+.obericht ol{margin:0;padding:0;list-style:none;display:grid;gap:8px;counter-reset:ob}
+.obericht li{counter-increment:ob;display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:start;padding:6px 8px;border-radius:10px;transition:background-color .2s}
+.obericht li::before{content:counter(ob);width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:.78rem;font-weight:600;background:var(--amber);color:#14224C}
+.obericht li.nu{background:rgba(234,152,54,.18)}
 /* de rondekaart en de telling */
 .rondekaart{padding:16px}
 .rondekaart .knoprij{margin-top:10px}
@@ -360,7 +365,7 @@ body.bord .logvak{font-size:clamp(.95rem,1.1vw,1.2rem)}
     <script>/* de gezichtjes in het startplaatje komen uit avatar.js */document.querySelectorAll('.tafereel [data-gz]').forEach(function(g){ g.innerHTML = AVATAR.inhoud(g.getAttribute('data-gz'), '', g.getAttribute('data-st') || ''); });</script>
     <div class="uitleg">
       <div><i style="background:var(--crab);color:#14224C">1</i><b>Maak een code</b><span>Op het digibord. Elke telefoon wordt een reiziger met een eigen probleem, in het Engels. Zonder telefoons kan ook: dan speelt de klas zes reizigers in groepjes en tik jij de keuzes in.</span></div>
-      <div><i style="background:var(--amber);color:#14224C">2</i><b>Lees en luister</b><span>Elk kwartier verandert het vertrekbord en klinkt er een omroepbericht, ook als tekst op het bord. Lees ook de borden van het vliegveld: daar staat wat je waar regelt.</span></div>
+      <div><i style="background:var(--amber);color:#14224C">2</i><b>Lees en luister</b><span>Elk kwartier verandert het vertrekbord en klinken er drie korte omroepberichten, ook als tekst op het bord. Luister goed welk bericht over jouw vlucht gaat: sommige vluchtnummers lijken op elkaar. Lees ook de borden van het vliegveld: daar staat wat je waar regelt.</span></div>
       <div><i style="background:var(--ocean);color:#fff">3</i><b>Kies wat je doet</b><span>Wat doe je nu? Een goede keuze brengt je verder, een verkeerde kost een kwartier. Aan het eind zie je wie het vliegtuig haalde, en welke woorden je moest kennen.</span></div>
     </div>
     <div class="kaart">
@@ -398,9 +403,9 @@ body.bord .logvak{font-size:clamp(.95rem,1.1vw,1.2rem)}
           <table class="vbord" id="vbord"></table>
         </div>
         <div class="omroep" id="omroep">
-          <div class="okop"><span class="oico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 9.5h3.2L12 5.4v13.2L7.2 14.5H4z"/><path d="M15.8 9.2a4 4 0 0 1 0 5.6"/><path d="M18.4 6.6a7.6 7.6 0 0 1 0 10.8"/></svg></span><b>Omroepbericht</b><span class="otijd" id="otijd"></span></div>
-          <p class="obericht" id="obericht" lang="en"></p>
-          <div class="knoprij"><button class="knop stil" id="herhaalBtn" type="button">Herhaal het bericht</button><button class="knop stil" id="traagBtn" type="button">Nog eens, langzamer</button></div>
+          <div class="okop"><span class="oico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 9.5h3.2L12 5.4v13.2L7.2 14.5H4z"/><path d="M15.8 9.2a4 4 0 0 1 0 5.6"/><path d="M18.4 6.6a7.6 7.6 0 0 1 0 10.8"/></svg></span><b>Omroepberichten</b><span class="otijd" id="otijd"></span></div>
+          <div class="obericht" id="obericht" lang="en"></div>
+          <div class="knoprij"><button class="knop stil" id="herhaalBtn" type="button">Herhaal de berichten</button><button class="knop stil" id="traagBtn" type="button">Nog eens, langzamer</button></div>
           <p class="tip" id="geenStem"></p>
         </div>
       </div>
@@ -682,33 +687,97 @@ var ARR = (function(){
   }
 
   /* ---------- de omroepberichten ----------
-     Per ronde per niveau. Bij elk bericht staat welke feiten erin zitten; die
-     moeten kloppen met het vertrekbord (check.js kijkt dat na). */
+     Per kwartier drie korte berichten na elkaar, per niveau. Elk bericht gaat
+     over andere vluchten, ook over vluchten die op elkaar lijken (NB 431 en
+     NB 413, NB 129 en NB 192): elke reiziger moet er zijn eigen vlucht uit
+     halen, en er is elk kwartier voor bijna iedereen iets bij. Bij elk bericht
+     staat welke feiten erin zitten (noemt): die kloppen met het vertrekbord
+     (arr/check.js in de scratchpad kijkt dat na). */
   var BERICHTEN = [
-    { noemt:[['F218', 'delay', null, '11:00'], ['F413', 'wait']],
-      bb:'Good morning. Flight NB 218 to Dublin is delayed. The new time is 11:00.',
-      kgt:'Good morning, passengers. Flight NB 218 to Dublin is delayed. It will now leave at 11:00. Passengers who have missed a connecting flight, please go to the service desk.',
-      havo:'Good morning, ladies and gentlemen. We regret to announce that flight NB 218 to Dublin has been delayed because of a technical problem. The new departure time is 11:00. Passengers for flight NB 413 to Aberdeen, please wait in the lounge until your gate is shown. Anyone who has missed a connecting flight should report to the airline service desk.' },
-    { noemt:[['F745', 'canc'], ['F431', 'gate', 'A4'], ['F307', 'delay', null, '11:10'], ['F413', 'gate', 'A3']],
-      bb:'Flight NB 745 to Rome is cancelled. Passengers for Rome, please go to the service desk.',
-      kgt:'We are sorry, but flight NB 745 to Rome is cancelled. Passengers for Rome, please go to the service desk for a new flight. Flight NB 431 to Amsterdam, please go to gate A4.',
-      havo:'We are sorry to announce that flight NB 745 to Rome has been cancelled. All passengers booked on this flight should go to the airline service desk, where staff will book you on a later flight. Flight NB 307 to Lisbon is delayed and is now expected to leave at 11:10. Passengers for flight NB 413 to Aberdeen, please make your way to gate A3.' },
-    { noemt:[['F431', 'gate', 'B7'], ['F129', 'gate', 'B2'], ['F413', 'board', 'A3'], ['F564', 'gate', 'C3']],
-      bb:'Gate change! Flight NB 431 to Amsterdam now leaves from gate B7, not from gate A4.',
-      kgt:'Attention, please. There is a gate change for flight NB 431 to Amsterdam. The flight now leaves from gate B7, not from gate A4. Flight NB 129 to Edinburgh, please go to gate B2.',
-      havo:'May I have your attention, please. Passengers on flight NB 431 to Amsterdam, please note that your flight will now depart from gate B7 instead of gate A4. Passengers on flight NB 413 to Aberdeen, boarding has started at gate A3. Passengers for flight NB 564 to Oslo, please go to gate C3.' },
-    { noemt:[['F129', 'board', 'B5'], ['F431', 'board', 'B7'], ['F192', 'gate', 'B12'], ['F218', 'gate', 'B9']],
-      bb:'Flight NB 129 to Edinburgh is now boarding at gate B5. That is a new gate.',
-      kgt:'Flight NB 129 to Edinburgh is now boarding. Please note: the gate has changed to B5. Flight NB 431 to Amsterdam is now boarding at gate B7.',
-      havo:'This is a boarding call for flight NB 129 to Edinburgh. Because of a gate change, the flight is now boarding at gate B5. Passengers for flight NB 192 to Glasgow, your gate is B12, but boarding will not start until 10:45. Passengers on flight NB 218 to Dublin, please go to gate B9.' },
-    { noemt:[['F431', 'final', 'B7'], ['F129', 'final', 'B5'], ['F413', 'closed']],
-      bb:'Final call for flight NB 431 to Amsterdam. Please go to gate B7 now.',
-      kgt:'This is the final call for flight NB 431 to Amsterdam at gate B7, and for flight NB 129 to Edinburgh at gate B5. Please go to your gate now.',
-      havo:'This is the final call for passengers travelling to Amsterdam on flight NB 431 and to Edinburgh on flight NB 129. Please go immediately to gates B7 and B5 respectively, as both gates will close in fifteen minutes. The gate for flight NB 413 to Aberdeen is now closed.' },
-    { noemt:[['F749', 'final', 'C8'], ['F307', 'final', 'A9'], ['F218', 'final', 'B9'], ['F653', 'final', 'A11'], ['F431', 'closed'], ['F129', 'closed'], ['F192', 'board', 'B12']],
-      bb:'Final call for the flights to Rome, Lisbon, Dublin and Copenhagen. Please go to your gate now.',
-      kgt:'This is the final call for flight NB 749 to Rome at gate C8, flight NB 307 to Lisbon at gate A9, flight NB 218 to Dublin at gate B9 and flight NB 653 to Copenhagen at gate A11.',
-      havo:'This is the final call for flights NB 749 to Rome, NB 307 to Lisbon, NB 218 to Dublin and NB 653 to Copenhagen. The gates for flight NB 431 to Amsterdam and flight NB 129 to Edinburgh are now closed. Passengers for flight NB 192 to Glasgow may now board at gate B12.' }
+    { delen:[
+      { noemt:[['F218', 'delay', null, '11:00']],
+        bb:'Good morning. Flight NB 218 to Dublin is delayed. The new time is 11:00.',
+        kgt:'Good morning, passengers. Flight NB 218 to Dublin is delayed. It will now leave at 11:00.',
+        havo:'Good morning, ladies and gentlemen. We regret to announce that flight NB 218 to Dublin has been delayed because of a technical problem. The new departure time is 11:00.' },
+      { noemt:[],
+        bb:'Did you miss your flight? Please go to the service desk.',
+        kgt:'Passengers who have missed a connecting flight, please go to the service desk. We will book you on a new flight.',
+        havo:'Passengers arriving from Rome and Madrid who have missed a connecting flight should go to the airline service desk, where staff will book you on a later flight.' },
+      { noemt:[['F413', 'wait'], ['F431', 'wait']],
+        bb:'Flights NB 413 and NB 431: there is no gate yet. Please wait in the lounge.',
+        kgt:'Passengers for flight NB 413 to Aberdeen and flight NB 431 to Amsterdam: your gates are not known yet. Please wait in the departure lounge.',
+        havo:'Passengers for flight NB 413 to Aberdeen and flight NB 431 to Amsterdam, your gates have not been announced yet. Please wait in the departure lounge and keep an eye on the screens.' }
+    ] },
+    { delen:[
+      { noemt:[['F745', 'canc']],
+        bb:'Flight NB 745 to Rome is cancelled. Passengers for Rome, please go to the service desk.',
+        kgt:'We are sorry, but flight NB 745 to Rome is cancelled. Passengers for Rome, please go to the service desk for a new flight.',
+        havo:'We are sorry to announce that flight NB 745 to Rome has been cancelled. All passengers booked on this flight should go to the airline service desk, where staff will book you on a later flight.' },
+      { noemt:[['F431', 'gate', 'A4'], ['F413', 'gate', 'A3']],
+        bb:'Flight NB 431 to Amsterdam: go to gate A4. Flight NB 413 to Aberdeen: go to gate A3.',
+        kgt:'Flight NB 431 to Amsterdam, please go to gate A4. Flight NB 413 to Aberdeen, please go to gate A3.',
+        havo:'Passengers for flight NB 431 to Amsterdam, please make your way to gate A4. Passengers for flight NB 413 to Aberdeen, your flight leaves from gate A3, not from gate A4.' },
+      { noemt:[['F307', 'delay', null, '11:10']],
+        bb:'Flight NB 307 to Lisbon is delayed. The new time is 11:10.',
+        kgt:'Flight NB 307 to Lisbon is delayed. It is now expected to leave at 11:10. Please wait in the lounge.',
+        havo:'Flight NB 307 to Lisbon is delayed because the aircraft arrived late. It is now expected to leave at 11:10. Please remain in the departure lounge until your gate is shown.' }
+    ] },
+    { delen:[
+      { noemt:[['F431', 'gate', 'B7']],
+        bb:'Gate change! Flight NB 431 to Amsterdam now leaves from gate B7, not from gate A4.',
+        kgt:'Attention, please. There is a gate change for flight NB 431 to Amsterdam. The flight now leaves from gate B7, not from gate A4.',
+        havo:'May I have your attention, please. Passengers on flight NB 431 to Amsterdam, please note that your flight will now depart from gate B7 instead of gate A4.' },
+      { noemt:[['F129', 'gate', 'B2'], ['F192', 'wait']],
+        bb:'Flight NB 129 to Edinburgh: go to gate B2. Flight NB 192 to Glasgow: please wait.',
+        kgt:'Flight NB 129 to Edinburgh, please go to gate B2. Flight NB 192 to Glasgow has no gate yet. Please wait in the lounge.',
+        havo:'Passengers for flight NB 129 to Edinburgh, please go to gate B2. Passengers for flight NB 192 to Glasgow, your gate has not been announced yet, so please stay in the lounge.' },
+      { noemt:[['F413', 'board', 'A3'], ['F564', 'gate', 'C3']],
+        bb:'Flight NB 413 to Aberdeen is boarding at gate A3. Flight NB 564 to Oslo: go to gate C3.',
+        kgt:'Flight NB 413 to Aberdeen is now boarding at gate A3. Flight NB 564 to Oslo, please go to gate C3.',
+        havo:'Boarding has started for flight NB 413 to Aberdeen at gate A3. Passengers for flight NB 564 to Oslo, please go to gate C3, where boarding will start shortly.' }
+    ] },
+    { delen:[
+      { noemt:[['F129', 'board', 'B5']],
+        bb:'Flight NB 129 to Edinburgh is now boarding at gate B5. That is a new gate.',
+        kgt:'Flight NB 129 to Edinburgh is now boarding. Please note: the gate has changed from B2 to B5.',
+        havo:'This is a boarding call for flight NB 129 to Edinburgh. Because of a gate change, the flight is now boarding at gate B5 instead of gate B2.' },
+      { noemt:[['F431', 'board', 'B7'], ['F564', 'board', 'C3']],
+        bb:'Flight NB 431 to Amsterdam is boarding at gate B7. Flight NB 564 to Oslo is boarding at gate C3.',
+        kgt:'Flight NB 431 to Amsterdam is now boarding at gate B7. Flight NB 564 to Oslo is now boarding at gate C3.',
+        havo:'Flight NB 431 to Amsterdam is now boarding at gate B7, and flight NB 564 to Oslo is boarding at gate C3. Please have your boarding pass and passport ready.' },
+      { noemt:[['F218', 'gate', 'B9'], ['F307', 'gate', 'A9'], ['F749', 'gate', 'C8'], ['F653', 'gate', 'A11']],
+        bb:'New gates. Flight NB 218: gate B9. Flight NB 307: gate A9. Flight NB 749: gate C8. Flight NB 653: gate A11.',
+        kgt:'We now have gates for four flights. Flight NB 218 to Dublin: gate B9. Flight NB 307 to Lisbon: gate A9. Flight NB 749 to Rome: gate C8. Flight NB 653 to Copenhagen: gate A11.',
+        havo:'Gates have now been announced for four flights. Flight NB 218 to Dublin leaves from gate B9, flight NB 307 to Lisbon from gate A9, flight NB 749 to Rome from gate C8 and flight NB 653 to Copenhagen from gate A11.' }
+    ] },
+    { delen:[
+      { noemt:[['F431', 'final', 'B7'], ['F129', 'final', 'B5']],
+        bb:'Final call for flight NB 431 to Amsterdam at gate B7 and flight NB 129 to Edinburgh at gate B5.',
+        kgt:'This is the final call for flight NB 431 to Amsterdam at gate B7, and for flight NB 129 to Edinburgh at gate B5. Please go to your gate now.',
+        havo:'This is the final call for passengers travelling to Amsterdam on flight NB 431 and to Edinburgh on flight NB 129. Please go immediately to gates B7 and B5, as both gates will close in fifteen minutes.' },
+      { noemt:[['F564', 'final', 'C3'], ['F413', 'closed']],
+        bb:'Final call for flight NB 564 to Oslo at gate C3. The gate for flight NB 413 is closed.',
+        kgt:'This is the final call for flight NB 564 to Oslo at gate C3. The gate for flight NB 413 to Aberdeen is now closed.',
+        havo:'This is the final call for flight NB 564 to Oslo. Please go to gate C3 immediately. The gate for flight NB 413 to Aberdeen is now closed, and late passengers should go to the service desk.' },
+      { noemt:[['F218', 'board', 'B9'], ['F307', 'board', 'A9'], ['F749', 'board', 'C8'], ['F653', 'board', 'A11']],
+        bb:'Now boarding. Flight NB 218 at gate B9. Flight NB 307 at gate A9. Flight NB 749 at gate C8. Flight NB 653 at gate A11.',
+        kgt:'Four flights are now boarding. Flight NB 218 to Dublin at gate B9, flight NB 307 to Lisbon at gate A9, flight NB 749 to Rome at gate C8 and flight NB 653 to Copenhagen at gate A11.',
+        havo:'Boarding has started for four flights: flight NB 218 to Dublin at gate B9, flight NB 307 to Lisbon at gate A9, flight NB 749 to Rome at gate C8 and flight NB 653 to Copenhagen at gate A11.' }
+    ] },
+    { delen:[
+      { noemt:[['F749', 'final', 'C8'], ['F307', 'final', 'A9']],
+        bb:'Final call for flight NB 749 to Rome at gate C8 and flight NB 307 to Lisbon at gate A9.',
+        kgt:'This is the final call for flight NB 749 to Rome at gate C8 and for flight NB 307 to Lisbon at gate A9. Please go to your gate now.',
+        havo:'This is the final call for flight NB 749 to Rome at gate C8 and for flight NB 307 to Lisbon at gate A9. Passengers who are not at the gate within fifteen minutes will not be allowed to board.' },
+      { noemt:[['F218', 'final', 'B9'], ['F653', 'final', 'A11']],
+        bb:'Final call for flight NB 218 to Dublin at gate B9 and flight NB 653 to Copenhagen at gate A11.',
+        kgt:'This is the final call for flight NB 218 to Dublin at gate B9 and for flight NB 653 to Copenhagen at gate A11.',
+        havo:'This is the final call for flight NB 218 to Dublin at gate B9 and for flight NB 653 to Copenhagen at gate A11. Please go to your gate immediately.' },
+      { noemt:[['F431', 'closed'], ['F129', 'closed'], ['F192', 'board', 'B12']],
+        bb:'The gates for flights NB 431 and NB 129 are closed. Flight NB 192 to Glasgow is boarding at gate B12.',
+        kgt:'The gates for flight NB 431 to Amsterdam and flight NB 129 to Edinburgh are now closed. Flight NB 192 to Glasgow is now boarding at gate B12.',
+        havo:'The gates for flight NB 431 to Amsterdam and flight NB 129 to Edinburgh are now closed. Passengers for flight NB 192 to Glasgow may now board at gate B12.' }
+    ] }
   ];
   /* voor de stem: een vluchtnummer cijfer voor cijfer, zoals een omroeper het zegt */
   function uitspraak(t){
@@ -850,10 +919,25 @@ var ARR = (function(){
   }
 
   /* ---------- de stem ---------- */
-  function bericht(){ return R.BERICHTEN[S.ronde - 1][S.niveau]; }
+  /* de drie berichten van dit kwartier, op het niveau van de klas */
+  function berichten(){ return R.BERICHTEN[S.ronde - 1].delen.map(function(d){ return d[S.niveau]; }); }
+  /* Ze klinken na elkaar, met een korte stilte ertussen. Een nieuwe beurt (herhalen, het volgende
+     kwartier) breekt de lopende af: spreekBeurt telt mee, zodat een oud bericht niet doorpraat. */
+  var spreekBeurt = 0, spreekKlok = null;
+  function licht(i){ [].forEach.call($('obericht').querySelectorAll('li'), function(li, j){ li.classList.toggle('nu', j === i); }); }
   function spreek(tempo){
-    if (!window.VOORLEES || !VOORLEES.kan()) return;
-    VOORLEES.spreek({ v:R.uitspraak(bericht()), taal:'en-GB', tempo:tempo || (S.niveau === 'bb' ? 0.85 : 0.95) });
+    clearTimeout(spreekKlok); licht(-1);
+    if (!S || !window.VOORLEES || !VOORLEES.kan()) return;
+    var mijn = ++spreekBeurt, lijst = berichten(), snel = tempo || (S.niveau === 'bb' ? 0.85 : 0.95);
+    (function volgende(i){
+      if (mijn !== spreekBeurt) return;
+      if (i >= lijst.length){ licht(-1); return; }
+      licht(i);
+      VOORLEES.spreek({ v:R.uitspraak(lijst[i]), taal:'en-GB', tempo:snel, klaar:function(){
+        if (mijn !== spreekBeurt) return;
+        spreekKlok = setTimeout(function(){ volgende(i + 1); }, rustig ? 900 : 1300);
+      } });
+    })(0);
   }
 
   /* ---------- tekenen ---------- */
@@ -960,10 +1044,12 @@ var ARR = (function(){
     var r = S.ronde, tijd = R.TIJDEN[r - 1];
     $('klok').textContent = tijd; $('vklok').textContent = tijd; $('otijd').textContent = tijd;
     $('rondeKop').textContent = 'Kwartier ' + r + ' van ' + RONDES + ' · ' + { bb:'vmbo-bb', kgt:'vmbo-kgt en tl', havo:'havo en vwo' }[S.niveau];
-    $('faseTekst').textContent = S.modus === 'telefoon' ? 'Lees het vertrekbord en luister naar het bericht. Wat doe jij nu? Kies op je telefoon.' : 'Lees het vertrekbord en luister naar het bericht. Laat elk groepje kiezen wat hun reiziger nu doet, en tik het aan.';
+    $('faseTekst').textContent = S.modus === 'telefoon' ? 'Lees het vertrekbord en luister naar de drie berichten. Welk bericht gaat over jouw vlucht? Kies op je telefoon wat je nu doet.' : 'Lees het vertrekbord en luister naar de drie berichten. Laat elk groepje kiezen wat hun reiziger nu doet, en tik het aan.';
     $('vbord').innerHTML = vertrekHtml();
     $('abord').innerHTML = aankomstHtml();
-    $('obericht').textContent = bericht();
+    /* alleen opnieuw tekenen als de berichten veranderen: anders verdwijnt het lichtje van het bericht dat nu klinkt */
+    var ob = '<ol>' + berichten().map(function(t){ return '<li><span>' + schoon(t) + '</span></li>'; }).join('') + '</ol>';
+    if ($('obericht').getAttribute('data-sig') !== S.ronde + S.niveau){ $('obericht').innerHTML = ob; $('obericht').setAttribute('data-sig', S.ronde + S.niveau); }
     if (!$('borden').innerHTML) $('borden').innerHTML = bordenHtml();
     $('kaartvak').innerHTML = kaartSvg();
     $('telling').innerHTML = telling();
