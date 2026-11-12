@@ -36,12 +36,52 @@ button{cursor:pointer}
 .pen{font-family:'Caveat','Segoe Script',cursive;font-size:1.5rem;color:var(--crab);line-height:1}
 .zacht{color:var(--muted);font-size:.9rem}
 
+/* ---------- laden: het merk in het midden tot bekend is of je bent ingelogd ---------- */
+.laden{position:fixed;inset:0;display:grid;place-items:center;align-content:center;gap:14px;background:var(--ocean);color:#fff;z-index:80}
+.laden b{font-size:3rem;font-weight:600;letter-spacing:-.01em}
+.laden i{width:54px;height:5px;border-radius:999px;background:rgba(255,255,255,.3);overflow:hidden;position:relative;display:block}
+.laden i::after{content:'';position:absolute;inset:0;width:40%;border-radius:999px;background:#fff;animation:ladenloop 1s ease-in-out infinite alternate}
+@keyframes ladenloop{from{transform:translateX(-10%)}to{transform:translateX(160%)}}
+@media (prefers-reduced-motion:reduce){.laden i::after{animation:none;width:100%}}
 /* ---------- niet ingelogd ---------- */
 .deur{min-height:100svh;display:grid;place-items:center;padding:24px 16px}
 .deur .kaart{width:min(440px,100%);background:var(--kaart);border:2px solid var(--ink);border-radius:22px;box-shadow:6px 6px 0 var(--vista);padding:30px 28px;display:flex;flex-direction:column;gap:14px}
 .deur h1{font-size:1.9rem}
 .melding{background:var(--let);border-radius:12px;padding:10px 14px;font-size:.92rem}
 
+/* het inlogscherm: links het merk op deep ocean, rechts de ingang */
+.deur{grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);place-items:stretch;padding:0}
+.deurmerk{background:var(--ocean);color:#fff;padding:clamp(28px,6vw,76px);display:flex;flex-direction:column;justify-content:center;gap:18px;position:relative;overflow:hidden}
+.deurmerk > *{position:relative}
+.deurmerk .vlek{position:absolute;border-radius:58% 42% 55% 45% / 48% 56% 44% 52%}
+.vlek.a{width:360px;height:340px;background:#83A5F2;opacity:.26;right:-120px;top:-110px}
+.vlek.b{width:230px;height:215px;background:#F26749;right:8%;bottom:-95px}
+.vlek.c{width:120px;height:112px;background:#EA9836;left:-46px;bottom:14%}
+.deurmerk .naam{font-size:clamp(3rem,7vw,4.6rem);font-weight:600;line-height:1;letter-spacing:-.02em}
+.deurmerk .pen{color:#FCDED6;font-size:clamp(1.5rem,2.6vw,2rem)}
+.deurmerk ul{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:14px;max-width:440px}
+.deurmerk li{display:grid;grid-template-columns:44px minmax(0,1fr);gap:14px;align-items:center;font-weight:500;font-size:1.02rem}
+.deurmerk li svg{width:44px;height:44px;padding:10px;border-radius:14px;background:#fff;stroke:#14224C;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.deurkant{display:grid;place-items:center;padding:32px max(20px,env(safe-area-inset-right,0px)) 32px max(20px,env(safe-area-inset-left,0px))}
+.deur .kaart{width:min(420px,100%);border:0;box-shadow:none;background:transparent;padding:0;gap:16px}
+.deur h1{font-size:clamp(2rem,4vw,2.6rem)}
+.deur #deurtekst{font-size:1rem}
+.deur #inlogknop{min-height:56px;font-size:1.06rem;width:100%;border-radius:14px}
+.deur #inlogknop.bezig{opacity:.75;pointer-events:none}
+.deur #msknop{text-align:center}
+.deurlinks{display:grid;gap:10px;margin-top:10px;padding-top:16px;border-top:1px solid var(--rand2);font-size:.9rem}
+.deurlinks a{color:var(--muted);text-decoration:none}
+.deurlinks a b{color:var(--accent);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.deurlinks a:hover{color:var(--ink)}
+@media (max-width:860px){
+  .deur{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+  .deurmerk{padding:30px 22px 34px;gap:8px}
+  .deurmerk ul{display:none}
+  .vlek.a{width:220px;height:210px;right:-90px;top:-90px}
+  .vlek.b{width:120px;height:112px;right:18px;bottom:-62px}
+  .vlek.c{display:none}
+  .deurkant{place-items:start center;padding-top:30px}
+}
 /* ---------- knoppen en velden ---------- */
 .knop{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 18px;border-radius:12px;border:0;background:var(--ocean);color:#fff;font-weight:600;text-decoration:none;box-shadow:0 3px 0 #173a9c}
 .knop:active{transform:translateY(2px);box-shadow:0 1px 0 #173a9c}
@@ -450,14 +490,31 @@ button.tegel:hover{border-color:var(--accent)}
 </head>
 <body>
 
+<div class="laden" id="laden" role="status" aria-label="PMT wordt geladen"><b>PMT</b><i></i></div>
+
 <div class="deur" id="deur" hidden>
-  <div class="kaart">
-    <h1>PMT-dossiers</h1>
-    <p class="zacht" id="deurtekst">Log in met je Microsoft-account van school. Alleen wie op de toegangslijst staat komt binnen.</p>
-    <p class="melding" id="deurmelding" hidden></p>
-    <a class="knop" id="inlogknop" href="/api/pmt/inloggen">Inloggen met Microsoft</a>
-    <a class="zacht" id="msknop" href="/api/pmt/inloggen" hidden>Inloggen met Microsoft, als je op de toegangslijst staat</a>
-    <a class="zacht" id="privacylink" href="/privacy">Privacy: wat er wordt vastgelegd en wat je rechten zijn</a>
+  <div class="deurmerk">
+    <span class="vlek a"></span><span class="vlek b"></span><span class="vlek c"></span>
+    <div class="naam">PMT</div>
+    <p class="pen">alles van een leerling op één plek</p>
+    <ul>
+      <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4M9 12h7M9 16h7"/></svg><span>Dossiers met doelen en notities</span></li>
+      <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M7 15l4-4 3 3 5-6"/></svg><span>Vragenlijsten en de ontwikkeling in een grafiek</span></li>
+      <li><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg><span>Rooster, wachtrij en aanwezigheid</span></li>
+    </ul>
+  </div>
+  <div class="deurkant">
+    <main class="kaart">
+      <h1>Welkom</h1>
+      <p class="zacht" id="deurtekst">Log in met je Microsoft-account van school. Alleen wie op de toegangslijst staat komt binnen.</p>
+      <p class="melding" id="deurmelding" role="status" hidden></p>
+      <a class="knop" id="inlogknop" href="/api/pmt/inloggen">Inloggen met Microsoft</a>
+      <a class="zacht" id="msknop" href="/api/pmt/inloggen" hidden>Inloggen met Microsoft, als je op de toegangslijst staat</a>
+      <div class="deurlinks">
+        <a id="leerlinglink" href="/invullen"><b>Leerling of mentor met een code?</b> Hier vul je de lijst in</a>
+        <a id="privacylink" href="/privacy">Privacy: wat er wordt vastgelegd en wat je rechten zijn</a>
+      </div>
+    </main>
   </div>
 </div>
 
@@ -494,6 +551,10 @@ button.tegel:hover{border-color:var(--accent)}
   var INVUL = location.pathname.indexOf('/pmt/') === 0 ? '/pmt/invullen' : '/invullen';
   var PRIVACY = location.pathname.indexOf('/pmt/') === 0 ? '/pmt/privacy' : '/privacy';
   $('privacylink').setAttribute('href', PRIVACY);
+  $('leerlinglink').setAttribute('href', INVUL);
+  /* een klik op inloggen laat meteen zien dat er iets gebeurt */
+  $('inlogknop').addEventListener('click', function(){ var k = $('inlogknop'); k.classList.add('bezig'); k.textContent = 'Bezig met inloggen'; });
+  window.addEventListener('pageshow', function(ev){ if (ev.persisted) location.reload(); });
   function getal(x){ return Number(x).toLocaleString('nl-NL', { minimumFractionDigits: 1, maximumFractionDigits: 1 }); }
   var STATUS = { wacht: 'Wachtrij', intake: 'Intake', loopt: 'Loopt', afgerond: 'Afgerond' };
   /* de leerlingen die een plek hebben; wie nog wacht staat op de wachtrij */
@@ -576,7 +637,8 @@ button.tegel:hover{border-color:var(--accent)}
     S.d = null; S.lijst = []; S.nieuw = [];
     var nv = $('nieuwvenster'); if (nv) nv.remove();
     $('scherm').textContent = ''; $('namen').textContent = '';
-    $('app').hidden = true; $('deur').hidden = false;
+    $('app').hidden = true; $('deur').hidden = false; $('laden').hidden = true;
+    $('inlogknop').classList.remove('bezig');
     var m = $('deurmelding');
     m.hidden = !MELDING[waarom]; m.textContent = MELDING[waarom] || '';
     $('inlogknop').hidden = waarom === 'dicht';
@@ -1002,7 +1064,9 @@ button.tegel:hover{border-color:var(--accent)}
             el('label', {}, ['Start', veld('date', 'start')]),
             el('label', {}, ['Status', status]),
             el('label', {}, ['Aangemeld op', veld('date', 'aangemeld')]),
-            el('label', {}, ['Aangemeld door', veld('text', 'door', { maxlength: '60' })])]),
+            el('label', {}, ['Aangemeld door', veld('text', 'door', { maxlength: '60' })]),
+            el('label', {}, ['E-mail leerling (om een link te mailen)', veld('email', 'mail', { maxlength: '120', inputmode: 'email' })]),
+            el('label', {}, ['E-mail mentor', veld('email', 'mentorMail', { maxlength: '120', inputmode: 'email' })])]),
           el('label', {}, ['Hulpvraag', veld('textarea', 'hulpvraag', { maxlength: '2000' })])]),
         !mag ? slot('Doelen', 'p-overzicht') : el('section', { class: 'vak p-overzicht' }, [
           el('h2', { tekst: 'Doelen' }),
@@ -1042,6 +1106,33 @@ button.tegel:hover{border-color:var(--accent)}
     $('hoofd').focus({ preventScroll: true }); window.scrollTo(0, 0);
   }
 
+  /* ---------- de link mailen ---------- */
+  /* Het bericht gaat uit het eigen mailprogramma van de therapeut: de knop opent
+     een nieuw bericht met de link erin. De server verstuurt zelf niets. Er staat
+     alleen in dat er een lijst klaarstaat, geen uitslag en geen reden. */
+  function goedAdres(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v || '') ? v : ''; }
+  function bericht(a, d, door){
+    var link = location.origin + INVUL + '#' + a.code, plek = location.host + INVUL;
+    var geldig = a.vast ? 'De link werkt elke week opnieuw, tot ' + new Date(a.tot).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' }) + '.' : 'De link werkt vandaag, een keer.';
+    var groet = S.ik && S.ik.naam && !S.ik.demo ? S.ik.naam : 'PMT';
+    if (door === 'mentor') return { aan: goedAdres(d.mentorMail), onderwerp: 'Korte wekelijkse check voor PMT',
+      tekst: 'Beste mentor,\n\nWil je elke week kort invullen wat je bij ' + d.voornaam + ' zag? Het zijn een paar zinnen en het kost een minuut.\n\n' + link + '\n\nLukt de link niet? Ga naar ' + plek + ' en tik deze code in: ' + a.code + '\n\n' + geldig + '\n\nGroet,\n' + groet };
+    return { aan: goedAdres(d.mail), onderwerp: a.vast ? 'Je wekelijkse check van PMT' : 'Er staat een vragenlijst voor je klaar',
+      tekst: 'Hoi ' + d.voornaam + ',\n\nEr staat een ' + (a.vast ? 'korte check' : 'vragenlijst') + ' voor je klaar. Klik op de link om hem in te vullen:\n\n' + link + '\n\nLukt de link niet? Ga naar ' + plek + ' en tik deze code in: ' + a.code + '\n\n' + geldig + '\n\nGroet,\n' + groet };
+  }
+  function mailKnop(a, d, door){
+    var b = bericht(a, d, door);
+    return el('a', { class: 'knop stil klein', title: b.aan ? 'Opent een nieuw bericht aan ' + b.aan : 'Opent een nieuw bericht. Zet het e-mailadres bij Gegevens, dan staat het er meteen in',
+      href: 'mailto:' + b.aan + '?subject=' + encodeURIComponent(b.onderwerp) + '&body=' + encodeURIComponent(b.tekst), tekst: 'Link mailen' });
+  }
+  function kopieerKnop(a, d, door){
+    return el('button', { class: 'knop stil klein', type: 'button', title: 'Zet het bericht met de link op het klembord, om in een mail of in Teams te plakken', tekst: 'Bericht kopi\u00ebren', onclick: function(){
+      var b = bericht(a, d, door);
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(b.tekst).then(function(){ toast('Het bericht staat op het klembord. Plak het in een mail of in Teams.'); }, function(){ toast('Kopi\u00ebren lukte niet. Gebruik Link mailen of schrijf de code over.', true); });
+      else toast('Kopi\u00ebren kan in deze browser niet. Gebruik Link mailen of schrijf de code over.', true);
+    } });
+  }
+
   /* ---------- vragenlijsten in het dossier ---------- */
   function herlaadMetingen(){
     var id = S.d.id;
@@ -1075,6 +1166,7 @@ button.tegel:hover{border-color:var(--accent)}
       zet.appendChild(el('div', { class: 'code', style: 'margin-top:12px' }, [
         el('span', { class: 'letters', tekst: a.code }),
         el('span', { class: 'wat', tekst: a.titel + '. ' + d.voornaam + ' gaat naar ' + location.host + INVUL + ' en tikt deze code in. De code werkt een keer en verloopt vannacht om twaalf uur.' }),
+        mailKnop(a, d, 'leerling'), kopieerKnop(a, d, 'leerling'),
         el('a', { class: 'knop stil klein', href: INVUL + '#' + a.code, target: '_blank', rel: 'noopener', tekst: 'Hier samen invullen' }),
         el('button', { class: 'knop stil klein', type: 'button', tekst: 'Intrekken', onclick: function(){
           stuur('DELETE', '/afname/' + a.code).then(function(){ d.afnames = d.afnames.filter(function(x){ return x.code !== a.code; }); tekenMetingen(); }).catch(meld);
@@ -1616,6 +1708,7 @@ button.tegel:hover{border-color:var(--accent)}
             el('span', { class: 'letters', tekst: a.code }),
             el('span', { class: 'wat', tekst: (door === 'mentor' ? 'Voor de mentor. Die vult elke week in wat hij of zij bij ' + d.voornaam + ' zag, op ' : d.voornaam + ' gaat elke week naar ') +
               location.host + INVUL + (door === 'mentor' ? '.' : ' en tikt deze code in.') + ' De code blijft geldig tot ' + tot + '.' }),
+            mailKnop(a, d, door), kopieerKnop(a, d, door),
             el('a', { class: 'knop stil klein', href: INVUL + '#' + a.code, target: '_blank', rel: 'noopener', tekst: 'Hier invullen' }),
             el('button', { class: 'knop stil klein', type: 'button', tekst: 'Intrekken', onclick: function(){
               stuur('DELETE', '/afname/' + a.code).then(function(){ d.afnames = d.afnames.filter(function(x){ return x.code !== a.code; }); tekenMonitor(); }).catch(meld);
@@ -2137,7 +2230,7 @@ button.tegel:hover{border-color:var(--accent)}
     $('ik').textContent = 'Ingelogd als ' + j.naam;
     $('proef').hidden = !j.proef;
     if (j.demo) $('proef').textContent = 'Dit is een demo die iedereen kan openen. Wat je hier invult kan iedereen zien, en na een dag is het weer weg. Zet er geen echte namen in.';
-    $('deur').hidden = true; $('app').hidden = false;
+    $('deur').hidden = true; $('app').hidden = false; $('laden').hidden = true;
     return Promise.all([laadLijst(), laadLijsten()]).then(tekenLeeg).then(toonNieuw);
   }).catch(function(){ naarDeur('fout'); });
 })();

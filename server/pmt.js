@@ -476,6 +476,7 @@ const TOESTEMMINGSTEKST = [
   "Uw rechten",
   "U mag het dossier inzien, laten verbeteren en laten verwijderen. U kunt uw toestemming altijd intrekken. Dat heeft geen gevolgen voor het onderwijs aan uw kind."
 ].join("\n");
+function mailadres(v){ const t = tekst(v, 120).toLowerCase(); return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t) ? t : ""; }
 function schoon(d){
   d = d && typeof d === "object" ? d : {};
   const uit = {
@@ -483,7 +484,9 @@ function schoon(d){
     start: datum(d.start), status: STATUS.indexOf(d.status) >= 0 ? d.status : "intake",
     hulpvraag: tekst(d.hulpvraag, 2000), proef: !!d.proef, doelen: [], notities: [],
     aangemeld: datum(d.aangemeld), door: tekst(d.door, 60), voorrang: !!d.voorrang,
-    toestemming: schoonToestemming(d.toestemming)
+    toestemming: schoonToestemming(d.toestemming),
+    /* om de link van een vragenlijst te mailen; de server verstuurt zelf niets */
+    mail: mailadres(d.mail), mentorMail: mailadres(d.mentorMail)
   };
   for (const x of (Array.isArray(d.doelen) ? d.doelen : []).slice(0, 20)){
     const t = tekst(x && x.tekst, 300);
