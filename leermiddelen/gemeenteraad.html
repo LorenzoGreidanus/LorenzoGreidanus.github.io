@@ -299,6 +299,13 @@ footer{padding:26px 0;color:var(--muted);font-size:.86rem}
 .fkaart small{grid-column:1/-1;color:var(--muted);font-size:.82rem;line-height:1.4;margin-top:4px}
 .fkaart .vink{grid-column:3;grid-row:1/span 2;width:28px;height:28px;border-radius:50%;box-shadow:inset 0 0 0 2px var(--rand2);display:grid;place-items:center;color:transparent}
 .fkaart .vink svg{width:15px;height:15px}
+/* de leerlingen van de fractie, op het bord bij de formatie */
+.fleden{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.fleden .flid{display:inline-flex;align-items:center;gap:6px;padding:3px 10px 3px 4px;border-radius:999px;background:var(--kaart2);box-shadow:inset 0 0 0 1px var(--rand2);font-size:.84rem;font-weight:600;color:var(--ink)}
+.fleden .flid svg{width:22px;height:22px;flex:none}
+.fleden i{font-style:normal;font-size:.8rem;color:var(--muted)}
+.finwoners{margin:12px 0 0;display:grid;gap:2px;font-size:.88rem}
+.finwoners .fleden{margin-top:4px}
 .fkaart.on{border-color:var(--fk);background:color-mix(in srgb,var(--fk) 9%,var(--kaart))}
 .fkaart.on .vink{background:var(--raad);box-shadow:none;color:#fff}
 :root[data-theme="dark"] .fkaart.on .vink{color:#14224C}
@@ -1317,6 +1324,12 @@ var VOORSTELLEN = [
     $('hoofd').setAttribute('data-fase', S.fase);
     $('hoofd').setAttribute('data-item', S.fase === 'stem' && R && R.items[R.si] ? R.items[R.si].soort : '');
   }
+  /* wie er in een fractie zit (of inwoner is), met het gezichtje: zo vindt een fractie elkaar in de klas */
+  function ledenHtml(rol){
+    var l = spelers.filter(function(sp){ return rollen[sp.sid] === rol; });
+    if (!l.length) return '';
+    return l.map(function(sp){ return '<span class="flid">' + (window.AVATAR ? AVATAR.svg(sp.naam, 22, sp.av) : '') + schoon(sp.naam) + '</span>'; }).join('');
+  }
   function hoofdFormatie(){
     var cz = coalitieZetels(), ok = cz >= NODIG;
     return '<header class="fasekop"><h2>Vorm een coalitie</h2>' +
@@ -1326,8 +1339,10 @@ var VOORSTELLEN = [
       '<div class="fkaarten">' + FRACTIES.map(function(f){
         var on = inCoalitie(f.id);
         return '<button type="button" class="fkaart' + (on ? ' on' : '') + '" style="--fk:' + f.kleur + '" data-actie="coal" data-f="' + f.id + '" aria-pressed="' + on + '">' + merk(f, true) +
-          '<b>' + schoon(f.naam) + '</b><span class="fz">' + f.zetels + ' zetels' + (on ? ' · in de coalitie' : '') + '</span><span class="vink">' + VINK + '</span><small>' + schoon(f.waar) + '</small></button>';
+          '<b>' + schoon(f.naam) + '</b><span class="fz">' + f.zetels + ' zetels' + (on ? ' · in de coalitie' : '') + '</span><span class="vink">' + VINK + '</span><small>' + schoon(f.waar) + '</small>' +
+          (telefoons() ? '<span class="fleden">' + (ledenHtml(f.id) || '<i>nog geen leerling</i>') + '</span>' : '') + '</button>';
       }).join('') + '</div>' +
+      (telefoons() && ledenHtml('inwoner') ? '<p class="finwoners"><b>Inwoners (insprekers)</b><span class="fleden">' + ledenHtml('inwoner') + '</span></p>' : '') +
       '<p class="teller' + (ok ? ' ok' : '') + '" role="status">' + cz + ' van de ' + ZETELS + ' zetels: ' + (ok ? 'een meerderheid' + (cz === NODIG ? ', maar krap: één raadslid dat afwijkt kan alles laten vallen' : '') : 'nog ' + (NODIG - cz) + ' nodig') + '</p>' +
       '<div class="knoprij"><button class="knop crab" id="verderBtn" type="button" data-actie="formatieKlaar"' + (ok ? '' : ' disabled') + '>Dit is de coalitie</button></div></section>';
   }
@@ -1880,7 +1895,9 @@ var VOORSTELLEN = [
      krijgt ook een laatkomer of een herladen bord meteen de goede kaart. */
   function deelRollen(vast){
     var n = spelers.length;
-    var inw = n < 6 ? (n >= 4 ? 1 : 0) : n < 12 ? 2 : Math.min(6, Math.round(n * 0.2));
+    /* Eerst krijgt elke fractie een leerling: pas vanaf de zesde leerling komen er inwoners (insprekers) bij.
+       Daarna twee inwoners, en in een grote klas ongeveer een op de vijf, hoogstens zes. */
+    var inw = Math.max(0, Math.min(n - FRACTIES.length, n < 12 ? 2 : Math.min(6, Math.round(n * 0.2))));
     var rl = n - inw, aantallen = {};
     /* raadsleden naar verhouding van de zetels, grootste overschot eerst; elke fractie minstens een als het kan */
     var exact = FRACTIES.map(function(f){ var e = rl * f.zetels / ZETELS; return { id:f.id, e:e, n:Math.floor(e) }; });
@@ -1914,8 +1931,8 @@ var VOORSTELLEN = [
     if (!r) return { soort:'wacht', titel:'Je doet mee', tekst:'Wacht even: het bord geeft je zo een rol.' };
     var inw = r === 'inwoner', id = S.id + '-' + S.vi;
     if (S.fase === 'formatie'){
-      return inw ? { soort:'wacht', titel:'formatie', tekst:'De fracties vormen een coalitie. Jij bent inwoner: bij elk voorstel krijg je een nieuwe rol met een eigen belang.' }
-        : { soort:'uitslag', kop:'formatie', titel:'Met wie gaat ' + fractie(r).naam + ' samen?', tekst:'Jij zit in de fractie van ' + fractie(r).naam + '. Samen minstens 11 van de 21 zetels is een meerderheid. Met welke fracties kan jouw fractie goed samenwerken? Praat met de andere fracties en zeg het tegen je docent.',
+      return inw ? { soort:'wacht', titel:'Jij bent inwoner van Molenveen', tekst:'De fracties vormen nu een coalitie. Jij zit niet in de raad: bij elk voorstel krijg je een nieuwe rol met een eigen belang.' }
+        : { soort:'uitslag', kop:'jij bent raadslid van ' + fractie(r).naam, titel:'Met wie gaat ' + fractie(r).naam + ' samen?', tekst:'Jij zit in de fractie van ' + fractie(r).naam + '. Samen minstens 11 van de 21 zetels is een meerderheid. Met welke fracties kan jouw fractie goed samenwerken? Praat met de andere fracties en zeg het tegen je docent.',
             regels:FRACTIES.map(function(f){ return f.naam + ': ' + f.zetels + ' zetels' + (f.id === r ? ' (jouw fractie)' : ''); }) };
     }
     var v = R.v;
@@ -2058,6 +2075,8 @@ var VOORSTELLEN = [
               var kk = inwoners().indexOf(s.sid) % R.v.insprekers.length; R.wieIs[s.sid] = kk; (R.inspreker[kk] = R.inspreker[kk] || []).push(s.naam);
             });
             kamer.kaarten(nieuw.map(function(s){ return { pid:s.sid, d:rolKaart(s.sid) }; }).filter(function(x){ return x.d; }));
+            /* bij de formatie: de namen in de fractie zijn veranderd, dus iedereen krijgt zijn rolkaart opnieuw */
+            if (S.fase === 'formatie') stuurRollen();
             kamer.kaarten(nieuw.map(function(s){ return { pid:s.sid, d:kaartVoor(s.sid) }; }));
           }
           teken();
