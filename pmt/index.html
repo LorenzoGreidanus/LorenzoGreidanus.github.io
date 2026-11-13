@@ -273,12 +273,44 @@ td.tijd{white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--muted)}
 .vonk polyline{fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
 /* ---------- het rooster ---------- */
 .weeknav{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
+.roosterkop{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin-bottom:12px}
+.roosterkop h1{font-size:1.9rem;margin-right:4px}
+.weekkiezer{display:inline-flex;align-items:center;border:1.5px solid var(--rand2);border-radius:12px;background:var(--kaart);overflow:hidden}
+.weekkiezer button{border:0;background:transparent;color:var(--ink);width:42px;height:44px;font-size:1.4rem;line-height:1}
+.weekkiezer button:hover{background:var(--kaart2);color:var(--accent)}
+.weeknaam{display:flex;flex-direction:column;align-items:center;line-height:1.15;padding:0 8px;min-width:124px}
+.weeknaam b{font-weight:600;font-size:.95rem}
+.weeknaam small{color:var(--muted);font-size:.76rem}
+.roosterknoppen{display:flex;flex-wrap:wrap;gap:6px;margin-left:auto}
+@media (max-width:640px){
+  .roosterkop{gap:8px 10px}
+  .roosterkop h1{font-size:1.5rem;margin-right:auto}
+  .roosterknoppen{margin-left:0;width:100%;flex-wrap:nowrap}
+  .roosterknoppen .knop{flex:1 1 0;padding:0 6px;min-width:0}
+  .dagkiezer{flex-wrap:nowrap;gap:6px}
+  .dagkiezer button{flex:1 1 0;padding:0 4px;min-width:0}
+}
+.bak .streep{width:1.5px;height:26px;background:var(--rand2);margin:0 4px}
+.bak .weektel{margin-left:auto;font-variant-numeric:tabular-nums}
+.dagnaamrij{display:flex;align-items:center;gap:6px}
+.dagtel{min-width:19px;height:19px;border-radius:10px;background:var(--kaart2);color:var(--ink);font-size:.68rem;font-weight:600;display:inline-grid;place-items:center;padding:0 5px;font-variant-numeric:tabular-nums}
+.dagkolom.nu .dagtel{background:#fff;color:#14224C}
+.blok.vol.k-sessie{border-left:4px solid #204ECF}
+.blok.vol.k-intake{border-left:4px solid #EA9836}
+.blok.vol.k-meting{border-left:4px solid #83A5F2}
+.blok.vol.k-gesprek{border-left:4px solid #F26749}
+.dagkolom.geweest .blok.leeg,.blok.leeg.voorbij{opacity:.5}
+.dagkolom.geweest .blok.leeg:hover,.blok.leeg.voorbij:hover,.dagkolom.geweest .blok.leeg:focus-visible,.blok.leeg.voorbij:focus-visible{opacity:1}
+.blok.heeftnu{position:relative}
+.blok.heeftnu::after{content:'';position:absolute;left:-5px;right:-4px;top:var(--nu,0%);height:2px;margin-top:-1px;border-radius:2px;pointer-events:none;
+  background:radial-gradient(circle at 5px 50%,#F26749 5px,transparent 5.5px) 0 50% / 10px 10px no-repeat,linear-gradient(#F26749,#F26749) 0 50% / 100% 2px no-repeat;height:10px;margin-top:-5px}
 .planpaneel{background:var(--kaart);border:2px solid var(--ink);border-radius:16px;box-shadow:5px 5px 0 var(--vista);padding:16px 18px;display:flex;flex-direction:column;gap:12px;margin-bottom:16px}
 .planrij{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;align-items:end}
 .dagkiezer{display:none;margin-bottom:10px}
 .rooster{display:grid;grid-template-columns:54px repeat(5,minmax(0,1fr));gap:6px}
 .tijdkolom,.dagkolom{display:flex;flex-direction:column;gap:6px;min-width:0}
 .dagkop{height:46px;display:flex;flex-direction:column;justify-content:center;align-items:center;line-height:1.2;border-radius:10px;font-size:.88rem}
+.dagkop{position:sticky;top:0;z-index:3;background:var(--room)}
 .dagkop b{font-weight:600}
 .dagkop small{color:var(--muted);font-size:.74rem}
 .dagkolom.nu .dagkop{background:var(--ocean);color:#fff}
@@ -2080,8 +2112,9 @@ button.tegel:hover{border-color:var(--accent)}
         /* een dag zonder afspraken toont alleen wat er toch nog staat */
         var eigen = blokkenVoor(i), dagUit = !eigen;
         var dagBlokken = eigen || j.afspraken.filter(function(x){ return x.dag === dag; }).map(function(x){ return { begin: x.begin, duur: x.duur }; });
-        return el('div', { class: 'dagkolom' + (dag === nu ? ' nu' : '') + (vd ? ' vrij' : ''), 'data-d': String(i) }, [
-          el('div', { class: 'dagkop' }, [el('b', { tekst: dagnaam }), el('small', { tekst: new Date(dag + 'T12:00:00').toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' }) })])
+        var telDag = j.afspraken.filter(function(x){ return x.dag === dag && x.soort !== 'dicht'; }).length;
+        return el('div', { class: 'dagkolom' + (dag === nu ? ' nu' : dag < nu ? ' geweest' : '') + (vd ? ' vrij' : ''), 'data-d': String(i) }, [
+          el('div', { class: 'dagkop' }, [el('span', { class: 'dagnaamrij' }, [el('b', { tekst: dagnaam }), telDag ? el('span', { class: 'dagtel', tekst: String(telDag), title: telDag === 1 ? '1 afspraak' : telDag + ' afspraken', 'aria-label': telDag === 1 ? '1 afspraak' : telDag + ' afspraken' }) : null]), el('small', { tekst: new Date(dag + 'T12:00:00').toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' }) })])
         ].concat(dagUit && !vd ? [el('div', { class: 'blok vrijdag', tekst: 'Geen afspraken' })] : []).concat(dagBlokken.map(function(b, bi){
           var a = null;
           j.afspraken.forEach(function(x){ if (!a && x.dag === dag && x.begin < b.begin + b.duur && x.begin + x.duur > b.begin) a = x; });
@@ -2105,34 +2138,54 @@ button.tegel:hover{border-color:var(--accent)}
             /* loopt de les door over meer blokken, dan staat in de volgende alleen dat hij doorloopt */
             a.begin !== b.begin ? [el('span', { class: 'wie' }, [el('small', { tekst: (a.tekst || 'EF-les') + ' loopt door tot ' + uur(a.begin + a.duur) })])]
               : [el('span', { class: 'avatar les', 'aria-hidden': 'true', tekst: 'EF' }), el('span', { class: 'wie' }, [el('b', { tekst: a.tekst || 'EF-les' }), el('small', { tekst: 'EF-les · ' + minTekst(a.duur) + (a.duur !== b.duur ? ' · tot ' + uur(a.begin + a.duur) : '') })])]), 'a:' + a.id);
-          return sleepbaar(el('button', { class: 'blok vol' + (a.komst === 'afwezig' ? ' afw' : ''), type: 'button', style: hoog(b), title: 'Sleep naar een ander blok om te verplaatsen', 'aria-label': dagnaam + ' ' + uur(a.begin) + ', ' + (d ? naam(d) : 'een leerling'), onclick: function(ev){ toonAfspraak(a, ev.currentTarget); } },
+          return sleepbaar(el('button', { class: 'blok vol k-' + a.soort + (a.komst === 'afwezig' ? ' afw' : ''), type: 'button', style: hoog(b), title: 'Sleep naar een ander blok om te verplaatsen', 'aria-label': dagnaam + ' ' + uur(a.begin) + ', ' + (d ? naam(d) : 'een leerling'), onclick: function(ev){ toonAfspraak(a, ev.currentTarget); } },
             [d ? avatar(d) : null, el('span', { class: 'wie' }, [el('b', { tekst: d ? naam(d) : 'Onbekend' }), el('small', { tekst: (perDagAnders ? uur(a.begin) + ' · ' : '') + (SOORT[a.soort] || '') + ' · ' + minTekst(a.duur) + (a.komst ? ' · ' + a.komst : '') + (!perDagAnders && a.begin !== b.begin ? ' · vanaf ' + uur(a.begin) : '') })])]), 'a:' + a.id);
         })));
       })));
+      (function(){
+        var kol = raster.querySelector('.dagkolom.nu'); if (!kol) return;
+        var eigen = blokkenVoor(+kol.getAttribute('data-d')); if (!eigen) return;
+        var klokNu = new Date(), min = klokNu.getHours() * 60 + klokNu.getMinutes(), els = kol.querySelectorAll(':scope > .blok');
+        eigen.forEach(function(b, k){
+          var e = els[k]; if (!e) return;
+          if (b.begin + b.duur <= min) e.classList.add('voorbij');
+          else if (b.begin <= min){ e.classList.add('heeftnu'); e.style.setProperty('--nu', Math.round(100 * (min - b.begin) / b.duur) + '%'); e.title = (e.title ? e.title + '. ' : '') + 'Het is nu ' + uur(min); }
+        });
+      })();
+      function weeknummer(dag){
+        var d = new Date(dag + 'T12:00:00'); d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+        var een = new Date(d.getFullYear(), 0, 4, 12);
+        return 1 + Math.round(((d - een) / 86400000 - 3 + ((een.getDay() + 6) % 7)) / 7);
+      }
+      var kortDag = function(dag, maand){ return new Date(dag + 'T12:00:00').toLocaleDateString('nl-NL', maand ? { day: 'numeric', month: 'short' } : { day: 'numeric' }); };
+      var vrijdag = plusDag(S.week, 4), zelfdeMaand = S.week.slice(0, 7) === vrijdag.slice(0, 7);
+      var metL = j.afspraken.filter(metLeerling).length, lessen = j.afspraken.filter(function(x){ return x.soort === 'les'; }).length;
+      var bakLeerlingen = actief().filter(function(d){ return d.status !== 'afgerond'; });
       var dagkiezer = el('div', { class: 'filter dagkiezer', role: 'group', 'aria-label': 'Dag' }, DAGEN.map(function(dagnaam, i){
         return el('button', { type: 'button', 'aria-pressed': S.roosterDag === i ? 'true' : 'false', tekst: dagnaam.slice(0, 2) + ' ' + new Date(plusDag(S.week, i) + 'T12:00:00').getDate(),
           onclick: function(){ S.roosterDag = i; tekenRooster(); } });
       }));
       var melding = S.melding ? el('p', { class: 'melding', role: 'status', tekst: S.melding }) : null; S.melding = '';
       scherm([
-        el('div', { class: 'paginakop' }, [el('h1', { tekst: 'Rooster' }),
-          el('div', { class: 'weeknav' }, [
-            el('button', { class: 'knop stil klein', type: 'button', tekst: '‹ Vorige week', onclick: function(){ S.week = plusDag(S.week, -7); S.roosterDag = 0; tekenRooster(); } }),
-            el('button', { class: 'knop stil klein', type: 'button', tekst: 'Deze week', onclick: function(){ S.week = maandag(vandaag()); S.roosterDag = null; tekenRooster(); } }),
-            el('button', { class: 'knop stil klein', type: 'button', tekst: 'Volgende week ›', onclick: function(){ S.week = plusDag(S.week, 7); S.roosterDag = 0; tekenRooster(); } }),
-            el('button', { class: 'knop stil klein', type: 'button', tekst: 'Agenda koppelen', onclick: function(){ sluit(); toonAgenda(paneel); } }),
-            el('button', { class: 'knop stil klein', type: 'button', tekst: 'Vakanties en vrije dagen', onclick: function(){ S.vrijOpen = vrijPaneel.hidden; vrijPaneel.hidden = !vrijPaneel.hidden; if (!vrijPaneel.hidden) vrijPaneel.scrollIntoView({ block: 'nearest' }); } }),
-            el('button', { class: 'knop stil klein', type: 'button', tekst: 'Dagindeling instellen', onclick: function(){ instel.hidden = !instel.hidden; S.instelOpen = !instel.hidden; if (!instel.hidden) iVan.focus(); } })])]),
-        el('p', { class: 'zacht', style: 'margin-bottom:14px', tekst: 'Week van ' + langeDag(S.week) + '. Van ' + uur(I.van) + ' tot ' + uur(I.tot) + ', in blokken van ' + I.blok + ' minuten' + (pauzes.length ? ', met ' + (pauzes.length === 1 ? 'een pauze' : pauzes.length + ' pauzes') : '') + (I.blokken && I.blokken.length || perDagAnders ? ', met een eigen indeling' : '') + '. Klik op een leeg blok om een leerling in te plannen, of sleep een leerling of een afspraak naar een blok.' +
-          (S.planVoor && dossierVan(S.planVoor) ? ' Je plant nu ' + naam(dossierVan(S.planVoor)) + ' in.' : '') }),
+        el('div', { class: 'roosterkop' }, [el('h1', { tekst: 'Rooster' }),
+          el('div', { class: 'weekkiezer', role: 'group', 'aria-label': 'Week' }, [
+            el('button', { type: 'button', tekst: '‹', title: 'Vorige week', 'aria-label': 'Vorige week', onclick: function(){ S.week = plusDag(S.week, -7); S.roosterDag = 0; tekenRooster(); } }),
+            el('span', { class: 'weeknaam', 'aria-live': 'polite' }, [el('b', { tekst: 'Week ' + weeknummer(S.week) }), el('small', { tekst: kortDag(S.week, !zelfdeMaand) + ' t/m ' + kortDag(vrijdag, true) })]),
+            el('button', { type: 'button', tekst: '›', title: 'Volgende week', 'aria-label': 'Volgende week', onclick: function(){ S.week = plusDag(S.week, 7); S.roosterDag = 0; tekenRooster(); } })]),
+          S.week !== maandag(vandaag()) ? el('button', { class: 'knop stil klein', type: 'button', tekst: 'Naar deze week', onclick: function(){ S.week = maandag(vandaag()); S.roosterDag = null; tekenRooster(); } }) : null,
+          el('div', { class: 'roosterknoppen' }, [
+            el('button', { class: 'knop stil klein', type: 'button', tekst: 'Agenda', title: 'Het rooster in je eigen agenda zetten', onclick: function(){ sluit(); toonAgenda(paneel); } }),
+            el('button', { class: 'knop stil klein', type: 'button', tekst: 'Vakanties', title: 'Vakanties en vrije dagen', onclick: function(){ S.vrijOpen = vrijPaneel.hidden; vrijPaneel.hidden = !vrijPaneel.hidden; if (!vrijPaneel.hidden) vrijPaneel.scrollIntoView({ block: 'nearest' }); } }),
+            el('button', { class: 'knop stil klein', type: 'button', tekst: 'Dagindeling', title: 'Tijden, blokken en pauzes instellen', onclick: function(){ instel.hidden = !instel.hidden; S.instelOpen = !instel.hidden; if (!instel.hidden) iVan.focus(); } })])]),
+        S.planVoor && dossierVan(S.planVoor) ? el('p', { class: 'melding', role: 'status', tekst: 'Je plant nu ' + naam(dossierVan(S.planVoor)) + ' in. Klik op een leeg blok.' }) : null,
         melding, ruimKnop, instel, vrijPaneel, paneel,
         S.verplaats ? el('p', { class: 'melding', role: 'status', tekst: 'Je bent een afspraak aan het verplaatsen. Tik op een leeg blok.' }) : null,
-        el('div', { class: 'bak' }, [el('span', { tekst: 'Sleep een leerling naar een blok:' })].concat(actief().filter(function(d){ return d.status !== 'afgerond'; }).map(function(d){
+        /* een regel: wie je kunt slepen, de wachtrij, en wat er deze week staat */
+        el('div', { class: 'bak' }, [el('span', { tekst: bakLeerlingen.length ? 'Sleep naar een blok, of klik op een leeg blok:' : 'Klik op een leeg blok om in te plannen.' })].concat(bakLeerlingen.map(function(d){
           return sleepbaar(el('span', { class: 'greep', title: 'Sleep naar een blok in het rooster' }, [avatar(d), naam(d)]), 'd:' + d.id);
-        }))),
-        wachtrij().length ? el('div', { class: 'bak' }, [el('b', { tekst: 'Wachtrij:' })].concat(wachtrij().map(function(d, n){
+        })).concat(wachtrij().length ? [el('span', { class: 'streep', 'aria-hidden': 'true' }), el('b', { tekst: 'Wachtrij:' })].concat(wachtrij().map(function(d, n){
           return sleepbaar(el('span', { class: 'greep', title: 'Sleep naar een blok: dan heeft ' + d.voornaam + ' een plek' }, [avatar(d), (n + 1) + '. ' + naam(d)]), 'd:' + d.id);
-        }))) : null,
+        })) : []).concat([el('span', { class: 'weektel', tekst: (metL === 1 ? '1 afspraak' : metL + ' afspraken') + (lessen ? ' \u00b7 ' + (lessen === 1 ? '1 EF-les' : lessen + ' EF-lessen') : '') + ' deze week' })])),
         dagkiezer, raster
       ]);
       window.scrollTo(0, 0);
