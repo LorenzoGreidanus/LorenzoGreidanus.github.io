@@ -291,6 +291,8 @@ td.tijd{white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--muted)}
 .blok.leeg:hover,.blok.leeg:focus-visible{color:var(--accent);border-color:var(--accent);border-style:solid}
 .blok.vol{border:1px solid var(--rand);background:var(--kaart);box-shadow:var(--schaduw)}
 .blok.vol:hover{border-color:var(--accent)}
+.blok.vol.les{background:color-mix(in srgb,var(--accent) 13%,var(--kaart));border-color:color-mix(in srgb,var(--accent) 45%,var(--rand))}
+.avatar.les{background:#204ECF;color:#fff}
 .blok .wie{display:flex;flex-direction:column;min-width:0;line-height:1.2}
 .blok .wie b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .blok .wie small{color:var(--muted);font-size:.72rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -803,7 +805,7 @@ button.tegel:hover{border-color:var(--accent)}
     api('/rooster').then(function(j){
       S.weekNu = j; S.weekNa = null;
       var nu = vandaag();
-      var komtNog = j.afspraken.some(function(a){ return a.dag > nu && a.soort !== 'dicht'; });
+      var komtNog = j.afspraken.some(function(a){ return a.dag > nu && metLeerling(a); });
       tekenVandaag();
       clearInterval(S.nuKlok); S.nuKlok = setInterval(tekenVandaag, 60000);
       if (!komtNog) return api('/rooster?week=' + plusDag(j.week, 7)).then(function(k){ S.weekNa = k; tekenVandaag(); });
@@ -816,14 +818,15 @@ button.tegel:hover{border-color:var(--accent)}
     var nu = vandaag(), klokNu = new Date(), min = klokNu.getHours() * 60 + klokNu.getMinutes();
     var vrij = null; R.vrij.forEach(function(v){ if (v.van <= nu && nu <= v.tot) vrij = v; });
     var rij = R.afspraken.filter(function(a){ return a.dag === nu; }).sort(function(a, b){ return a.begin - b.begin; });
-    var leerlingen = rij.filter(function(a){ return a.soort !== 'dicht'; });
+    var leerlingen = rij.filter(function(a){ return metLeerling(a); });
+    var lessen = rij.filter(function(a){ return a.soort === 'les'; }).length;
     var eerstvolgende = null; leerlingen.forEach(function(a){ if (!eerstvolgende && a.begin > min) eerstvolgende = a; });
     var teGaan = leerlingen.filter(function(a){ return a.begin + a.duur > min; }).length;
     function duurTekst(m){ return m < 60 ? m + ' min' : Math.floor(m / 60) + ' uur' + (m % 60 ? ' ' + (m % 60) + ' min' : ''); }
     box.textContent = '';
     box.appendChild(el('div', { class: 'lijstkaart' }, [
-      el('h2', { tekst: !leerlingen.length ? 'Geen leerlingen vandaag' : (leerlingen.length === 1 ? '1 leerling' : leerlingen.length + ' leerlingen') +
-        (teGaan === leerlingen.length ? '' : teGaan ? ', nog ' + teGaan + ' te gaan' : leerlingen.length === 1 ? ', al geweest' : ', allemaal geweest') }),
+      el('h2', { tekst: !leerlingen.length ? (lessen ? (lessen === 1 ? '1 EF-les' : lessen + ' EF-lessen') + ' vandaag, geen leerlingen' : 'Geen leerlingen vandaag') : (leerlingen.length === 1 ? '1 leerling' : leerlingen.length + ' leerlingen') +
+        (teGaan === leerlingen.length ? '' : teGaan ? ', nog ' + teGaan + ' te gaan' : leerlingen.length === 1 ? ', al geweest' : ', allemaal geweest') + (lessen ? ', ' + (lessen === 1 ? '1 EF-les' : lessen + ' EF-lessen') : '') }),
       el('button', { class: 'knop stil klein', type: 'button', tekst: 'Rooster openen', onclick: function(){ S.planVoor = null; S.verplaats = null; S.week = maandag(vandaag()); S.roosterDag = null; tekenRooster(); } })]));
     if (vrij) box.appendChild(el('p', { tekst: 'Vandaag is het vrij: ' + vrij.naam + '.' }));
     else if (!rij.length) box.appendChild(el('p', { class: 'zacht', tekst: 'Er staat vandaag niemand in het rooster. Via Rooster openen plan je iemand in.' }));
@@ -831,6 +834,9 @@ button.tegel:hover{border-color:var(--accent)}
       var tijd = el('time', { tekst: uur(a.begin) + ' tot ' + uur(a.begin + a.duur) });
       var bezig = a.begin <= min && min < a.begin + a.duur, geweest = a.begin + a.duur <= min;
       if (a.soort === 'dicht') return el('li', {}, [el('div', { class: 'regel dicht' + (geweest ? ' geweest' : '') }, [tijd, el('span'), el('span', { class: 'wie' }, [el('b', { tekst: a.tekst || 'Dicht' })]), el('span')])]);
+      if (a.soort === 'les') return el('li', {}, [el('div', { class: 'regel' + (bezig ? ' nu' : geweest ? ' geweest' : '') }, [tijd, el('span', { class: 'avatar les', 'aria-hidden': 'true', tekst: 'EF' }),
+        el('span', { class: 'wie' }, [el('b', { tekst: a.tekst || 'EF-les' }), el('small', { tekst: 'EF-les · ' + duurTekst(a.duur) })]),
+        el('div', { class: 'rechts' }, [bezig ? el('span', { class: 'chip loopt', tekst: 'nu, nog ' + duurTekst(a.begin + a.duur - min) }) : null])])]);
       var d = dossierVan(a.dossier);
       return el('li', {}, [el('div', { class: 'regel' + (bezig ? ' nu' : geweest ? ' geweest' : '') }, [
         tijd, d ? avatar(d) : el('span'),
@@ -841,7 +847,7 @@ button.tegel:hover{border-color:var(--accent)}
           komstVak(a)])])]);
     })));
     /* wat er daarna komt: de eerstvolgende dag met leerlingen */
-    var later = R.afspraken.concat(S.weekNa ? S.weekNa.afspraken : []).filter(function(a){ return a.dag > nu && a.soort !== 'dicht'; }).sort(function(a, b){ return a.dag < b.dag ? -1 : a.dag > b.dag ? 1 : a.begin - b.begin; });
+    var later = R.afspraken.concat(S.weekNa ? S.weekNa.afspraken : []).filter(function(a){ return a.dag > nu && metLeerling(a); }).sort(function(a, b){ return a.dag < b.dag ? -1 : a.dag > b.dag ? 1 : a.begin - b.begin; });
     if (later.length){
       var dagNa = later[0].dag, opDieDag = later.filter(function(a){ return a.dag === dagNa; });
       box.appendChild(el('p', { class: 'daarna' }, [el('b', { tekst: 'Daarna, ' + langeDag(dagNa) + ': ' }),
@@ -1358,6 +1364,8 @@ button.tegel:hover{border-color:var(--accent)}
 
   /* ---------- het rooster ---------- */
   var DAGEN = ['maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag'];
+  /* een dicht blok en een EF-les hebben geen leerling */
+  function metLeerling(a){ return a.soort !== 'dicht' && a.soort !== 'les'; }
   var SOORT = { sessie: 'Sessie', intake: 'Intake', meting: 'Meting', gesprek: 'Gesprek' };
   function datumVan(d){ return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
   function plusDag(dag, n){ var d = new Date(dag + 'T12:00:00'); d.setDate(d.getDate() + n); return datumVan(d); }
@@ -1445,24 +1453,37 @@ button.tegel:hover{border-color:var(--accent)}
         weken.addEventListener('change', function(){ totLabel.hidden = weken.value !== 'datum'; });
         var waarom = el('input', { type: 'text', id: 'plan-waarom', maxlength: '40', placeholder: 'Pauze, overleg, vrij', autocomplete: 'off' });
         var hoeveel = el('select', { id: 'plan-hoeveel' }, [['blok', 'Alleen dit blok'], ['dag', 'De hele dag']].map(function(x){ return el('option', { value: x[0], tekst: x[1] }); }));
+        /* een EF-les: voor welke klas, en hoe lang. Hij mag doorlopen over de blokken die er direct achter liggen. */
+        var lesWie = el('input', { type: 'text', id: 'plan-les', maxlength: '40', placeholder: 'Klas 2B', autocomplete: 'off' });
+        var lesLang = el('select', { id: 'plan-leslang' }, (function(){
+          var bl = blokkenVoor((new Date(dag + 'T12:00:00').getDay() + 6) % 7) || blokken, uit = [], som = 0, eind = b.begin;
+          bl.filter(function(x){ return x.begin >= b.begin; }).some(function(x){
+            if (x.pauze || x.begin !== eind || uit.length >= 4) return true;
+            som += x.duur; eind = x.begin + x.duur;
+            uit.push(el('option', { value: String(som), tekst: minTekst(som) + ', tot ' + uur(eind) }));
+            return false;
+          });
+          return uit.length ? uit : [el('option', { value: String(b.duur), tekst: minTekst(b.duur) })];
+        })());
         var stand = el('span', { class: 'zacht', role: 'status' });
         var wissel = el('div', { class: 'filter', role: 'group', 'aria-label': 'Wat wil je doen?' });
         var velden = el('div', { class: 'planrij' });
         var doe = el('button', { class: 'knop', type: 'submit' });
         function teken(){
           wissel.textContent = '';
-          [['leerling', 'Leerling inplannen'], ['dicht', 'Dicht zetten']].forEach(function(p){
+          [['leerling', 'Leerling inplannen'], ['les', 'EF-les inplannen'], ['dicht', 'Dicht zetten']].forEach(function(p){
             if (p[0] === 'leerling' && !kandidaten.length) return;
             wissel.appendChild(el('button', { type: 'button', 'aria-pressed': soortPlan === p[0] ? 'true' : 'false', tekst: p[1], onclick: function(){ soortPlan = p[0]; teken(); } }));
           });
           velden.textContent = '';
-          (soortPlan === 'leerling' ? [el('label', {}, ['Wie?', wie]), el('label', {}, ['Wat?', soort])] : [el('label', {}, ['Waarom? (mag leeg blijven)', waarom]), el('label', {}, ['Hoeveel?', hoeveel])])
+          (soortPlan === 'leerling' ? [el('label', {}, ['Wie?', wie]), el('label', {}, ['Wat?', soort])] : soortPlan === 'les' ? [el('label', {}, ['Welke klas of groep?', lesWie]), el('label', {}, ['Hoe lang?', lesLang])] : [el('label', {}, ['Waarom? (mag leeg blijven)', waarom]), el('label', {}, ['Hoeveel?', hoeveel])])
             .concat([el('label', {}, ['Hoe vaak?', weken]), totLabel]).forEach(function(x){ velden.appendChild(x); });
-          doe.textContent = soortPlan === 'leerling' ? 'Inplannen' : 'Dicht zetten';
+          doe.textContent = soortPlan === 'leerling' ? 'Inplannen' : soortPlan === 'les' ? 'EF-les inplannen' : 'Dicht zetten';
         }
         paneel.appendChild(el('form', { class: 'planpaneel', onsubmit: function(ev){
           ev.preventDefault();
           var vraag = soortPlan === 'leerling' ? { dag: dag, begin: b.begin, duur: b.duur, dossier: wie.value, soort: soort.value }
+            : soortPlan === 'les' ? { dag: dag, begin: b.begin, duur: +lesLang.value, les: true, tekst: lesWie.value }
             : hoeveel.value === 'dag' ? (function(){
                 var bl = blokkenVoor((new Date(dag + 'T12:00:00').getDay() + 6) % 7) || blokken, eerste = bl[0].begin, laatste = 0;
                 bl.forEach(function(x){ laatste = Math.max(laatste, x.begin + x.duur); });
@@ -1479,24 +1500,24 @@ button.tegel:hover{border-color:var(--accent)}
           wissel, velden,
           el('div', { class: 'onder', style: 'margin-top:0' }, [doe, el('button', { class: 'knop stil', type: 'button', tekst: 'Toch niet', onclick: sluit }), stand])]));
         teken();
-        paneel.scrollIntoView({ block: 'nearest' }); (soortPlan === 'leerling' ? wie : waarom).focus();
+        paneel.scrollIntoView({ block: 'nearest' }); (soortPlan === 'leerling' ? wie : soortPlan === 'les' ? lesWie : waarom).focus();
       }
       function toonAfspraak(a, knop){
         kiesBlok(knop);
-        var d = dossierVan(a.dossier), isDicht = a.soort === 'dicht';
-        var wieTekst = isDicht ? (a.tekst || 'Dicht') : d ? naam(d) : 'Een leerling';
+        var d = dossierVan(a.dossier), isDicht = a.soort === 'dicht', isLes = a.soort === 'les';
+        var wieTekst = isDicht ? (a.tekst || 'Dicht') : isLes ? 'EF-les' + (a.tekst ? ' ' + a.tekst : '') : d ? naam(d) : 'Een leerling';
         paneel.appendChild(el('div', { class: 'planpaneel' }, [
           el('h2', { style: 'font-size:1.05rem', tekst: wieTekst + ', ' + langeDag(a.dag) + ' van ' + uur(a.begin) + ' tot ' + uur(a.begin + a.duur) }),
-          el('p', { class: 'zacht', tekst: isDicht ? 'Dit blok staat dicht.' : SOORT[a.soort] || 'Afspraak' }),
-          isDicht ? null : el('div', { style: 'display:flex;flex-wrap:wrap;align-items:center;gap:10px' }, [el('span', { tekst: 'Was ' + (d ? d.voornaam : 'de leerling') + ' er?' }), komstVak(a, function(){ knop.classList.toggle('afw', a.komst === 'afwezig'); var kl = knop.querySelector('small'); if (kl) kl.textContent = (SOORT[a.soort] || '') + ' · ' + minTekst(a.duur) + (a.komst ? ' · ' + a.komst : ''); })]),
+          el('p', { class: 'zacht', tekst: isDicht ? 'Dit blok staat dicht.' : isLes ? 'Een les voor een klas of groep, ' + minTekst(a.duur) + '.' : SOORT[a.soort] || 'Afspraak' }),
+          isDicht || isLes ? null : el('div', { style: 'display:flex;flex-wrap:wrap;align-items:center;gap:10px' }, [el('span', { tekst: 'Was ' + (d ? d.voornaam : 'de leerling') + ' er?' }), komstVak(a, function(){ knop.classList.toggle('afw', a.komst === 'afwezig'); var kl = knop.querySelector('small'); if (kl) kl.textContent = (SOORT[a.soort] || '') + ' · ' + minTekst(a.duur) + (a.komst ? ' · ' + a.komst : ''); })]),
           el('div', { class: 'onder', style: 'margin-top:0' }, [
             d && !isDicht ? el('button', { class: 'knop', type: 'button', tekst: 'Dossier openen', onclick: function(){ openDossier(a.dossier); } }) : null,
             el('button', { class: 'knop stil', type: 'button', tekst: 'Verplaatsen', onclick: function(){
               S.verplaats = a.id; paneel.textContent = '';
-              paneel.appendChild(el('div', { class: 'planpaneel' }, [el('p', { tekst: 'Tik nu op een leeg blok. Daar komt ' + (isDicht ? 'het dichte blok' : 'de afspraak van ' + wieTekst) + ' te staan. Een andere week kiezen kan ook eerst.' }),
+              paneel.appendChild(el('div', { class: 'planpaneel' }, [el('p', { tekst: 'Tik nu op een leeg blok. Daar komt ' + (isDicht ? 'het dichte blok' : isLes ? 'de EF-les' : 'de afspraak van ' + wieTekst) + ' te staan. Een andere week kiezen kan ook eerst.' }),
                 el('div', {}, [el('button', { class: 'knop stil', type: 'button', tekst: 'Toch niet verplaatsen', onclick: function(){ S.verplaats = null; sluit(); } })])]));
             } }),
-            el('button', { class: 'knop weg', type: 'button', tekst: isDicht ? 'Weer openzetten' : 'Afspraak verwijderen', onclick: function(){ stuur('DELETE', '/afspraken/' + a.id).then(herlaad).catch(meld); } }),
+            el('button', { class: 'knop weg', type: 'button', tekst: isDicht ? 'Weer openzetten' : isLes ? 'EF-les verwijderen' : 'Afspraak verwijderen', onclick: function(){ stuur('DELETE', '/afspraken/' + a.id).then(herlaad).catch(meld); } }),
             el('button', { class: 'knop weg', type: 'button', tekst: isDicht ? 'Deze en alle volgende openzetten' : 'Deze en alle volgende verwijderen', onclick: function(ev){
               var k = ev.currentTarget;
               if (!k.dataset.zeker){ k.dataset.zeker = '1'; k.textContent = 'Zeker weten? Alle volgende weken gaan weg'; return; }
@@ -1692,6 +1713,10 @@ button.tegel:hover{border-color:var(--accent)}
           if (a.soort === 'dicht') return sleepbaar(el('button', { class: 'blok dicht', type: 'button', style: hoog(b), title: 'Dicht. Sleep om te verplaatsen', 'aria-label': dagnaam + ' ' + uur(a.begin) + ' dicht' + (a.tekst ? ', ' + a.tekst : ''), onclick: function(ev){ toonAfspraak(a, ev.currentTarget); } },
             [el('span', { tekst: (a.tekst || 'Dicht') + ' · ' + minTekst(a.duur) + (a.begin !== b.begin ? ' · vanaf ' + uur(a.begin) : '') })]), 'a:' + a.id);
           var d = dossierVan(a.dossier);
+          if (a.soort === 'les') return sleepbaar(el('button', { class: 'blok vol les', type: 'button', style: hoog(b), title: 'EF-les. Sleep om te verplaatsen', 'aria-label': dagnaam + ' ' + uur(a.begin) + ', EF-les' + (a.tekst ? ' ' + a.tekst : ''), onclick: function(ev){ toonAfspraak(a, ev.currentTarget); } },
+            /* loopt de les door over meer blokken, dan staat in de volgende alleen dat hij doorloopt */
+            a.begin !== b.begin ? [el('span', { class: 'wie' }, [el('small', { tekst: (a.tekst || 'EF-les') + ' loopt door tot ' + uur(a.begin + a.duur) })])]
+              : [el('span', { class: 'avatar les', 'aria-hidden': 'true', tekst: 'EF' }), el('span', { class: 'wie' }, [el('b', { tekst: a.tekst || 'EF-les' }), el('small', { tekst: 'EF-les · ' + minTekst(a.duur) + (a.duur !== b.duur ? ' · tot ' + uur(a.begin + a.duur) : '') })])]), 'a:' + a.id);
           return sleepbaar(el('button', { class: 'blok vol' + (a.komst === 'afwezig' ? ' afw' : ''), type: 'button', style: hoog(b), title: 'Sleep naar een ander blok om te verplaatsen', 'aria-label': dagnaam + ' ' + uur(a.begin) + ', ' + (d ? naam(d) : 'een leerling'), onclick: function(ev){ toonAfspraak(a, ev.currentTarget); } },
             [d ? avatar(d) : null, el('span', { class: 'wie' }, [el('b', { tekst: d ? naam(d) : 'Onbekend' }), el('small', { tekst: (perDagAnders ? uur(a.begin) + ' · ' : '') + (SOORT[a.soort] || '') + ' · ' + minTekst(a.duur) + (a.komst ? ' · ' + a.komst : '') + (!perDagAnders && a.begin !== b.begin ? ' · vanaf ' + uur(a.begin) : '') })])]), 'a:' + a.id);
         })));
@@ -2265,7 +2290,9 @@ button.tegel:hover{border-color:var(--accent)}
   /* Wat er nieuw is in PMT zelf. Komt er iets bij dat de moeite van het melden
      waard is, zet dan hier een nieuwe id en nieuwe punten neer: wie het vorige
      venster heeft weggeklikt, krijgt het nieuwe een keer te zien. */
-  var NIEUWS = { id: '2026-11-12', punten: [
+  var NIEUWS = { id: '2026-11-13', punten: [
+    'In het rooster plan je nu ook EF-lessen in, voor een klas of groep.',
+    'Aan elk blok in het rooster zie je hoe lang het duurt.',
     'Het hoofdscherm begint met Vandaag: wie er komt en wie nu aan de beurt is.',
     'Bij elke afspraak kruis je aan of de leerling er was, met een reden bij afwezig.',
     'Het rooster stel je zelf in: eigen blokken per dag, pauzes, vakanties en studiedagen.',

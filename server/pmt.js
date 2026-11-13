@@ -795,6 +795,15 @@ export class Pmt extends DurableObject {
     if (l === null) return !this.pauzeOp(begin, duur);
     return l.some(b => !b.vrij && begin >= b.van && begin + duur <= b.tot);
   }
+  /* Een EF-les is voor een klas en mag over meer blokken lopen, maar begint en
+     eindigt binnen de dag en raakt geen pauze of blok waar niets kan. */
+  lesPast(dagStr, begin, duur){
+    const l = this.blokkenVan(dagStr), eind = begin + duur;
+    if (l === null){ const i = this.roosterInstelling(); return begin >= i.van && eind <= i.tot && !this.pauzeOp(begin, duur); }
+    const open = l.filter(b => !b.vrij);
+    return open.some(b => begin >= b.van && begin < b.tot) && open.some(b => eind > b.van && eind <= b.tot)
+      && !l.some(b => b.vrij && begin < b.tot && eind > b.van);
+  }
   /* valt dit moment in een pauze? */
   pauzeOp(begin, duur){ return (this.roosterInstelling().pauzes || []).find(p => begin < p.tot && begin + duur > p.van) || null; }
   roosterInstelling(){
@@ -833,18 +842,18 @@ export class Pmt extends DurableObject {
   }
   async plan(d, wie){
     const dagEen = echteDag(d && d.dag), begin = Math.round(Number(d && d.begin)), duur = Math.round(Number(d && d.duur));
-    const isDicht = !!(d && d.dicht);
-    const soort = isDicht ? "dicht" : SOORTEN.indexOf(d && d.soort) >= 0 ? d.soort : "sessie";
+    const isDicht = !!(d && d.dicht), isLes = !isDicht && !!(d && d.les), zonder = isDicht || isLes;
+    const soort = isDicht ? "dicht" : isLes ? "les" : SOORTEN.indexOf(d && d.soort) >= 0 ? d.soort : "sessie";
     /* een aantal weken, of elke week tot en met een datum (hooguit een jaar) */
     const totDag = echteDag(d && d.tot);
     const weken = totDag && dagEen && totDag >= dagEen
       ? Math.min(MAX_WEKEN, Math.floor((Date.parse(totDag + "T12:00:00Z") - Date.parse(dagEen + "T12:00:00Z")) / (7 * 86400000)) + 1)
       : Math.max(1, Math.min(12, Math.round(Number(d && d.weken)) || 1));
     if (!dagEen || !(begin >= 0 && begin < 1440) || !(duur >= 5 && duur <= (isDicht ? 1440 : 240)) || begin + duur > 1440) return null;
-    if (!isDicht && !this.sql.exec("SELECT id FROM dossier WHERE id = ?", String(d.dossier || "")).toArray().length) return null;
+    if (!zonder && !this.sql.exec("SELECT id FROM dossier WHERE id = ?", String(d.dossier || "")).toArray().length) return null;
     if (this.sql.exec("SELECT COUNT(*) AS n FROM afspraak").one().n + weken > MAX_AFSPRAKEN) return null;
     /* een leerling plan je niet in de pauze; dichtzetten mag er wel overheen */
-    if (!isDicht && !this.pastIn(dagEen, begin, duur)) return { gemaakt: 0, overgeslagen: 0, vrij: 0, vrijNaam: "", pauze: true };
+    if (isLes ? !this.lesPast(dagEen, begin, duur) : !isDicht && !this.pastIn(dagEen, begin, duur)) return { gemaakt: 0, overgeslagen: 0, vrij: 0, vrijNaam: "", pauze: true };
     let gemaakt = 0, overgeslagen = 0, vrij = 0, vrijNaam = "";
     const vrijLijst = this.vrijeDagen();
     for (let w = 0; w < weken; w++){
@@ -854,10 +863,11 @@ export class Pmt extends DurableObject {
       if (v){ vrij++; vrijNaam = v.naam; continue; }
       const bezet = this.sql.exec("SELECT id FROM afspraak WHERE dag = ? AND begin < ? AND begin + duur > ?", dagNu, begin + duur, begin).toArray().length;
       if (bezet){ overgeslagen++; continue; }
-      this.sql.exec("INSERT INTO afspraak (id, dag, begin, duur, dossier, soort, tekst) VALUES (?, ?, ?, ?, ?, ?, ?)", willekeur(9), dagNu, begin, duur, isDicht ? "" : d.dossier, soort, isDicht ? tekst(d.tekst, 40) : "");
+      this.sql.exec("INSERT INTO afspraak (id, dag, begin, duur, dossier, soort, tekst) VALUES (?, ?, ?, ?, ?, ?, ?)", willekeur(9), dagNu, begin, duur, zonder ? "" : d.dossier, soort, zonder ? tekst(d.tekst, 40) : "");
       gemaakt++;
     }
     if (gemaakt && isDicht) this.meld(wie, gemaakt === 1 ? "blok dichtgezet" : gemaakt + " blokken dichtgezet", "");
+    else if (gemaakt && isLes) this.meld(wie, gemaakt === 1 ? "EF-les ingepland" : gemaakt + " EF-lessen ingepland", "");
     else if (gemaakt){
       this.meld(wie, gemaakt === 1 ? "afspraak ingepland" : gemaakt + " afspraken ingepland", d.dossier);
       await this.vanWachtrij(d.dossier, dagEen);
@@ -869,11 +879,11 @@ export class Pmt extends DurableObject {
     const a = this.sql.exec("SELECT dossier, duur, soort FROM afspraak WHERE id = ?", id).toArray()[0];
     /* een afspraak met een leerling neemt de lengte van het nieuwe blok over, als die is meegegeven */
     const nieuweDuur = Math.round(Number(d && d.duur));
-    if (a && a.soort !== "dicht" && nieuweDuur >= 5 && nieuweDuur <= 240) a.duur = nieuweDuur;
+    if (a && a.soort !== "dicht" && a.soort !== "les" && nieuweDuur >= 5 && nieuweDuur <= 240) a.duur = nieuweDuur;
     const dagNu = echteDag(d && d.dag), begin = Math.round(Number(d && d.begin));
     if (!a || !dagNu || !(begin >= 0) || begin + a.duur > 1440) return null;
     if (this.vrijOp(dagNu)) return "vrij";
-    if (a.soort !== "dicht" && !this.pastIn(dagNu, begin, a.duur)) return "pauze";
+    if (a.soort === "les" ? !this.lesPast(dagNu, begin, a.duur) : a.soort !== "dicht" && !this.pastIn(dagNu, begin, a.duur)) return "pauze";
     if (this.sql.exec("SELECT id FROM afspraak WHERE dag = ? AND begin < ? AND begin + duur > ? AND id <> ?", dagNu, begin + a.duur, begin, id).toArray().length) return false;
     this.sql.exec("UPDATE afspraak SET dag = ?, begin = ?, duur = ? WHERE id = ?", dagNu, begin, a.duur, id);
     this.meld(wie, "afspraak verplaatst", a.dossier);
@@ -883,7 +893,7 @@ export class Pmt extends DurableObject {
      In het logboek komt alleen dat het genoteerd is, niet de reden. */
   zetKomst(id, d, wie){
     const a = this.sql.exec("SELECT dossier, soort FROM afspraak WHERE id = ?", id).toArray()[0];
-    if (!a || a.soort === "dicht") return null;
+    if (!a || a.soort === "dicht" || a.soort === "les") return null;
     const komst = ["aanwezig", "afwezig"].indexOf(d && d.komst) >= 0 ? d.komst : "";
     const reden = komst === "afwezig" ? tekst(d.reden, 60) : "";
     this.sql.exec("UPDATE afspraak SET komst = ?, reden = ? WHERE id = ?", komst, reden, id);
@@ -893,13 +903,14 @@ export class Pmt extends DurableObject {
   /* Een afspraak weg. Met reeks ook alle latere van dezelfde leerling op
      dezelfde weekdag en tijd: zo haal je een heel jaar in een keer weg. */
   wegAfspraak(id, wie, reeks){
-    const r = this.sql.exec("SELECT dossier, dag, begin FROM afspraak WHERE id = ?", id).toArray()[0];
+    const r = this.sql.exec("SELECT dossier, dag, begin, soort FROM afspraak WHERE id = ?", id).toArray()[0];
     if (!r) return false;
     let n = 1;
     if (reeks){
       n = 0;
       const start = Date.parse(r.dag + "T12:00:00Z");
-      for (const x of this.sql.exec("SELECT id, dag FROM afspraak WHERE dossier = ? AND begin = ? AND dag >= ?", r.dossier, r.begin, r.dag).toArray()){
+      /* zonder leerling (dicht of EF-les) telt alleen dezelfde soort mee */
+      for (const x of this.sql.exec("SELECT id, dag FROM afspraak WHERE dossier = ? AND begin = ? AND dag >= ? AND (dossier <> '' OR soort = ?)", r.dossier, r.begin, r.dag, r.soort).toArray()){
         if (Math.round((Date.parse(x.dag + "T12:00:00Z") - start) / 86400000) % 7 === 0){ this.sql.exec("DELETE FROM afspraak WHERE id = ?", x.id); n++; }
       }
     } else this.sql.exec("DELETE FROM afspraak WHERE id = ?", id);
