@@ -278,6 +278,20 @@ export async function behandel(req, env, url, hulp){
     return uit ? json({ ok: true }) : json({ fout: "nog niet alle vragen zijn beantwoord" }, 400);
   }
 
+  /* De agenda haalt Outlook zelf op, zonder in te loggen: de lange sleutel in
+     het adres is het enige bewijs. Een verkeerde sleutel telt mee. */
+  const ag = p.match(/^\/api\/pmt\/agenda\/([A-Za-z0-9_-]{24,48})\.ics$/);
+  if (ag && m === "GET"){
+    if (!await hulp.magDoor("pmt-agenda-mis", 30, 600, true)) return json({ fout: "even wachten" }, 429);
+    const kluizen = demoKan(env) ? [kluis(env, url), demoKluis(env, url)] : [kluis(env, url)];
+    for (const x of kluizen){
+      const ics = await x.agendaIcs(ag[1]);
+      if (ics) return new Response(ics, { status: 200, headers: { "content-type": "text/calendar; charset=utf-8", "cache-control": "no-store", "x-robots-tag": "noindex" } });
+    }
+    await hulp.magDoor("pmt-agenda-mis", 30, 600);
+    return json({ fout: "deze agenda bestaat niet" }, 404);
+  }
+
   /* vanaf hier alleen voor wie ingelogd is en op de lijst staat */
   const s = await wie(env, req);
   if (!s) return json({ fout: "niet ingelogd" }, 401, { "set-cookie": zet(koekNaam(url), "", url, 0, "/", true) });
@@ -393,6 +407,9 @@ export async function behandel(req, env, url, hulp){
     const i = await k.zetRooster(inhoud, s.naam);
     return i ? klaar({ instelling: i }) : klaar({ fout: "deze tijden kloppen niet: het eind moet na het begin liggen en een blok duurt 10 tot 120 minuten" }, 400);
   }
+  if (p === "/api/pmt/agenda" && m === "GET") return klaar({ sleutel: await k.agenda() });
+  if (p === "/api/pmt/agenda" && m === "POST") return klaar({ sleutel: await k.zetAgenda(true, s.naam) });
+  if (p === "/api/pmt/agenda" && m === "DELETE") return klaar({ sleutel: await k.zetAgenda(false, s.naam) });
   if (p === "/api/pmt/afspraken" && m === "POST"){
     let inhoud; try { inhoud = await leesInhoud(req); } catch (e){ return klaar({ fout: "dit kan de server niet lezen" }, 400); }
     const u = await k.plan(inhoud, s.naam);
@@ -477,6 +494,7 @@ const TOESTEMMINGSTEKST = [
   "U mag het dossier inzien, laten verbeteren en laten verwijderen. U kunt uw toestemming altijd intrekken. Dat heeft geen gevolgen voor het onderwijs aan uw kind."
 ].join("\n");
 function mailadres(v){ const t = tekst(v, 120).toLowerCase(); return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t) ? t : ""; }
+const LIJFPLEKKEN = ["hoofd", "schouders", "borst", "buik", "armen", "handen", "benen", "voeten"];
 function schoon(d){
   d = d && typeof d === "object" ? d : {};
   const uit = {
@@ -490,12 +508,27 @@ function schoon(d){
   };
   for (const x of (Array.isArray(d.doelen) ? d.doelen : []).slice(0, 20)){
     const t = tekst(x && x.tekst, 300);
-    if (t) uit.doelen.push({ tekst: t, klaar: !!(x && x.klaar) });
+    if (!t) continue;
+    /* per doel een score van 1 tot 5 per keer dat er gescoord is */
+    const scores = [];
+    for (const y of (Array.isArray(x.scores) ? x.scores : []).slice(-120)){
+      const sc = Math.round(Number(y && y.s)), dg = datum(y && y.datum);
+      if (dg && sc >= 1 && sc <= 5) scores.push({ datum: dg, s: sc });
+    }
+    uit.doelen.push({ tekst: t, klaar: !!(x && x.klaar), scores });
   }
   for (const x of (Array.isArray(d.notities) ? d.notities : []).slice(0, 500)){
-    const t = tekst(x && x.tekst, 4000);
-    if (t) uit.notities.push({ id: /^[A-Za-z0-9_-]{4,20}$/.test(String(x.id || "")) ? String(x.id) : willekeur(6), datum: datum(x.datum), tekst: t });
+    const t = tekst(x && x.tekst, 4000), v = tekst(x && x.volgende, 600);
+    if (t || v) uit.notities.push({ id: /^[A-Za-z0-9_-]{4,20}$/.test(String(x.id || "")) ? String(x.id) : willekeur(6), datum: datum(x.datum), tekst: t, volgende: v });
   }
+  /* de check-in met het lijf: per keer de plekken waar de leerling spanning voelt, 1 tot 3 */
+  uit.lijf = [];
+  for (const x of (Array.isArray(d.lijf) ? d.lijf : []).slice(-200)){
+    const dg = datum(x && x.datum), plekken = {};
+    for (const z of LIJFPLEKKEN){ const n = Math.round(Number(x && x.plekken && x.plekken[z])); if (n >= 1 && n <= 3) plekken[z] = n; }
+    if (dg) uit.lijf.push({ datum: dg, plekken });
+  }
+  uit.verslagOp = datum(d.verslagOp);
   return uit.voornaam ? uit : null;
 }
 /* ---------- vragenlijsten ---------- */
@@ -643,14 +676,18 @@ function voorbeelden(){
   return [
     { voornaam: "Sam", letter: "K", klas: "2B", start: dag(-84), status: "loopt", proef: true, toestemming: { status: "ja", datum: dag(-30), door: "ouder" },
       hulpvraag: "Sam raakt snel gespannen in de klas en merkt dat pas als het te laat is.",
-      doelen: [{ tekst: "Spanning eerder opmerken in het lijf", klaar: true }, { tekst: "Zelf een ademoefening doen in de les", klaar: false }],
+      doelen: [{ tekst: "Spanning eerder opmerken in het lijf", klaar: true, scores: [[-70, 2], [-49, 2], [-35, 3], [-21, 4], [-7, 4]].map(x => ({ datum: dag(x[0]), s: x[1] })) },
+        { tekst: "Zelf een ademoefening doen in de les", klaar: false, scores: [[-35, 1], [-21, 2], [-7, 3]].map(x => ({ datum: dag(x[0]), s: x[1] })) }],
+      lijf: [[-35, { buik: 3, schouders: 2, handen: 2 }], [-21, { buik: 2, schouders: 2 }], [-7, { buik: 1, schouders: 1 }]].map(x => ({ datum: dag(x[0]), plekken: x[1] })),
       notities: [{ datum: dag(-84), tekst: "Intake en beginmeting. Sam vertelt weinig maar doet goed mee met de oefeningen." },
         { datum: dag(-42), tekst: "Tweede meting. Doel bijgesteld: eerst opmerken, dan pas iets doen." },
-        { datum: dag(-7), tekst: "Sessie 9: de ademoefening lukt nu zonder hulp." }] },
+        { datum: dag(-7), tekst: "Sessie 9: de ademoefening lukt nu zonder hulp.", volgende: "De ademoefening proberen vlak voor de les begint." }] },
     { voornaam: "Noor", letter: "B", klas: "1A", start: dag(-28), status: "loopt", proef: true, toestemming: { status: "ja", datum: dag(-30), door: "ouder" },
       hulpvraag: "Noor durft weinig ruimte in te nemen en trekt zich terug bij drukte.",
-      doelen: [{ tekst: "Stevig staan en de eigen ruimte aangeven", klaar: false }],
-      notities: [{ datum: dag(-28), tekst: "Intake. Noor kiest zelf de oefeningen met de bal." }] },
+      doelen: [{ tekst: "Stevig staan en de eigen ruimte aangeven", klaar: false, scores: [[-21, 2], [-14, 2], [-7, 3]].map(x => ({ datum: dag(x[0]), s: x[1] })) }],
+      lijf: [[-14, { borst: 2, benen: 2 }], [-7, { borst: 1, benen: 2 }]].map(x => ({ datum: dag(x[0]), plekken: x[1] })),
+      notities: [{ datum: dag(-28), tekst: "Intake. Noor kiest zelf de oefeningen met de bal." },
+        { datum: dag(-7), tekst: "Balspel met afstand aangeven. Noor zei zelf stop toen het te dichtbij kwam.", volgende: "Dezelfde oefening, nu met een klasgenoot." }] },
     { voornaam: "Jesse", letter: "V", klas: "3C", start: dag(-3), status: "intake", proef: true, toestemming: { status: "ja", datum: dag(-3), door: "ouder" },
       hulpvraag: "Aangemeld door de mentor: veel boosheid na de pauze.", doelen: [], notities: [] },
     { voornaam: "Daan", letter: "R", klas: "1C", status: "wacht", proef: true, toestemming: { status: "gevraagd", datum: "", door: "" }, aangemeld: dag(-34), door: "mentor 1C", voorrang: true,
@@ -679,7 +716,7 @@ const VOORBEELDCIJFERS = {
   Jesse: { metingen: [[-3, [2, 2, 4, 2, 2, 4, 3, 2, 4]]], weken: {} }
 };
 /* verandert dit getal, dan vult de demo zich opnieuw, ook als hij nog geen dag oud is */
-const DEMO_VERSIE = "12";
+const DEMO_VERSIE = "14";
 
 export class Pmt extends DurableObject {
   constructor(ctx, env){
@@ -803,6 +840,39 @@ export class Pmt extends DurableObject {
     const open = l.filter(b => !b.vrij);
     return open.some(b => begin >= b.van && begin < b.tot) && open.some(b => eind > b.van && eind <= b.tot)
       && !l.some(b => b.vrij && begin < b.tot && eind > b.van);
+  }
+  /* Het rooster als agenda-abonnement, voor Outlook. Wie de link heeft kan de
+     tijden zien, dus er staan alleen initialen in en geen soort afspraak. De
+     link is lang en willekeurig en is in te trekken. */
+  agenda(){
+    const r = this.sql.exec("SELECT v FROM stand WHERE k = 'agenda'").toArray()[0];
+    return r && /^[A-Za-z0-9_-]{24,48}$/.test(r.v) ? r.v : "";
+  }
+  zetAgenda(aan, wie){
+    if (aan) this.sql.exec("INSERT OR REPLACE INTO stand (k, v) VALUES ('agenda', ?)", willekeur(32));
+    else this.sql.exec("DELETE FROM stand WHERE k = 'agenda'");
+    this.meld(wie, aan ? "agendalink gemaakt" : "agendalink ingetrokken", "");
+    return this.agenda();
+  }
+  async agendaIcs(sleutel){
+    const echt = this.agenda();
+    if (!echt || String(sleutel) !== echt) return null;
+    const naam = {};
+    for (const d of await this.alles()) naam[d.id] = (String(d.voornaam || "").slice(0, 1) + String(d.letter || "").slice(0, 1)).toUpperCase();
+    const veilig = t => String(t || "").replace(/[\\;,]/g, " ").replace(/[\r\n]+/g, " ").slice(0, 60);
+    const moment = (dag, min) => dag.replace(/-/g, "") + "T" + String(Math.floor(min / 60)).padStart(2, "0") + String(min % 60).padStart(2, "0") + "00";
+    const nu = new Date().toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z";
+    const uit = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//meneergreidanus//PMT//NL", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "X-WR-CALNAME:PMT", "X-WR-TIMEZONE:Europe/Amsterdam",
+      "BEGIN:VTIMEZONE", "TZID:Europe/Amsterdam",
+      "BEGIN:STANDARD", "DTSTART:19701025T030000", "RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU", "TZOFFSETFROM:+0200", "TZOFFSETTO:+0100", "TZNAME:CET", "END:STANDARD",
+      "BEGIN:DAYLIGHT", "DTSTART:19700329T020000", "RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU", "TZOFFSETFROM:+0100", "TZOFFSETTO:+0200", "TZNAME:CEST", "END:DAYLIGHT",
+      "END:VTIMEZONE"];
+    for (const a of this.sql.exec("SELECT id, dag, begin, duur, dossier, soort, tekst FROM afspraak WHERE dag >= ? AND dag <= ? ORDER BY dag, begin", plusDagen(vandaagNL(), -14), plusDagen(vandaagNL(), 400)).toArray()){
+      const titel = a.soort === "les" ? "EF-les" + (a.tekst ? " " + veilig(a.tekst) : "") : a.soort === "dicht" ? "Bezet" : "PMT " + (naam[a.dossier] || "");
+      uit.push("BEGIN:VEVENT", "UID:" + a.id + "@pmt", "DTSTAMP:" + nu, "DTSTART;TZID=Europe/Amsterdam:" + moment(a.dag, a.begin), "DTEND;TZID=Europe/Amsterdam:" + moment(a.dag, a.begin + a.duur), "SUMMARY:" + titel.trim(), "END:VEVENT");
+    }
+    uit.push("END:VCALENDAR");
+    return uit.join("\r\n") + "\r\n";
   }
   /* valt dit moment in een pauze? */
   pauzeOp(begin, duur){ return (this.roosterInstelling().pauzes || []).find(p => begin < p.tot && begin + duur > p.van) || null; }
@@ -976,7 +1046,7 @@ export class Pmt extends DurableObject {
     const r = this.sql.exec("SELECT inhoud FROM dossier WHERE id = ?", id).toArray()[0];
     if (!r) return null;
     const d = await this.open(r.inhoud);
-    d.notities = []; d.doelen = []; d.hulpvraag = "";
+    d.notities = []; d.doelen = []; d.lijf = []; d.verslagOp = ""; d.hulpvraag = "";
     this.sql.exec("UPDATE dossier SET inhoud = ?, bijgewerkt = ? WHERE id = ?", await this.dicht(d), Date.now(), id);
     this.sql.exec("DELETE FROM meting WHERE dossier = ?", id);
     this.sql.exec("DELETE FROM afname WHERE dossier = ?", id);
@@ -1009,14 +1079,23 @@ export class Pmt extends DurableObject {
     for (const r of this.sql.exec("SELECT dossier, inhoud, t FROM meting ORDER BY t").toArray()){
       try {
         const m = await this.open(r.inhoud);
-        const p = met[r.dossier] = met[r.dossier] || { trend: [], weken: 0, t: 0 };
-        if (m.monitor){ p.weken++; continue; }
+        const p = met[r.dossier] = met[r.dossier] || { trend: [], weken: 0, t: 0, week: 0 };
+        if (m.monitor){ p.weken++; p.week = r.t; continue; }
         if (!m.schalen.length || !(m.max > 1)) continue;
         const gem = m.schalen.reduce((a, x) => a + x.score, 0) / m.schalen.length;
         p.trend.push(Math.round(100 * (gem - 1) / (m.max - 1)) / 100); p.t = r.t;
       } catch (e){ console.error("pmt: meting niet te openen voor de lijst"); }
     }
     for (const r of this.sql.exec("SELECT dossier, COUNT(*) AS n FROM afname WHERE tot >= ? GROUP BY dossier", Date.now()).toArray()) cod[r.dossier] = r.n;
+    /* hoe vaak achter elkaar afwezig (de laatste keren), en hoeveel afspraken van de
+       laatste twee weken nog geen aanwezig of afwezig hebben */
+    const rij = {}, klaarRij = {}, open = {}, vast = {};
+    for (const r of this.sql.exec("SELECT dossier, komst FROM afspraak WHERE dossier <> '' AND dag <= ? AND komst <> '' ORDER BY dag DESC, begin DESC", vandaagNL()).toArray()){
+      if (klaarRij[r.dossier]) continue;
+      if (r.komst === "afwezig") rij[r.dossier] = (rij[r.dossier] || 0) + 1; else klaarRij[r.dossier] = true;
+    }
+    for (const r of this.sql.exec("SELECT dossier, COUNT(*) AS n FROM afspraak WHERE dossier <> '' AND dag < ? AND dag >= ? AND komst = '' GROUP BY dossier", vandaagNL(), plusDagen(vandaagNL(), -14)).toArray()) open[r.dossier] = r.n;
+    for (const r of this.sql.exec("SELECT dossier, MIN(gemaakt) AS sinds FROM afname WHERE vast = 1 AND tot >= ? GROUP BY dossier", Date.now()).toArray()) vast[r.dossier] = r.sinds;
     const volgende = {};
     for (const r of this.sql.exec("SELECT dossier, dag, begin FROM afspraak WHERE dag >= ? ORDER BY dag, begin", vandaagNL()).toArray()){
       if (!volgende[r.dossier]) volgende[r.dossier] = { dag: r.dag, begin: r.begin };
@@ -1026,7 +1105,8 @@ export class Pmt extends DurableObject {
       aangemeld: d.aangemeld || "", door: d.door || "", voorrang: !!d.voorrang, reden: d.status === "wacht" ? String(d.hulpvraag || "").slice(0, 160) : "", voornaam: d.voornaam, letter: d.letter, klas: d.klas, status: d.status, start: d.start,
       proef: !!d.proef, notities: d.notities.length, bijgewerkt: d.bijgewerkt,
       metingen: met[d.id] ? met[d.id].trend.length : 0, laatsteMeting: met[d.id] ? met[d.id].t : 0, weekchecks: met[d.id] ? met[d.id].weken : 0,
-      trend: met[d.id] ? met[d.id].trend.slice(-8) : [], codes: cod[d.id] || 0, nieuw: nw[d.id] || 0, afgerondOp: this.afgerondSinds(d), wegOp: this.wegOp(d, bewaar) }))
+      trend: met[d.id] ? met[d.id].trend.slice(-8) : [], codes: cod[d.id] || 0,
+      afwezigRij: rij[d.id] || 0, komstOpen: open[d.id] || 0, vasteCodeSinds: vast[d.id] || 0, laatsteWeek: met[d.id] ? met[d.id].week : 0, nieuw: nw[d.id] || 0, afgerondOp: this.afgerondSinds(d), wegOp: this.wegOp(d, bewaar) }))
       .sort((a, b) => a.voornaam.localeCompare(b.voornaam, "nl"));
   }
   async haal(id, wie, wat){
@@ -1056,13 +1136,13 @@ export class Pmt extends DurableObject {
       const oudRij = this.sql.exec("SELECT inhoud FROM dossier WHERE id = ?", id).toArray()[0];
       if (!oudRij) return null;
       const oud = await this.open(oudRij.inhoud), was = (oud.toestemming && oud.toestemming.status) || "geen";
-      if (d.toestemming.status !== "ja"){ d.notities = oud.notities || []; d.doelen = oud.doelen || []; }
+      if (d.toestemming.status !== "ja"){ d.notities = oud.notities || []; d.doelen = oud.doelen || []; d.lijf = oud.lijf || []; }
       d.afgerondOp = d.status === "afgerond" ? (oud.afgerondOp || vandaagNL()) : "";
       this.sql.exec("UPDATE dossier SET inhoud = ?, bijgewerkt = ? WHERE id = ?", await this.dicht(d), nu, id);
       this.meld(wie, "gewijzigd", id);
       if (was !== d.toestemming.status) this.meld(wie, "toestemming van de ouders: " + { geen: "nog niet gevraagd", gevraagd: "formulier meegegeven", ja: "getekend", nee: "geweigerd" }[d.toestemming.status], id);
     } else {
-      if (d.toestemming.status !== "ja"){ d.notities = []; d.doelen = []; }
+      if (d.toestemming.status !== "ja"){ d.notities = []; d.doelen = []; d.lijf = []; }
       d.afgerondOp = d.status === "afgerond" ? vandaagNL() : "";
       id = willekeur(9);
       this.sql.exec("INSERT INTO dossier (id, inhoud, gemaakt, bijgewerkt) VALUES (?, ?, ?, ?)", id, await this.dicht(d), nu, nu);
@@ -1104,7 +1184,7 @@ export class Pmt extends DurableObject {
         const ma = maandagVan(vandaagNL());
         for (let w = (vast[2] === "intake" ? 0 : -5); w < (vast[2] === "intake" ? 1 : 4); w++){
           const dagA = plusDagen(ma, vast[0] + 7 * w), geweest = dagA < vandaagNL();
-          const afw = geweest && w === -3 ? (v.voornaam === "Sam" ? "Ziek" : "Weigerde") : "";
+          const afw = geweest && (w === -3 || (v.voornaam === "Sam" && w >= -1)) ? (v.voornaam === "Sam" ? (w === 0 ? "Weigerde" : "Ziek") : "Weigerde") : "";
           this.sql.exec("INSERT INTO afspraak (id, dag, begin, duur, dossier, soort, komst, reden) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", willekeur(9), dagA, vast[1], 30, d.id, vast[2],
             !geweest ? "" : afw ? "afwezig" : "aanwezig", afw);
         }
