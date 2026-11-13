@@ -1,6 +1,6 @@
 /* Overschrijven: de leerling schrijft een zin een aantal keer over.
 
-   De docent typt de zin en kiest hoe vaak (5 tot 100 keer). Op het blad staat
+   De docent typt de zin en kiest hoe vaak (5 tot 500 keer). Op het blad staat
    de zin bovenaan, daaronder genummerde schrijfregels: een lange zin krijgt
    twee of drie regels per keer. Hoeveel ruimte er is, stelt de docent zelf in:
    het aantal regels per keer (vanzelf, of 1 tot 4) en de hoogte van een regel
@@ -54,7 +54,7 @@
 
   window.SPELBLAD.overschrijven = {
     naam:'Overschrijven', kort:'Een zin een aantal keer overschrijven', icoon:'pen', vak:'los', eigenNiveau:true, zonderAntwoord:true,
-    aantallen:[5, 10, 15, 20, 25, 30, 40, 50, 75, 100], standaard:10, aantalNaam:'Aantal keer',
+    aantallen:[5, 10, 15, 20, 25, 30, 40, 50, 75, 100, 150, 200, 250, 300, 400, 500], standaard:10, aantalNaam:'Aantal keer',
     delenKop:'De zin',
     delenTip:'De leerling schrijft de zin het gekozen aantal keer over, bijvoorbeeld na een gemiste afspraak. Een lange zin krijgt vanzelf meer schrijfregels per keer.',
     delen:function(aan){
