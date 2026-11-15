@@ -90,6 +90,9 @@ import { DurableObject } from "cloudflare:workers";
 import { teken, lees, koekjes, controleer, basis, willekeur, b64url, vanB64url, sha256 } from "./account.js";
 
 const SESSIE_MIN = 15, SESSIE_MAX_UUR = 10, AANMELD_SECONDEN = 600;
+/* na hoeveel minuten zonder iets te doen de sessie sluit: de therapeut kiest uit deze */
+const SESSIE_KEUZES = [15, 30, 60, 120];
+function sessieMin(s){ return SESSIE_KEUZES.indexOf(s && s.min) >= 0 ? s.min : SESSIE_MIN; }
 const AANMELD = "pmt_aanmelden";
 /* Met __Host- ervoor neemt een browser het koekje alleen aan van dit ene adres,
    over https en zonder Domain. Een ander adres onder hetzelfde domein kan er
@@ -145,8 +148,9 @@ function demoKluis(env, url){
   return ns.get(ns.idFromName("pmt-demo"));
 }
 async function sessieKoekje(env, url, s){
-  const pak = await teken(env, { pmt: 1, mail: s.mail, naam: s.naam, demo: s.demo ? 1 : undefined, sinds: s.sinds, tot: Date.now() + SESSIE_MIN * 60000 });
-  return zet(koekNaam(url), pak, url, SESSIE_MIN * 60, "/", true);
+  const min = sessieMin(s);
+  const pak = await teken(env, { pmt: 1, mail: s.mail, naam: s.naam, demo: s.demo ? 1 : undefined, sinds: s.sinds, min, tot: Date.now() + min * 60000 });
+  return zet(koekNaam(url), pak, url, min * 60, "/", true);
 }
 async function wie(env, req){
   const s = await lees(env, koekjes(req)[koekNaam(new URL(req.url))]);
@@ -181,7 +185,7 @@ export async function behandel(req, env, url, hulp){
   if (p === "/api/pmt" && m === "GET"){
     const s = await wie(env, req);
     if (!s) return json({ aan: true, ingelogd: false, demo: demoKan(env) });
-    return json({ aan: true, ingelogd: true, naam: s.naam, proef: !!s.demo, demo: !!s.demo, minuten: SESSIE_MIN }, 200, { "set-cookie": await sessieKoekje(env, url, s) });
+    return json({ aan: true, ingelogd: true, naam: s.naam, proef: !!s.demo, demo: !!s.demo, minuten: sessieMin(s), keuzes: SESSIE_KEUZES }, 200, { "set-cookie": await sessieKoekje(env, url, s) });
   }
 
   if (p === "/api/pmt/inloggen" && m === "GET"){
@@ -236,7 +240,7 @@ export async function behandel(req, env, url, hulp){
     }
     const naam = String(claims.name || mail.split("@")[0]).replace(/[<>]/g, "").slice(0, 60) || "iemand";
     await kluis(env, url).meld(naam, "ingelogd", "");
-    return naar("", await sessieKoekje(env, url, { mail, naam, sinds: Date.now() }));
+    return naar("", await sessieKoekje(env, url, { mail, naam, sinds: Date.now(), min: await kluis(env, url).sessieMinuten() }));
   }
 
   if (p === "/api/pmt/demo" && m === "GET"){
@@ -247,7 +251,7 @@ export async function behandel(req, env, url, hulp){
     const echt = await wie(env, req);
     if (echt && !echt.demo) return new Response(null, { status: 302, headers: { location: url.origin + thuisPad(url), "cache-control": "no-store" } });
     await demoKluis(env, url).demoKlaar();
-    const koek = await sessieKoekje(env, url, { mail: "", naam: "Demo", demo: 1, sinds: Date.now() });
+    const koek = await sessieKoekje(env, url, { mail: "", naam: "Demo", demo: 1, sinds: Date.now(), min: await demoKluis(env, url).sessieMinuten() });
     return new Response(null, { status: 302, headers: { location: url.origin + thuisPad(url), "set-cookie": koek, "cache-control": "no-store" } });
   }
 
@@ -434,6 +438,13 @@ export async function behandel(req, env, url, hulp){
     return u ? klaar({ ok: true }) : klaar({ fout: "op dat moment staat al een afspraak" }, 409);
   }
   if (afm && m === "DELETE") return (await k.wegAfspraak(afm[1], s.naam, url.searchParams.get("reeks") === "1")) ? klaar({ ok: true }) : klaar({ fout: "deze afspraak bestaat niet" }, 404);
+  if (p === "/api/pmt/sessie" && m === "PUT"){
+    let inhoud; try { inhoud = await leesInhoud(req); } catch (e){ return klaar({ fout: "dit kan de server niet lezen" }, 400); }
+    const n = await k.zetSessieMinuten(inhoud.minuten, s.naam);
+    if (!n) return klaar({ fout: "kies 15, 30, 60 of 120 minuten" }, 400);
+    s.min = n;   /* het koekje dat nu meegaat heeft de nieuwe duur al */
+    return klaar({ minuten: n });
+  }
   if (p === "/api/pmt/privacy" && m === "GET") return klaar({ maanden: await k.bewaartermijn() });
   if (p === "/api/pmt/privacy" && m === "PUT"){
     let inhoud; try { inhoud = await leesInhoud(req); } catch (e){ return klaar({ fout: "dit kan de server niet lezen" }, 400); }
@@ -445,7 +456,7 @@ export async function behandel(req, env, url, hulp){
     return d ? klaar({ dossier: d }) : klaar({ fout: "dit dossier bestaat niet" }, 404);
   }
   const dl = p.match(/^\/api\/pmt\/dossiers\/([A-Za-z0-9_-]{8,24})\/logboek$/);
-  if (dl && m === "GET") return klaar({ regels: await k.logboekVan(dl[1], s.naam) });
+  if (dl && m === "GET") return klaar({ regels: await k.logboekVan(dl[1], s.naam, url.searchParams.get("kijk") === "1") });
   if (p === "/api/pmt/toestemming" && m === "GET") return klaar({ tekst: await k.toestemmingstekst() });
   if (p === "/api/pmt/toestemming" && m === "PUT"){
     let inhoud; try { inhoud = await leesInhoud(req); } catch (e){ return klaar({ fout: "dit kan de server niet lezen" }, 400); }
@@ -1036,6 +1047,19 @@ export class Pmt extends DurableObject {
   /* ---------- bewaartermijn ---------- */
   /* Hoeveel maanden na het afronden een dossier blijft staan. 0 betekent dat er
      niets vanzelf verdwijnt; de school hoort de termijn zelf vast te stellen. */
+  /* na hoeveel minuten zonder iets te doen de sessie sluit */
+  sessieMinuten(){
+    const r = this.sql.exec("SELECT v FROM stand WHERE k = 'sessie'").toArray()[0];
+    const n = Math.round(Number(r && r.v));
+    return SESSIE_KEUZES.indexOf(n) >= 0 ? n : SESSIE_MIN;
+  }
+  zetSessieMinuten(m, wie){
+    const n = Math.round(Number(m));
+    if (SESSIE_KEUZES.indexOf(n) < 0) return 0;
+    this.sql.exec("INSERT OR REPLACE INTO stand (k, v) VALUES ('sessie', ?)", String(n));
+    this.meld(wie, "automatisch uitloggen op " + n + " minuten gezet", "");
+    return n;
+  }
   bewaartermijn(){
     const r = this.sql.exec("SELECT v FROM stand WHERE k = 'bewaar'").toArray()[0];
     const n = Math.round(Number(r && r.v));
@@ -1087,8 +1111,8 @@ export class Pmt extends DurableObject {
     this.meld(wie, "verwerkte gegevens gewist", id);
     return this.haal(id);
   }
-  logboekVan(id, wie){
-    this.meld(wie, "inzage uitgedraaid", id);
+  logboekVan(id, wie, alleenKijken){
+    this.meld(wie, alleenKijken ? "logboek van het dossier bekeken" : "inzage uitgedraaid", id);
     return this.sql.exec("SELECT t, wie, wat FROM logboek WHERE dossier = ? ORDER BY n DESC LIMIT 500", id).toArray();
   }
   /* wat er is ingevuld en nog niet bekeken, nieuwste eerst */
