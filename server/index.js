@@ -202,7 +202,16 @@ async function verdeel(req, env, ctx){
       if (p === "/invullen") return pmtPagina(env, req, url, "invullen.html");
       /* de privacyverklaring voor ouders en leerlingen */
       if (p === "/privacy") return pmtPagina(env, req, url, "privacy.html");
-      if (p === "/fonts.css" || p.startsWith("/fonts/") || ["/favicon.ico", "/favicon.svg", "/apple-touch-icon.png"].indexOf(p) >= 0) return env.ASSETS.fetch(req);
+      /* als app op het beginscherm: het icoon en het manifest van PMT zelf */
+      const pmtBestand = { "/apple-touch-icon.png": "icoon-180.png", "/apple-touch-icon-precomposed.png": "icoon-180.png", "/icoon-192.png": "icoon-192.png", "/icoon-512.png": "icoon-512.png", "/app.webmanifest": "app.webmanifest" }[p];
+      if (pmtBestand){
+        const r = await env.ASSETS.fetch(new Request(url.origin + "/pmt/" + pmtBestand, { headers: req.headers }));
+        const h = new Headers(r.headers);
+        if (p === "/app.webmanifest") h.set("content-type", "application/manifest+json; charset=utf-8");
+        h.set("cache-control", "public, max-age=3600");
+        return new Response(r.body, { status: r.status, headers: h });
+      }
+      if (p === "/fonts.css" || p.startsWith("/fonts/") || ["/favicon.ico", "/favicon.svg"].indexOf(p) >= 0) return env.ASSETS.fetch(req);
       return new Response(null, { status: 302, headers: { location: "/", "cache-control": "no-store" } });
     }
     if (p === "/pmt" || p.startsWith("/pmt/")){
