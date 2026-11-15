@@ -838,12 +838,16 @@ export class Pmt extends DurableObject {
     const l = pd && pd.blokken && pd.blokken.length ? pd.blokken : i.blokken;
     return l && l.length ? l : null;
   }
-  /* past een afspraak met een leerling op dit moment? Met eigen blokken moet hij
-     binnen een blok vallen waar een afspraak kan; anders mag hij geen pauze raken. */
+  /* past een afspraak met een leerling op dit moment? De lengte is vrij, dus hij
+     mag over meer blokken lopen. Met eigen blokken begint en eindigt hij in een
+     blok waar een afspraak kan en raakt hij geen blok waar niets kan; anders mag
+     hij geen pauze raken. */
   pastIn(dagStr, begin, duur){
-    const l = this.blokkenVan(dagStr);
+    const l = this.blokkenVan(dagStr), eind = begin + duur;
     if (l === null) return !this.pauzeOp(begin, duur);
-    return l.some(b => !b.vrij && begin >= b.van && begin + duur <= b.tot);
+    const open = l.filter(b => !b.vrij);
+    return open.some(b => begin >= b.van && begin < b.tot) && open.some(b => eind > b.van && eind <= b.tot)
+      && !l.some(b => b.vrij && begin < b.tot && eind > b.van);
   }
   /* Een EF-les is voor een klas en mag over meer blokken lopen, maar begint en
      eindigt binnen de dag en raakt geen pauze of blok waar niets kan. */
@@ -988,19 +992,23 @@ export class Pmt extends DurableObject {
     }
     return { gemaakt, overgeslagen, vrij, vrijNaam };
   }
-  /* een afspraak naar een andere dag of tijd; de lengte blijft */
+  /* Een afspraak naar een andere dag of tijd. De lengte blijft, tenzij er
+     uitdrukkelijk een nieuwe lengte bij staat (Tijd aanpassen). */
   verplaats(id, d, wie){
-    const a = this.sql.exec("SELECT dossier, duur, soort FROM afspraak WHERE id = ?", id).toArray()[0];
-    /* een afspraak met een leerling neemt de lengte van het nieuwe blok over, als die is meegegeven */
+    const a = this.sql.exec("SELECT dossier, dag, begin, duur, soort FROM afspraak WHERE id = ?", id).toArray()[0];
     const nieuweDuur = Math.round(Number(d && d.duur));
-    if (a && a.soort !== "dicht" && a.soort !== "les" && nieuweDuur >= 5 && nieuweDuur <= 240) a.duur = nieuweDuur;
+    const alleenTijd = !!(a && d && d.lengte);
+    if (alleenTijd){
+      if (!(nieuweDuur >= 5 && nieuweDuur <= (a.soort === "dicht" ? 1440 : 240))) return null;
+      a.duur = nieuweDuur;
+    }
     const dagNu = echteDag(d && d.dag), begin = Math.round(Number(d && d.begin));
     if (!a || !dagNu || !(begin >= 0) || begin + a.duur > 1440) return null;
     if (this.vrijOp(dagNu)) return "vrij";
     if (a.soort === "les" ? !this.lesPast(dagNu, begin, a.duur) : a.soort !== "dicht" && !this.pastIn(dagNu, begin, a.duur)) return "pauze";
     if (this.sql.exec("SELECT id FROM afspraak WHERE dag = ? AND begin < ? AND begin + duur > ? AND id <> ?", dagNu, begin + a.duur, begin, id).toArray().length) return false;
     this.sql.exec("UPDATE afspraak SET dag = ?, begin = ?, duur = ? WHERE id = ?", dagNu, begin, a.duur, id);
-    this.meld(wie, "afspraak verplaatst", a.dossier);
+    this.meld(wie, alleenTijd && a.dag === dagNu ? "tijd van een afspraak aangepast" : "afspraak verplaatst", a.dossier);
     return true;
   }
   /* Was de leerling er? Bij afwezig hoort een korte reden (ziek, weigerde, ...).
