@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icoon-192.png">
+<script>
+(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();
+</script>
+<title>Tafeltoets · meneer Greidanus</title>
+<meta name="description" content="De tafeltoets: een vast aantal sommen uit de tafels 1 tot en met 10, de tijd loopt mee. Elke week als opdracht van je docent, of zelf om te oefenen.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:site_name" content="meneer Greidanus">
+<meta property="og:title" content="Tafeltoets">
+<meta property="og:description" content="De tafeltoets: een vast aantal sommen uit de tafels 1 tot en met 10, de tijd loopt mee. Elke week als opdracht van je docent, of zelf om te oefenen.">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="icon" href="/icoon-donker-192.png" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M46.9 11.3 C70.6 7.8 87.4 19.5 89.9 41.6 C92.7 65.4 81.9 87.2 58.9 89.8 C35.1 92.5 13.2 84.9 12.1 61 C10.9 37.1 24 14.7 46.9 11.3Z' fill='%23204ECF'/><g transform='translate(50 51) scale(2.2) translate(-12 -12)' fill='none' stroke='%23FBF6F1' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'><path d='M4.5 12.5l5 5 10-11'/></g></svg>">
+<link rel="stylesheet" href="eigen.css">
+<script src="/vangnet.js" defer></script>
+<script src="/leermiddelen/merk.js" defer></script>
+<style>
+/* de tafeltoets: een rustig scherm met een grote som, zodat alle aandacht naar het rekenen gaat */
+.tt-start{margin-top:18px;display:grid;gap:16px;max-width:680px}
+.tt-feiten,.tt-cijfers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.tt-feiten div,.tt-cijfers div{background:var(--kaart2);border-radius:14px;padding:12px 10px;text-align:center;min-width:0}
+.tt-feiten b,.tt-cijfers b{display:block;font-size:1.35rem;line-height:1.15;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.tt-feiten span,.tt-cijfers span{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.tt-cijfers{max-width:680px;margin:16px 0 4px}
+.tt-cijfers b{font-size:2rem}
+.tt-lbl{font-size:.9rem;font-weight:600;margin-bottom:6px}
+.tt-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.tt-chips button{min-width:44px;min-height:44px;border-radius:12px;border:1.5px solid var(--rand2);background:var(--kaart);font-weight:600;padding:0 12px}
+.tt-chips button[aria-pressed="true"]{background:var(--ocean);border-color:var(--ocean);color:#fff}
+.tt-vink{display:flex;gap:10px;align-items:center;min-height:44px;font-size:.95rem}
+.tt-vink input{width:20px;height:20px;accent-color:var(--ocean)}
+.tt-regels{margin:0;padding-left:1.2em;color:var(--muted);font-size:.94rem;display:grid;gap:4px}
+.knop.tt-groot{min-height:54px;font-size:1.08rem;padding:12px 26px;justify-self:start}
+.tt-balk{display:flex;justify-content:space-between;gap:10px;margin-top:14px;max-width:680px}
+.tt-pil{background:var(--kaart);border:1px solid var(--rand);border-radius:999px;padding:6px 16px;font-weight:600;font-variant-numeric:tabular-nums;font-size:.95rem}
+.tt-voort{height:8px;border-radius:999px;background:var(--rand);overflow:hidden;margin:10px 0 14px;max-width:680px}
+.tt-voort i{display:block;height:100%;background:var(--vista,#83A5F2);transform:scaleX(0);transform-origin:left center;transition:transform .2s var(--ease)}
+.tt-som{max-width:680px;display:grid;gap:16px;justify-items:center;padding:34px 20px;text-align:center}
+.tt-opgave{font-size:clamp(2.6rem,9vw,4.4rem);font-weight:600;line-height:1.05;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.tt-is{color:var(--muted)}
+.tt-invoer{width:min(100%,240px);font-size:clamp(2.2rem,7vw,3.2rem);font-weight:600;text-align:center;border:2.5px solid var(--rand2);border-radius:18px;padding:8px 12px;background:var(--kaart);color:var(--ink);font-variant-numeric:tabular-nums;min-height:72px}
+.tt-invoer:focus{border-color:var(--ocean);outline:3px solid var(--focusring);outline-offset:3px}
+.tt-som .knop.tt-groot{justify-self:center}
+#scherm-einde .kaart{max-width:680px;margin-top:14px}
+#scherm-einde .kaart h2{font-size:1.1rem;margin-bottom:10px}
+.tt-fouten{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
+.tt-fouten li{background:var(--kaart2);border-radius:12px;padding:8px 12px;display:grid;gap:1px}
+.tt-fouten b{font-variant-numeric:tabular-nums;font-size:1.05rem}
+.tt-fouten span{font-size:.84rem;color:var(--muted)}
+.tt-pertafel{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:8px}
+.tt-pertafel div{border-radius:12px;padding:8px 6px;text-align:center;background:var(--kaart2);border:1.5px solid transparent}
+.tt-pertafel b{display:block;font-size:1.2rem}
+.tt-pertafel span{font-size:.8rem;color:var(--muted)}
+.tt-pertafel .vol{border-color:var(--ocean)}
+.tt-pertafel .laag{border-color:var(--crab,#F26749)}
+@media(max-width:420px){.tt-feiten b{font-size:1.1rem}}
+#eindTitel:focus{outline:none}
+</style>
+</head>
+<body>
+<a class="sronly" href="#main">Naar de inhoud</a>
+<header class="wrap">
+  <a class="mark" href="index.html"><i class="lgblob" style="background:none;box-shadow:none;border:0;border-radius:0;padding:0"><svg class="ng teken" viewBox="0 0 256 256" width="34" height="34" aria-hidden="true" focusable="false" style="width:100%;height:100%;overflow:visible;transform:scale(1.3)"><style>.ng .ngr{stroke:#204ECF}.ng .ngv{stroke:#F26749}:root[data-theme="dark"] .ng .ngr{stroke:#83A5F2}@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .ng .ngr{stroke:#83A5F2}}.ng.teken .ngr{stroke-dasharray:100;animation:ng-ring .6s cubic-bezier(.6,0,.3,1) .15s both}.ng.teken .ngv{stroke-dasharray:100;animation:ng-vink .34s cubic-bezier(.3,0,.2,1) .67s both}@keyframes ng-ring{from{stroke-dashoffset:100}to{stroke-dashoffset:0}}@keyframes ng-vink{from{stroke-dashoffset:100;opacity:0}1%{opacity:1}to{stroke-dashoffset:0;opacity:1}}@media(prefers-reduced-motion:reduce){.ng.teken .ngr,.ng.teken .ngv{animation:none}}</style><g transform="translate(8 0)" fill="none" stroke-width="32"><path class="ngr" pathLength="100" d="M163.3 123A50 50 0 1 0 76.7 73A50 50 0 1 0 163.3 123Z"/><path class="ngv" pathLength="100" d="M163.3 123L114.2 208L82.2 176" stroke-linecap="round" stroke-linejoin="round"/></g></svg></i><span>Leeromgeving</span></a>
+  <span class="hd-right">
+    <button class="themaknop" id="themaknop" type="button" aria-label="Schakel naar donker" title="Donker of licht">
+      <svg class="maan" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+      <svg class="zon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>
+    </button>
+  </span>
+</header>
+
+<main class="wrap" id="main">
+  <section id="scherm-start">
+    <p class="hand">elke week even testen</p>
+    <h1 id="titel">Tafeltoets</h1>
+    <p class="intro" id="intro"></p>
+    <div class="kaart tt-start">
+      <div class="tt-feiten" id="feiten"></div>
+      <div id="kiesvak" class="hide">
+        <p class="tt-lbl" id="tafelLbl">Welke tafels</p>
+        <div class="tt-chips" id="tafelChips" role="group" aria-labelledby="tafelLbl"></div>
+        <p class="tt-lbl" id="aantalLbl">Hoeveel sommen</p>
+        <div class="tt-chips" id="aantalChips" role="group" aria-labelledby="aantalLbl"></div>
+        <label class="tt-vink"><input type="checkbox" id="delenVink"> Ook de deelsommen die bij de tafels horen</label>
+      </div>
+      <ul class="tt-regels">
+        <li>Typ het antwoord en druk op Enter. Je kunt niet terug naar een vorige som.</li>
+        <li>De tijd loopt mee, maar er is geen limiet: goed gaat voor snel.</li>
+        <li>Pas aan het eind zie je wat goed en fout was.</li>
+      </ul>
+      <button class="knop tt-groot" id="startBtn" type="button">Begin de toets</button>
+      <p class="tip" id="klasTip"></p>
+    </div>
+  </section>
+
+  <section id="scherm-toets" class="hide" aria-live="off">
+    <div class="tt-balk">
+      <span class="tt-pil" id="voortgang">som 1 van 40</span>
+      <span class="tt-pil" id="klok" aria-label="tijd">0:00</span>
+    </div>
+    <div class="tt-voort" aria-hidden="true"><i id="voortBalk"></i></div>
+    <form class="kaart tt-som" id="somForm" autocomplete="off" novalidate>
+      <label class="tt-opgave" for="antwoord"><span id="som">6 × 7</span> <span class="tt-is">=</span></label>
+      <input class="tt-invoer" id="antwoord" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="somTip">
+      <button class="knop tt-groot" type="submit" id="volgendeBtn">Volgende</button>
+      <p class="tip" id="somTip">Typ het antwoord en druk op Enter.</p>
+    </form>
+  </section>
+
+  <section id="scherm-einde" class="hide">
+    <p class="hand" id="eindHand">klaar</p>
+    <h1 id="eindTitel"></h1>
+    <div class="tt-cijfers">
+      <div><b id="eGoed">0</b><span>goed</span></div>
+      <div><b id="eFout">0</b><span>fout</span></div>
+      <div><b id="eTijd">0:00</b><span>tijd</span></div>
+    </div>
+    <p class="melding" id="eindMeta" role="status"></p>
+    <div class="kaart" id="foutKaart">
+      <h2 id="foutKop">Deze oefen je nog</h2>
+      <ul class="tt-fouten" id="foutLijst"></ul>
+    </div>
+    <div class="kaart" id="tafelKaart">
+      <h2>Per tafel</h2>
+      <div class="tt-pertafel" id="perTafel"></div>
+    </div>
+    <div class="rij" style="margin-top:16px">
+      <a class="knop" href="index.html">Naar de leeromgeving</a>
+      <button class="knop stil" id="nogeensBtn" type="button">Nog een keer oefenen</button>
+    </div>
+  </section>
+</main>
+
+<script src="thema.js"></script>
+<script src="profiel.js"></script>
+<script src="klas.js"></script>
+<script>
+/* De tafeltoets: een vast aantal sommen uit de tafels 1 tot en met 10, de tijd loopt mee.
+   Als opdracht van de docent (tafeltoets.html?op=1&t=2,3,4&n=40&delen=1&week=2026-W46) liggen de
+   tafels, het aantal en de week vast; los geopend kiest de leerling zelf en is het oefenen.
+   Geen terugkoppeling tijdens de toets: aan het eind staat wat fout ging, en gaat de uitslag
+   naar de klas (klas.js; server/kamer.js bewaart tt: goed, n, sec en de foute sommen). */
+(function(){
+  'use strict';
+  function $(id){ return document.getElementById(id); }
+  function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+  var q = new URLSearchParams(location.search);
+  var opdracht = q.get('op') === '1';
+  var AANTALLEN = [20, 30, 40, 50, 60, 80, 100];
+  function leesTafels(x){
+    var uit = [];
+    String(x || '').split(',').forEach(function(t){ var n = Math.floor(Number(t)); if (n >= 1 && n <= 10 && uit.indexOf(n) < 0) uit.push(n); });
+    return uit.length ? uit.sort(function(a, b){ return a - b; }) : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  }
+  var tafels = leesTafels(q.get('t')), delen = q.get('delen') === '1';
+  var aantal = AANTALLEN.indexOf(Number(q.get('n'))) >= 0 ? Number(q.get('n')) : 40;
+  var week = /^\d{4}-W\d{2}$/.test(q.get('week') || '') ? q.get('week') : '';
+  /* test: ?zaad=… geeft steeds dezelfde sommen */
+  var zaad = Number(q.get('zaad')) || 0;
+  function toeval(){ if (!zaad) return Math.random(); zaad = (zaad * 1664525 + 1013904223) >>> 0; return zaad / 4294967296; }
+  function schud(a){ a = a.slice(); for (var i = a.length - 1; i > 0; i--){ var j = Math.floor(toeval() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+
+  function tafelTekst(l){
+    if (l.length === 10) return 'de tafels van 1 tot en met 10';
+    if (l.length === 1) return 'de tafel van ' + l[0];
+    var rij = l.every(function(t, i){ return i === 0 || t === l[i - 1] + 1; });
+    if (rij && l.length > 2) return 'de tafels van ' + l[0] + ' tot en met ' + l[l.length - 1];
+    return 'de tafels van ' + l.slice(0, -1).join(', ') + ' en ' + l[l.length - 1];
+  }
+  /* Alle sommen van de gekozen tafels: 1 tot en met 10 keer de tafel, en met delen ook de deelsom
+     die erbij hoort. Is het aantal groter dan de voorraad, dan komt de voorraad opnieuw geschud
+     langs; twee keer dezelfde som achter elkaar gebeurt niet. */
+  function maakSommen(){
+    var keer = [], deel = [];
+    tafels.forEach(function(t){ for (var k = 1; k <= 10; k++){ keer.push({ s:'x', a:k, b:t, goed:k * t, tafel:t }); deel.push({ s:':', a:k * t, b:t, goed:k, tafel:t }); } });
+    var uit = [], voorraad = [];
+    function vul(){ voorraad = delen ? schud(schud(keer).slice(0, Math.ceil(keer.length / 2)).concat(schud(deel).slice(0, Math.floor(deel.length / 2)))) : schud(keer); }
+    while (uit.length < aantal){
+      if (!voorraad.length) vul();
+      var x = voorraad.shift(), vorige = uit[uit.length - 1];
+      if (vorige && vorige.s === x.s && vorige.a === x.a && vorige.b === x.b && (voorraad.length || keer.length > 1)){ voorraad.push(x); if (voorraad.length === 1) vul(); continue; }
+      uit.push({ s:x.s, a:x.a, b:x.b, goed:x.goed, tafel:x.tafel });
+    }
+    return uit;
+  }
+  function somTekst(x){ return x.a + (x.s === 'x' ? ' × ' : ' : ') + x.b; }
+  function tijdTekst(sec){ return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0'); }
+
+  /* ---------- het startscherm ---------- */
+  var weekNr = week ? Number(week.slice(-2)) : 0;
+  function tekenStart(){
+    $('titel').textContent = opdracht && weekNr ? 'Tafeltoets van week ' + weekNr : opdracht ? 'Tafeltoets' : 'Tafeltoets oefenen';
+    $('intro').textContent = opdracht ? 'Deze toets heeft je docent klaargezet. Je maakt hem één keer goed geconcentreerd; je uitslag gaat naar je docent.' : 'Kies welke tafels je wilt testen. Dit is oefenen: staat er een toets van je docent klaar, open die dan vanuit de leeromgeving.';
+    $('feiten').innerHTML = '<div><b>' + aantal + '</b><span>sommen</span></div><div><b>' + (tafels.length === 10 ? '1 t/m 10' : tafels.join(', ')) + '</b><span>' + (tafels.length === 1 ? 'tafel' : 'tafels') + '</span></div><div><b>' + (delen ? 'keer en delen' : 'keer') + '</b><span>soort sommen</span></div>';
+    $('kiesvak').classList.toggle('hide', opdracht);
+    if (!opdracht){
+      $('tafelChips').innerHTML = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(function(t){ return '<button type="button" data-t="' + t + '" aria-pressed="' + (tafels.indexOf(t) >= 0) + '">' + t + '</button>'; }).join('');
+      $('aantalChips').innerHTML = AANTALLEN.map(function(n){ return '<button type="button" data-n="' + n + '" aria-pressed="' + (n === aantal) + '">' + n + '</button>'; }).join('');
+      $('delenVink').checked = delen;
+    }
+    var k = window.KLAS && KLAS.lees && KLAS.lees();
+    $('klasTip').textContent = k ? 'Je uitslag gaat naar klas ' + k.code + ', als ' + k.naam + '.' : opdracht ? 'Je bent niet gekoppeld aan een klas: je uitslag gaat dan niet naar je docent. Vul eerst je klascode in bij de leeromgeving.' : '';
+  }
+  $('tafelChips').addEventListener('click', function(e){
+    var b = e.target.closest('[data-t]'); if (!b) return;
+    var t = Number(b.getAttribute('data-t')), i = tafels.indexOf(t);
+    if (i >= 0){ if (tafels.length > 1) tafels.splice(i, 1); } else { tafels.push(t); tafels.sort(function(a, c){ return a - c; }); }
+    tekenStart();
+    var zelfde = $('tafelChips').querySelector('[data-t="' + t + '"]'); if (zelfde) zelfde.focus();
+  });
+  $('aantalChips').addEventListener('click', function(e){
+    var b = e.target.closest('[data-n]'); if (!b) return;
+    aantal = Number(b.getAttribute('data-n')); tekenStart();
+    var zelfde = $('aantalChips').querySelector('[data-n="' + aantal + '"]'); if (zelfde) zelfde.focus();
+  });
+  $('delenVink').addEventListener('change', function(){ delen = this.checked; tekenStart(); });
+
+  /* ---------- de toets ---------- */
+  var sommen = [], nr = 0, begin = 0, klokId = null, klaar = false;
+  function toon(id){ ['scherm-start', 'scherm-toets', 'scherm-einde'].forEach(function(s){ $(s).classList.toggle('hide', s !== id); }); scrollTo(0, 0); }
+  function tik(){ $('klok').textContent = tijdTekst(Math.floor((Date.now() - begin) / 1000)); }
+  function tekenSom(){
+    var x = sommen[nr];
+    $('som').textContent = somTekst(x);
+    $('voortgang').textContent = 'som ' + (nr + 1) + ' van ' + sommen.length;
+    $('voortBalk').style.transform = 'scaleX(' + (nr / sommen.length) + ')';
+    $('volgendeBtn').textContent = nr === sommen.length - 1 ? 'Lever in' : 'Volgende';
+    var inv = $('antwoord'); inv.value = ''; inv.focus();
+  }
+  function start(){
+    sommen = maakSommen(); nr = 0; klaar = false; begin = Date.now();
+    toon('scherm-toets');
+    clearInterval(klokId); klokId = setInterval(tik, 500); tik();
+    tekenSom();
+  }
+  $('startBtn').addEventListener('click', start);
+  $('antwoord').addEventListener('input', function(){ this.value = this.value.replace(/[^0-9]/g, '').slice(0, 4); });
+  $('somForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    if (klaar) return;
+    var v = $('antwoord').value.trim();
+    /* leeg doorgaan mag niet per ongeluk: eerst iets typen */
+    if (!v){ $('somTip').textContent = 'Typ eerst een antwoord. Weet je het niet? Typ dan 0.'; $('antwoord').focus(); return; }
+    $('somTip').textContent = 'Typ het antwoord en druk op Enter.';
+    sommen[nr].gaf = Number(v);
+    nr++;
+    if (nr >= sommen.length) einde(); else tekenSom();
+  });
+
+  /* ---------- het einde ---------- */
+  function einde(){
+    klaar = true; clearInterval(klokId);
+    var sec = Math.max(1, Math.round((Date.now() - begin) / 1000));
+    var fout = sommen.filter(function(x){ return x.gaf !== x.goed; }), goed = sommen.length - fout.length;
+    $('eindTitel').textContent = goed + ' van de ' + sommen.length + ' goed';
+    $('eindHand').textContent = fout.length === 0 ? 'alles goed!' : goed >= sommen.length * 0.9 ? 'bijna foutloos' : 'klaar';
+    $('eGoed').textContent = goed; $('eFout').textContent = fout.length; $('eTijd').textContent = tijdTekst(sec);
+    /* elke foute som een keer, met het goede antwoord en wat de leerling gaf */
+    var gezien = {}, uniek = fout.filter(function(x){ var k = x.s + x.a + '|' + x.b; if (gezien[k]) return false; gezien[k] = 1; return true; });
+    $('foutKaart').classList.toggle('hide', !fout.length);
+    $('foutKop').textContent = uniek.length === 1 ? 'Deze oefen je nog' : 'Deze ' + uniek.length + ' oefen je nog';
+    $('foutLijst').innerHTML = uniek.map(function(x){ return '<li><b>' + somTekst(x) + ' = ' + x.goed + '</b><span>jij typte ' + x.gaf + '</span></li>'; }).join('');
+    var per = {};
+    sommen.forEach(function(x){ var p = per[x.tafel] = per[x.tafel] || [0, 0]; p[1]++; if (x.gaf === x.goed) p[0]++; });
+    $('perTafel').innerHTML = Object.keys(per).map(Number).sort(function(a, b){ return a - b; }).map(function(t){
+      var p = per[t], vol = p[0] === p[1];
+      return '<div class="' + (vol ? 'vol' : p[0] / p[1] < 0.7 ? 'laag' : '') + '"><b>' + t + '</b><span>' + p[0] + ' van ' + p[1] + '</span></div>'; }).join('');
+    $('nogeensBtn').textContent = opdracht ? 'Nog een keer oefenen' : 'Nog een keer';
+    toon('scherm-einde');
+    $('eindTitel').setAttribute('tabindex', '-1'); $('eindTitel').focus();
+    if (window.KLAS && KLAS.meld){
+      KLAS.meld({ spel:'tafeltoets', ronde:goed, punten:0, niveau:'', vak:'reken', od:{ tafels:[goed, sommen.length] },
+        tt:{ goed:goed, n:sommen.length, sec:sec, fout:uniek.slice(0, 40).map(function(x){ return x.a + x.s + x.b; }) }, week:week || undefined }, 'eindMeta');
+    }
+    window.__tt = { goed:goed, n:sommen.length, sec:sec, fout:uniek.length };
+  }
+  $('nogeensBtn').addEventListener('click', function(){ toon('scherm-start'); tekenStart(); $('startBtn').focus(); });
+  /* midden in de toets weggaan: eerst vragen */
+  addEventListener('beforeunload', function(e){ if (!$('scherm-toets').classList.contains('hide') && !klaar){ e.preventDefault(); e.returnValue = ''; } });
+  tekenStart();
+  /* voor het testscript */
+  window.__ttSommen = function(){ return sommen; };
+})();
+</script>
+</body>
+</html>

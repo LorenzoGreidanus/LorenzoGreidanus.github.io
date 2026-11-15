@@ -3009,7 +3009,7 @@ var SPELLEN = [
     function klaar(){ if (window.LESVAKBIJ) LESVAKBIJ(); }
     /* een oudere server stuurt nog een losse opdracht, met gehaald en beste ernaast */
     var lijst = (j && j.opdrachten) || (j && j.opdracht ? [Object.assign({ gehaald: j.gehaald, beste: j.beste }, j.opdracht)] : []);
-    lijst = lijst.filter(function(o){ return OP_SPEL[o.spel] || o.spel === 'dictee' || (o.spel === 'leerroute' && o.doelen && o.doelen.length) || oefSpel(o); });
+    lijst = lijst.filter(function(o){ return OP_SPEL[o.spel] || o.spel === 'dictee' || o.spel === 'tafeltoets' || (o.spel === 'leerroute' && o.doelen && o.doelen.length) || oefSpel(o); });
     /* eerst wat nog moet, dan wat gehaald is, en verlopen achteraan */
     var nu = Date.now();
     function rang(o){ return o.gehaald ? 1 : o.tot < nu ? 2 : 0; }
@@ -3021,6 +3021,7 @@ var SPELLEN = [
     if (lijst.length) html += '<p class="eyebrow">' + (lijst.length > 1 ? lijst.length + ' opdrachten' : 'opdracht') + ' van je docent</p>';
     html += lijst.map(function(o){
       if (o.spel === 'dictee') return dicteeStuk(o, nu);
+      if (o.spel === 'tafeltoets') return tafelStuk(o, nu);
       if (o.spel === 'leerroute') return routeStuk(o, nu);
       var oef = !OP_SPEL[o.spel] && oefSpel(o);
       var sp = oef ? [o.naam || oef.naam, oef.bestand, 'goed'] : OP_SPEL[o.spel], verlopen = o.tot < nu, maat = o.deel ? 'goed' : sp[2] || 'rondes';
@@ -3084,6 +3085,18 @@ var SPELLEN = [
     /* spel.js bewaart het beste onder lg-beste-dictee-<sleutel>; de sleutel is de tekst, met of zonder dictee- ervoor */
     var id = String(o.dt).replace(/[^a-z0-9-]/gi, '');
     try { return ['lg-beste-dictee-' + id, 'lg-beste-dictee-dictee-' + id].some(function(k){ var b = JSON.parse(localStorage.getItem(k) || 'null'); return !!(b && b.t >= o.sinds); }); } catch (e){ return false; }
+  }
+  /* De tafeltoets als opdracht: elke week een nieuwe, met de tafels die de docent koos. De knop
+     opent de toets met die keuzes; gedaan en de score komen van de server. */
+  function tafelStuk(o, nu){
+    var verlopen = o.tot < nu, t = (o.tafels && o.tafels.length ? o.tafels : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    var welke = t.length === 10 ? 'de tafels van 1 tot en met 10' : t.length === 1 ? 'de tafel van ' + t[0] : 'de tafels van ' + t.slice(0, -1).join(', ') + ' en ' + t[t.length - 1];
+    var link = 'tafeltoets.html?op=1&t=' + t.join(',') + '&n=' + (o.n || 40) + (o.delen ? '&delen=1' : '') + (o.week ? '&week=' + encodeURIComponent(o.week) : '');
+    return '<div class="opstuk' + (o.gehaald || verlopen ? ' af' : '') + '">' +
+      '<b>Tafeltoets' + (o.weekNr ? ' van week ' + o.weekNr : '') + ': ' + (o.n || 40) + ' sommen</b>' +
+      '<span>Uit ' + schoon(welke) + (o.delen ? ', keer en delen' : '') + '. De tijd loopt mee. ' + (verlopen ? 'De tijd was tot ' : 'Tot ') + new Date(o.tot).toLocaleDateString('nl-NL', { weekday:'long', day:'numeric', month:'long' }) + '.' + (o.tekst ? ' ' + schoon(o.tekst) : '') + '</span>' +
+      (o.gehaald ? '<span class="klaar">Gedaan ✓' + (o.score ? ' Je had er ' + o.score[0] + ' van de ' + o.score[1] + ' goed.' : '') + '</span>' : '<span class="nog">' + (verlopen ? 'Verlopen.' : 'Nog te doen.') + '</span>') +
+      '<a class="knop" href="' + link + '">' + (o.gehaald ? 'Nog een keer oefenen' : 'Begin de toets') + '</a></div>';
   }
   function dicteeStuk(o, nu){
     var verlopen = o.tot < nu, hier = !o.gehaald && dicteeHier(o);

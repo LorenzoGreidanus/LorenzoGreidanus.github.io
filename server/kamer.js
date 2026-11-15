@@ -117,7 +117,7 @@ const KLAS_ALIAS = 2000;
 const KLAS_LEERLINGEN = 400;
 /* spellen die een opdracht kunnen zijn: bij een onderdeel telt het aantal goed in dat onderdeel, anders de ronde (of het aantal goed bij de Vragenrace).
    Bij Mijnwerker is de ronde het diepste punt in meters, bij Poortrace het aantal goede poorten en bij Kaarttoren het aantal verdiepingen. */
-const OPDRACHT_SPELLEN = { race: true, toren: true, zwaard: true, dictee: true, mijnwerker: true, poortrace: true, kaarttoren: true };
+const OPDRACHT_SPELLEN = { race: true, toren: true, zwaard: true, dictee: true, mijnwerker: true, poortrace: true, kaarttoren: true, tafeltoets: true };
 /* Ook elke losse oefening uit de klas (de vakspellen en de oefenspellen) kan een
    opdracht zijn, met de keuzes van de docent in kz (n=kgt&soort=...&aantal=20).
    Niet de spellen die geen eigen uitslag per leerling hebben. */
@@ -231,11 +231,46 @@ function dicteePast(r, o){
   }
   return !!r.dt && r.dt === o.dt && r.t >= o.sinds;
 }
+/* ---------- de tafeltoets ----------
+   Een vast aantal sommen uit de tafels die de docent kiest (1 tot en met 10, met of
+   zonder de deelsommen erbij); de tijd loopt mee maar er is geen limiet. Net als het
+   dictee van de week kan hij elke week vanzelf terugkomen: dan loopt hij van maandag
+   0:00 tot zondag 23:59 en draagt elke uitslag de week waarin hij gemaakt is (wk).
+   De sommen zelf maakt tafeltoets.html; de kamer bewaart alleen de uitslag:
+     tg goed, tn van hoeveel, ts seconden, tf de sommen die fout gingen ("6x7", "42:6"). */
+const TAFEL_AANTAL = { 20: 1, 30: 1, 40: 1, 50: 1, 60: 1, 80: 1, 100: 1 };
+function tafelLijst(x){
+  const uit = [];
+  (Array.isArray(x) ? x : String(x || "").split(",")).forEach(t => { const n = Math.floor(Number(t)); if (n >= 1 && n <= 10 && uit.indexOf(n) < 0) uit.push(n); });
+  return uit.length ? uit.sort((a, b) => a - b) : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+}
+function tafelVelden(inz){
+  const t = inz && inz.tt && typeof inz.tt === "object" ? inz.tt : {}, uit = {};
+  const n = Math.floor(Number(t.n)) || 0, g = Math.floor(Number(t.goed)) || 0, sec = Math.floor(Number(t.sec)) || 0;
+  if (n >= 1 && n <= 200){ uit.tn = n; uit.tg = Math.max(0, Math.min(n, g)); }
+  if (sec >= 1 && sec <= 7200) uit.ts = sec;
+  if (Array.isArray(t.fout)){
+    const f = t.fout.map(x => String(x || "")).filter(x => /^[0-9]{1,3}[x:][0-9]{1,2}$/.test(x)).slice(0, 40);
+    if (f.length) uit.tf = f;
+  }
+  const wk = dicteeWeekSleutel(inz.week);
+  if (wk) uit.wk = wk;
+  return uit;
+}
+function tafelScore(r){ return r && r.tn ? [r.tg | 0, r.tn] : null; }
+/* hoort deze uitslag bij deze tafeltoets (zoals opdrachtNu hem geeft)? */
+function tafelPast(r, o){
+  if (r.spel !== "tafeltoets" || !r.tn) return false;
+  if (o.week) return r.wk ? r.wk === o.week : (r.t >= o.sinds && r.t <= o.tot + 3600000);
+  return r.t >= o.sinds;
+}
 /* De opdracht zoals hij nu is: een dictee dat elke week vanzelf vernieuwt krijgt de week van vandaag.
    Staat die week in het dictee-rooster van de klas, dan geldt het rooster: de periode, de titel en
    het niveau komen daarvandaan, en een week zonder dictee of zonder opdracht krijgt uit: true
    (de leerling ziet hem dan niet, de docent wel). */
 function opdrachtNu(o, nu, rooster){
+  /* de tafeltoets van elke week: de week van vandaag, zonder rooster */
+  if (o && o.spel === "tafeltoets" && o.auto){ const tw = dicteeWeek(nu); return Object.assign({}, o, { week: tw.sleutel, weekNr: tw.nr, sinds: tw.van, tot: tw.tot }); }
   if (!o || o.spel !== "dictee" || !o.auto) return o;
   const w = dicteeWeek(nu), r = roosterNu(rooster, nu);
   if (!r) return Object.assign({}, o, { week: w.sleutel, weekNr: w.nr, sinds: w.van, tot: w.tot });
@@ -337,11 +372,13 @@ function roosterOpdracht(lijst, rooster, nu){
 function maatVoor(r, o){
   /* bij het dictee: het deel van de woorden dat goed was, in procenten */
   if (o.spel === "dictee"){ if (!dicteePast(r, o)) return 0; const s = dicteeScore(r); return s ? Math.round(100 * s[0] / s[1]) : 0; }
+  /* bij de tafeltoets: het deel van de sommen dat goed was, in procenten */
+  if (o.spel === "tafeltoets"){ if (!tafelPast(r, o)) return 0; const ts = tafelScore(r); return ts ? Math.round(100 * ts[0] / ts[1]) : 0; }
   if (r.spel !== o.spel || (r.vak || "") !== o.vak || r.t < o.sinds) return 0;
   if (o.deel) return r.od && r.od[o.deel] ? (r.od[o.deel][0] | 0) : 0;
   return r.ronde | 0;
 }
-function haaltOpdracht(r, o){ return o.spel === "dictee" ? dicteePast(r, o) : maatVoor(r, o) >= o.min; }
+function haaltOpdracht(r, o){ return o.spel === "dictee" ? dicteePast(r, o) : o.spel === "tafeltoets" ? tafelPast(r, o) : maatVoor(r, o) >= o.min; }
 /* Een doel uit de leerroute als opdracht (ook een rekenmanier, zoals de
    staartdeling: elke manier heeft een eigen doel in de leerroute). Twee
    soorten: beheers (elk gekozen doel een vinkje: vijf van de zes zelf goed,
@@ -381,7 +418,7 @@ function goedVan(r){
   return Math.min(r.ronde | 0, 250);
 }
 /* spellen zonder kamer die wel bij een klas melden */
-const KLAS_SPELLEN = { leerroute: "Leerroute", race: "Vragenrace", metriek: "Het metriek stelsel", eigen: "Eigen oefening", klasquiz: "Klasquiz", dag: "Dagelijkse uitdaging", fouten: "Oefen je fouten", rekenen: "Rekenrace", balans: "De balans", werkwoorden: "Werkwoordrace", irregular: "Irregular verbs", vlaggen: "Vlaggen", landenvormen: "Landenvormen", topografie: "Topografie", lichaam: "Het lichaam", tijdvakken: "Tijdvakken sorteren", bronnenlab: "Bronnenlab", jagers: "Blijven of doorlopen", feodalisme: "Feodalisme", leenmannen: "Verdeel je rijk", stad: "Arena", handel: "De handelsroute", vergadering: "De vergadering", zinsbouw: "Zinsbouw", tekstdetective: "De tekstdetective", uitverkoop: "De uitverkoop", breukenbakker: "De breukenbakker",
+const KLAS_SPELLEN = { tafeltoets: "Tafeltoets", leerroute: "Leerroute", race: "Vragenrace", metriek: "Het metriek stelsel", eigen: "Eigen oefening", klasquiz: "Klasquiz", dag: "Dagelijkse uitdaging", fouten: "Oefen je fouten", rekenen: "Rekenrace", balans: "De balans", werkwoorden: "Werkwoordrace", irregular: "Irregular verbs", vlaggen: "Vlaggen", landenvormen: "Landenvormen", topografie: "Topografie", lichaam: "Het lichaam", tijdvakken: "Tijdvakken sorteren", bronnenlab: "Bronnenlab", jagers: "Blijven of doorlopen", feodalisme: "Feodalisme", leenmannen: "Verdeel je rijk", stad: "Arena", handel: "De handelsroute", vergadering: "De vergadering", zinsbouw: "Zinsbouw", tekstdetective: "De tekstdetective", uitverkoop: "De uitverkoop", breukenbakker: "De breukenbakker",
   /* Deze meldden hun uitslag wel, maar stonden hier niet, dus de klas kreeg ze
      nooit te zien: de melding werd geweigerd met "onbekend spel". */
   dhte: "Het DHTE-schema", vlakken: "Vlakken herkennen", organisme: "Bouw het organisme",
@@ -2192,7 +2229,7 @@ export class Kamer extends DurableObject {
       if (inz.stil){ await this.zetAlarm({ wat: "opruimen" }, KLAS_SLAAPT); await this.bewaar(); return json({ ok: true }); }
     }
     this.voegToe(Object.assign({ sid: kort, naam: nette(inz.naam, "Leerling"), av: schoonAv(inz.av), spel, ronde: getal(inz.ronde, 250), punten: getal(inz.punten, 5000),
-                   niveau: schoon(inz.niveau, 10), vak: schoon(inz.vak, 10), od: schoonOd(inz.od), t: Date.now() }, spel === "dictee" ? dicteeVelden(inz) : {},
+                   niveau: schoon(inz.niveau, 10), vak: schoon(inz.vak, 10), od: schoonOd(inz.od), t: Date.now() }, spel === "dictee" ? dicteeVelden(inz) : spel === "tafeltoets" ? tafelVelden(inz) : {},
                    /* de leerroute zegt welk doel deze ronde Zelf was, voor een opdracht met sommen goed */
                    spel === "leerroute" && ROUTE_DOEL.test(String(inz.doel || "")) ? { doel: String(inz.doel) } : {}));
     this.telFk(kort, schoonFk(inz.fk));
@@ -2372,6 +2409,12 @@ export class Kamer extends DurableObject {
       await this.bewaar();
       return json({ ok: true, opdracht: opdrachtNu(d, Date.now(), this.stand.rooster), opdrachten: lijst.map(x => opdrachtNu(x, Date.now(), this.stand.rooster)) });
     }
+    if (spel === "tafeltoets"){
+      const d = this.tafelOpdracht(o);
+      lijst.push(d);
+      await this.bewaar();
+      return json({ ok: true, opdracht: opdrachtNu(d, Date.now(), this.stand.rooster), opdrachten: lijst.map(x => opdrachtNu(x, Date.now(), this.stand.rooster)) });
+    }
     if (!vak) return json({ fout: "kies een vak" }, 400);
     const min = getal(o.min, 250), tot = getal(o.tot, 4e12);
     if (min < 1) return json({ fout: "het minimum is minstens 1" }, 400);
@@ -2411,6 +2454,14 @@ export class Kamer extends DurableObject {
   /* Een dictee als opdracht, schoon en gecontroleerd. De titel komt van de pagina
      van de docent (uit de tekstbank of de naam van zijn eigen dictee) en is
      alleen om te tonen; wat telt is de bron met de tekst of de week. */
+  /* een tafeltoets: welke tafels, met of zonder delen, hoeveel sommen; elke week vanzelf (auto) of alleen deze week */
+  tafelOpdracht(o){
+    const nu = Date.now(), w = dicteeWeek(nu), n = Math.floor(Number(o.n)) || 0;
+    const d = { id: sleutelMaken(3), spel: "tafeltoets", vak: "reken", deel: "", deelNaam: "", min: 1, tafels: tafelLijst(o.tafels), delen: o.delen === true,
+                n: TAFEL_AANTAL[n] ? n : 40, tekst: schoon(o.tekst, 140), week: w.sleutel, weekNr: w.nr, sinds: w.van, tot: w.tot };
+    if (o.auto === true) d.auto = true;
+    return d;
+  }
   dicteeOpdracht(o){
     const nu = Date.now();
     const bron = DICTEE_BRONNEN[o.bron] ? String(o.bron) : "";
@@ -2598,6 +2649,11 @@ export class Kamer extends DurableObject {
         const s = mijn.filter(r => dicteePast(r, o)).map(dicteeScore).filter(Boolean).sort((a, b) => b[0] / b[1] - a[0] / a[1])[0];
         if (s) x.score = s;
       }
+      /* bij de tafeltoets: hoeveel sommen goed, van de beste keer deze week */
+      if (o.spel === "tafeltoets"){
+        const ts = mijn.filter(r => tafelPast(r, o)).map(tafelScore).filter(Boolean).sort((a, b) => b[0] / b[1] - a[0] / a[1])[0];
+        if (ts) x.score = ts;
+      }
       return x;
     });
     /* de eerste ook los, voor een pagina van voor de lijst */
@@ -2696,7 +2752,7 @@ export class Kamer extends DurableObject {
                   /* ingelogd met Microsoft: de docent ziet de accountnaam, niet de bijnaam */
                   /* bij het dictee ook de tekst, de week, de woorden goed en welke fout gingen */
                   resultaten: this.stand.resultaten.map(x => Object.assign({ naam: (l => l.ms || l.naam)((this.stand.leerlingen || {})[x.sid] || {}) || x.naam, av: x.av || "", spel: x.spel, ronde: x.ronde, punten: x.punten, niveau: x.niveau, vak: x.vak, od: x.od, t: x.t },
-                    x.spel === "dictee" ? { dt: x.dt, wk: x.wk, gw: x.gw, tw: x.tw, fw: x.fw } : x.doel ? { doel: x.doel } : {})) });
+                    x.spel === "dictee" ? { dt: x.dt, wk: x.wk, gw: x.gw, tw: x.tw, fw: x.fw } : x.spel === "tafeltoets" ? { wk: x.wk, tg: x.tg, tn: x.tn, ts: x.ts, tf: x.tf } : x.doel ? { doel: x.doel } : {})) });
   }
 
   /* Wie is er gekoppeld, en heeft die al iets gespeeld? Het kenmerk zelf gaat
