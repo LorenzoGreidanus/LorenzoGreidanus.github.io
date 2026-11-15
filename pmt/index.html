@@ -871,11 +871,24 @@ dialog.nieuw .ingevuld small{color:var(--muted);font-size:.8rem}
 .snelnotitie{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 10px;align-items:end}
 .snelnotitie textarea{grid-column:1 / -1;min-height:64px}
 .snelnotitie input[type="date"]{max-width:170px}
-#tijdlijn{display:flex;flex-direction:column;gap:10px}
-.dagkaart{border:1px solid var(--rand);border-left:5px solid var(--rand2);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-width:0;background:var(--kaart)}
-.dagkaart.sessie{border-left-color:#204ECF}
-.dagkaart.weg{border-left-color:#F26749}
-.dagkaart.meting{border-left-color:#EA9836}
+#tijdlijn{display:flex;flex-direction:column;gap:0}
+.dagrij{display:grid;grid-template-columns:76px 30px minmax(0,1fr);gap:0 12px;align-items:start;padding-bottom:14px}
+.dagrij:last-of-type{padding-bottom:0}
+.dagdatum{text-align:right;padding-top:10px;line-height:1.25;display:flex;flex-direction:column}
+.dagdatum b{font-weight:600;font-size:.86rem;white-space:nowrap}
+.dagdatum small{font-size:.76rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.dagspoor{position:relative;align-self:stretch;display:flex;justify-content:center;padding-top:7px}
+.dagspoor::before{content:'';position:absolute;left:50%;top:0;bottom:-14px;width:3px;transform:translateX(-50%);background:var(--rand2);border-radius:2px}
+.dagrij:first-child .dagspoor::before{top:12px}
+.dagrij:last-of-type .dagspoor::before{bottom:auto;height:22px}
+.dagrij:first-child:last-of-type .dagspoor::before{display:none}
+.dagbol{position:relative;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:.78rem;line-height:1;background:#83A5F2;color:#14224C;box-shadow:0 0 0 3px var(--kaart)}
+.dagbol.d-sessie{background:#204ECF;color:#fff}
+.dagbol.d-weg{background:#F26749;color:#14224C}
+.dagbol.d-meting{background:#14224C;color:#fff;border:2px solid #83A5F2;box-sizing:border-box}
+.dagbol.d-week{background:#EA9836;color:#14224C}
+.dagkaart{border:1px solid var(--rand);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-width:0;background:var(--kaart)}
+.dagkaart.d-weg{border-color:#F26749}
 .dagkaart header{display:flex;align-items:baseline;gap:10px}
 .dagkaart header b{font-weight:600;flex:1 1 auto}
 .dagkaart header time{font-size:.82rem;color:var(--muted);white-space:nowrap}
@@ -932,6 +945,9 @@ dialog.nieuw .ingevuld small{color:var(--muted);font-size:.8rem}
 @media (max-width:1100px){
   .groeiblad{grid-template-columns:minmax(0,1fr)}
   .verhaal{display:flex;flex-direction:column}
+  .dagrij{grid-template-columns:50px 26px minmax(0,1fr);gap:0 8px}
+  .dagdatum b{white-space:normal;font-size:.8rem}
+  .dagbol{width:26px;height:26px;font-size:.72rem}
   .nukolom{display:contents}
   .nukaart{order:-2}
   .verhaalhoofd{order:-1}
@@ -958,6 +974,12 @@ button.tegel:hover{border-color:var(--accent)}
 .grafiek svg{min-width:540px}
 /* bij zijwaarts schuiven blijft de naam van het domein staan */
 .raster th.rij{position:sticky;left:0;background:var(--kaart);z-index:1}
+/* de wekelijkse check schuift niet: hij past zich aan de breedte aan */
+.raster.past{overflow:visible}
+.raster.past table{max-width:100%}
+.raster.past th{white-space:normal;line-height:1.2}
+.raster.past th.rij{position:static;min-width:110px;line-height:1.3}
+.rasternoot{font-size:.8rem;color:var(--muted);margin:2px 0 0}
 
 @media (max-width:1100px){
   .maker{grid-template-columns:1fr}
@@ -979,6 +1001,8 @@ button.tegel:hover{border-color:var(--accent)}
   .kop .knop{flex:1 1 130px}
   .koptekst{flex:1 1 calc(100% - 64px)}
   .raster th.rij{max-width:124px;white-space:normal;font-size:.8rem;line-height:1.25}
+  .raster.past td{min-width:30px}
+  .raster.past th.rij{max-width:none;padding-right:6px}
   .stand{margin-left:0;width:100%;order:9}
   .tabbalk{margin:12px -16px 0;padding:0 16px;position:sticky;top:0;background:var(--room);z-index:5}
   .kaarten{grid-template-columns:1fr}
@@ -1916,13 +1940,13 @@ button.tegel:hover{border-color:var(--accent)}
     }
     var tonen = S.verhaalMeer ? rij : rij.slice(0, 10);
     tonen.forEach(function(g){
-      var a0 = g.afspraken[0], titel, soort = 'los';
-      if (a0 && a0.komst === 'aanwezig'){ titel = (SOORT[a0.soort] && a0.soort !== 'sessie' ? SOORT[a0.soort] + ', sessie ' : 'Sessie ') + nr[a0.id]; soort = 'sessie'; }
-      else if (a0 && a0.komst === 'afwezig'){ titel = 'Niet geweest'; soort = 'weg'; }
-      else if (a0){ titel = (SOORT[a0.soort] || 'Afspraak') + (g.dag === nuDag ? ' van vandaag' : ''); soort = 'sessie'; }
-      else if (g.notities.length || g.lijf.length || g.scores.length){ titel = g.notities.length ? 'Notitie' : 'Sessie'; }
-      else { titel = g.metingen.every(function(m){ return m.monitor; }) ? 'Wekelijkse check' : 'Vragenlijst ingevuld'; soort = 'meting'; }
-      var delen = [el('header', {}, [el('b', { tekst: titel }), el('time', { datetime: g.dag, tekst: korteDag(g.dag) })])];
+      var a0 = g.afspraken[0], titel, soort = 'los', bol = 'N';
+      if (a0 && a0.komst === 'aanwezig'){ titel = (SOORT[a0.soort] && a0.soort !== 'sessie' ? SOORT[a0.soort] + ', sessie ' : 'Sessie ') + nr[a0.id]; soort = 'sessie'; bol = 'S'; }
+      else if (a0 && a0.komst === 'afwezig'){ titel = 'Niet geweest'; soort = 'weg'; bol = '\u00d7'; }
+      else if (a0){ titel = (SOORT[a0.soort] || 'Afspraak') + (g.dag === nuDag ? ' van vandaag' : ''); soort = 'sessie'; bol = 'S'; }
+      else if (g.notities.length || g.lijf.length || g.scores.length){ titel = g.notities.length ? 'Notitie' : 'Sessie'; bol = g.notities.length ? 'N' : 'S'; }
+      else { var wk = g.metingen.every(function(m){ return m.monitor; }); titel = wk ? 'Wekelijkse check' : 'Vragenlijst ingevuld'; soort = wk ? 'week' : 'meting'; bol = wk ? 'W' : 'M'; }
+      var delen = [el('header', {}, [el('b', { tekst: titel })])];
       g.afspraken.forEach(function(a){
         delen.push(el('div', { class: 'dagregel' }, [el('span', { tekst: uur(a.begin) + ' tot ' + uur(a.begin + a.duur) + ' · ' + (SOORT[a.soort] || 'afspraak') }), komstVak(a, function(){ tekenTraject(); tekenKort(); })]));
       });
@@ -1937,7 +1961,10 @@ button.tegel:hover{border-color:var(--accent)}
         delen.push(el('div', { class: 'dagregel' }, [el('span', { tekst: tekst + (m.nieuw ? ' · nieuw' : '') }),
           el('button', { class: 'knop stil klein', type: 'button', tekst: 'Bekijken', onclick: function(){ kiesTab(m.monitor ? 'week' : 'lijsten'); } })]));
       });
-      box.appendChild(el('article', { class: 'dagkaart ' + soort }, delen));
+      box.appendChild(el('div', { class: 'dagrij' }, [
+        el('time', { class: 'dagdatum', datetime: g.dag }, [el('b', { tekst: korteDag(g.dag) }), a0 ? el('small', { tekst: uur(a0.begin) }) : null]),
+        el('span', { class: 'dagspoor', 'aria-hidden': 'true' }, [el('span', { class: 'dagbol d-' + soort, tekst: bol })]),
+        el('article', { class: 'dagkaart d-' + soort }, delen)]));
     });
     if (rij.length > 10) box.appendChild(el('button', { class: 'knop stil klein', type: 'button', style: 'align-self:flex-start', tekst: S.verhaalMeer ? 'Alleen de laatste 10 dagen tonen' : 'Ook de ' + (rij.length - 10) + ' oudere dagen tonen', onclick: function(){ S.verhaalMeer = !S.verhaalMeer; tekenTijdlijn(); } }));
   }
@@ -3246,9 +3273,11 @@ button.tegel:hover{border-color:var(--accent)}
   }
   function cijfer(sc){ return Math.round(sc) === sc ? String(sc) : getal(sc); }
   function rasterTabel(g, door){
-    var ms = reeks(g, door).slice(-10); if (!ms.length) return null;
+    /* zoveel weken als er naast elkaar passen zonder te schuiven */
+    var alle = reeks(g, door), past = window.innerWidth < 560 ? 5 : window.innerWidth < 900 ? 7 : 10;
+    var ms = alle.slice(-past); if (!ms.length) return null;
     var letop = {}; zakkers(g, door).forEach(function(z){ letop[z.naam] = true; });
-    return el('div', { class: 'schuif raster' }, [el('table', {}, [
+    return el('div', { class: 'schuif raster past' }, [el('table', {}, [
       el('thead', {}, [el('tr', {}, [el('th', { class: 'rij', tekst: door === 'mentor' ? 'Wat de mentor zag' : 'Wat de leerling invulde' })].concat(ms.map(function(m){ return el('th', { tekst: kort(m.t) }); })))]),
       el('tbody', {}, g.namen.map(function(n){
         return el('tr', {}, [el('th', { class: 'rij', scope: 'row', tekst: n })].concat(ms.map(function(m, i){
@@ -3258,7 +3287,7 @@ button.tegel:hover{border-color:var(--accent)}
           var zakt = i === ms.length - 1 && letop[n];
           return el('td', { class: 't' + niveau + (zakt ? ' let' : ''), tekst: cijfer(sc), title: zakt ? 'Lager dan de vorige keer' : null });
         })));
-      }))])]);
+      }))]), alle.length > ms.length ? el('p', { class: 'rasternoot', tekst: 'Je ziet de laatste ' + ms.length + ' van de ' + alle.length + ' keer.' }) : null]);
   }
   function monitorVak(g){
     var delen = [el('h3', { tekst: g.titel })];
