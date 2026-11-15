@@ -447,6 +447,43 @@ td.tijd{white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--muted)}
 .tekenvak div{border-bottom:1.5px solid var(--ink);height:52px;display:flex;align-items:flex-start}
 /* ---------- vandaag op het hoofdscherm ---------- */
 .vandaagvak{margin-top:0;margin-bottom:18px;gap:12px}
+/* ---- de wachtrij ---- */
+.wachtblad{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:18px;align-items:start}
+.wachtvak{margin:0;gap:0;padding:8px 16px 12px}
+.wachtkop,.wachtrij{display:grid;grid-template-columns:34px minmax(0,1.4fr) minmax(0,1fr) 150px;gap:12px;align-items:center}
+.wachtkop{padding:8px;font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.wachtrij{width:100%;padding:10px 8px;border:2px solid transparent;border-top:1px solid var(--rand);background:transparent;color:var(--ink);text-align:left;font-size:.92rem}
+.wachtrij:hover{background:color-mix(in srgb,var(--accent) 6%,transparent)}
+.wachtrij[aria-pressed="true"]{border:2px solid var(--accent);border-radius:12px;background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.wachtrij .nr{width:32px;height:32px;border-radius:50%;background:#204ECF;color:#fff;font-weight:600;font-size:.85rem;display:grid;place-items:center}
+.wachtrij .wie{display:flex;flex-direction:column;line-height:1.25;min-width:0}
+.wachtrij .wie b{font-weight:600;font-size:1rem;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.wachtrij .wie small{color:var(--muted);font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wachtrij .hoelang{font-weight:600;font-variant-numeric:tabular-nums}
+.wachtbalk{height:6px;border-radius:3px;background:var(--kaart2);position:relative;overflow:hidden;display:block;margin-top:4px}
+.wachtbalk i{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:#204ECF}
+.wachtbalk.lang i{background:#F26749}
+.chip.t-ja{background:#E3F2EA;color:#14523A;border-color:transparent}
+.chip.t-gevraagd{background:#FCE9C8;color:#14224C;border-color:transparent}
+.chip.t-nee{background:#FCDED6;color:#7A2A14;border-color:transparent}
+.plek{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1.5px solid var(--rand);border-radius:12px}
+.plek span{display:flex;flex-direction:column;line-height:1.2;flex:1}
+.plek small{color:var(--muted);font-size:.8rem}
+.paneelkop{display:flex;align-items:center;gap:12px}
+.paneelkop .avatar{width:46px;height:46px;border-radius:15px}
+.paneelkop h2{font-size:1.2rem}
+.paneelkop small{color:var(--muted);font-size:.84rem;display:block}
+.paneeldeel{display:flex;flex-direction:column;gap:6px}
+.tweeknop{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;border-top:1px solid var(--rand);padding-top:12px}
+.let3{background:#FCE9C8;color:#14224C;border-radius:12px;padding:10px 12px;font-size:.88rem}
+.wachtpaneel form{display:flex;flex-direction:column;gap:12px}
+@media (max-width:1180px){.wachtblad{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:760px){
+  .wachtkop{display:none}
+  .wachtrij{grid-template-columns:34px minmax(0,1fr) 92px}
+  .wachtrij .toestcel{display:none}
+  .wachtpaneel{padding:14px!important;border:1.5px solid var(--rand)!important;background:var(--kaart)!important}
+}
 /* ---- het overzicht ---- */
 .thuiskop{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin-bottom:16px}
 .thuiskop .titel{display:flex;flex-direction:column;line-height:1.2;flex:1 1 200px}
@@ -533,6 +570,7 @@ button.regel:hover{border-color:var(--accent)}
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:60;max-width:min(520px,calc(100vw - 32px));
   background:var(--ink);color:var(--room);border-radius:14px;padding:12px 18px;font-weight:500;font-size:.94rem;box-shadow:0 10px 30px rgba(0,0,0,.25);display:flex;gap:12px;align-items:center}
 .toast.fout{background:#a8371f;color:#fff}
+.toast{width:max-content}
 /* ---- notities en doelen ---- */
 .notitie .notitietekst{display:flex;flex-direction:column;gap:8px;min-width:0}
 .notitie .notitietekst textarea{min-height:110px}
@@ -1905,46 +1943,121 @@ button.tegel:hover{border-color:var(--accent)}
       return stuur('PUT', '/dossiers/' + id, d);
     }).then(laadLijst);
   }
+  var TOESTKORT = { ja: 'getekend', gevraagd: 'formulier is mee', geen: 'nog niet gevraagd', nee: 'geweigerd' };
+  function wachtTekst(n){ return n == null ? 'onbekend' : n < 14 ? (n === 1 ? '1 dag' : n + ' dagen') : Math.floor(n / 7) + ' weken'; }
+  /* Links wie er wacht, rechts een vast paneel: de gekozen leerling met de eerste vrije
+     plekken, het aanmelden, of de bevestiging dat iemand een plek heeft. */
   function tekenWachtrij(){
     S.d = null; S.zicht = 'wacht'; tekenNamen();
     var rij = wachtrij();
-    var vVoornaam = el('input', { type: 'text', id: 'w-voornaam', maxlength: '40', autocomplete: 'off', required: true });
-    var vLetter = el('input', { type: 'text', id: 'w-letter', maxlength: '3', autocomplete: 'off' });
-    var vKlas = el('input', { type: 'text', id: 'w-klas', maxlength: '12', autocomplete: 'off' });
-    var vOp = el('input', { type: 'date', id: 'w-op', value: vandaag(), max: vandaag() });
-    var vDoor = el('input', { type: 'text', id: 'w-door', maxlength: '60', autocomplete: 'off', placeholder: 'Mentor, zorgcoördinator, ouders' });
-    var vReden = el('textarea', { id: 'w-reden', maxlength: '2000' });
-    var vVoor = el('input', { type: 'checkbox', id: 'w-voorrang', style: 'width:20px;height:20px;accent-color:var(--ocean);flex:none' });
-    var formulier = el('form', { class: 'planpaneel', hidden: true, onsubmit: function(ev){
-      ev.preventDefault();
-      if (!vVoornaam.value.trim()){ vVoornaam.focus(); return; }
-      stuur('POST', '/dossiers', { voornaam: vVoornaam.value, letter: vLetter.value, klas: vKlas.value, status: 'wacht', aangemeld: vOp.value, door: vDoor.value, hulpvraag: vReden.value, voorrang: vVoor.checked, proef: !!S.ik.proef })
-        .then(laadLijst).then(tekenWachtrij).catch(meld);
-    } }, [
-      el('h2', { style: 'font-size:1.05rem', tekst: 'Leerling aanmelden voor de wachtrij' }),
-      el('div', { class: 'planrij' }, [el('label', {}, ['Voornaam', vVoornaam]), el('label', {}, ['Letter achternaam', vLetter]), el('label', {}, ['Klas', vKlas]),
-        el('label', {}, ['Aangemeld op', vOp]), el('label', {}, ['Aangemeld door', vDoor])]),
-      el('label', {}, ['Waarom PMT? (de hulpvraag)', vReden]),
-      el('label', { style: 'flex-direction:row;align-items:center;gap:10px;color:var(--ink)' }, [vVoor, 'Voorrang: deze leerling komt bovenaan de wachtrij']),
-      el('div', { class: 'onder', style: 'margin-top:0' }, [el('button', { class: 'knop', type: 'submit', tekst: 'Op de wachtrij zetten' }),
-        el('button', { class: 'knop stil', type: 'button', tekst: 'Toch niet', onclick: function(){ formulier.hidden = true; } })])]);
+    var stand = S.wachtPaneel || 'detail';
+    var gekozen = rij.filter(function(d){ return d.id === S.wachtKies; })[0] || rij[0] || null;
+    var paneel = el('aside', { class: 'zijpaneel wachtpaneel', 'aria-label': 'De gekozen leerling' });
+    function naarStand(st, kies){ S.wachtPaneel = st; if (kies) S.wachtKies = kies; tekenWachtrij(); }
+
+    function tekenDetail(d){
+      var n = d.aangemeld ? dagenGeleden(d.aangemeld) : null;
+      var plekVak = el('div', { class: 'paneeldeel' }, [el('b', { class: 'kopje', tekst: 'Eerste vrije plekken' }), el('p', { class: 'zacht', tekst: 'De vrije plekken worden gezocht.' })]);
+      api('/wachtrij/plekken').then(function(u){
+        while (plekVak.children.length > 1) plekVak.lastChild.remove();
+        if (!u.plekken.length) plekVak.appendChild(el('p', { class: 'zacht', tekst: 'In de komende weken is er geen vrij blok gevonden.' }));
+        u.plekken.forEach(function(p){
+          plekVak.appendChild(el('div', { class: 'plek' }, [el('span', {}, [el('b', { tekst: langeDag(p.dag) }), el('small', { tekst: uur(p.begin) + ' tot ' + uur(p.begin + p.duur) + ', ' + p.duur + ' minuten' })]),
+            el('button', { class: 'knop klein', type: 'button', tekst: 'Intake hier', onclick: function(ev){
+              ev.currentTarget.disabled = true;
+              stuur('POST', '/afspraken', { dag: p.dag, begin: p.begin, duur: p.duur, dossier: d.id, soort: 'intake', weken: 1 }).then(function(){
+                S.wachtKlaar = { id: d.id, naam: naam(d), dag: p.dag, begin: p.begin, duur: p.duur };
+                return laadLijst();
+              }).then(function(){ naarStand('klaar'); }).catch(function(e){ meld(e); tekenWachtrij(); });
+            } })]));
+        });
+        plekVak.appendChild(el('div', {}, [el('button', { class: 'knop stil klein', type: 'button', tekst: 'Zelf een blok kiezen in het rooster', onclick: function(){ S.planVoor = d.id; S.verplaats = null; tekenRooster(); } })]));
+      }).catch(function(e){ if (e.message !== 'uit'){ while (plekVak.children.length > 1) plekVak.lastChild.remove(); plekVak.appendChild(el('p', { class: 'zacht', tekst: 'De vrije plekken konden niet worden opgehaald.' })); } });
+      return [
+        el('div', { class: 'paneelkop' }, [avatar(d), el('div', { style: 'min-width:0' }, [el('h2', { tekst: naam(d) }),
+          el('small', { tekst: [d.klas ? 'klas ' + d.klas : '', 'wacht ' + wachtTekst(n), d.door ? 'aangemeld door ' + d.door : ''].filter(Boolean).join(', ') })])]),
+        d.reden ? el('div', { class: 'paneeldeel' }, [el('b', { class: 'kopje', tekst: 'Hulpvraag' }), el('p', { tekst: d.reden })]) : null,
+        plekVak,
+        d.toestemming !== 'ja' ? el('p', { class: 'let3', tekst: d.toestemming === 'nee' ? 'De ouders hebben geen toestemming gegeven. Je kunt wel een gesprek plannen, maar niets vastleggen.' : 'De toestemming van de ouders is nog niet binnen. Je kunt wel een intake plannen, maar nog niets vastleggen.' }) : null,
+        el('div', { class: 'tweeknop' }, [
+          el('button', { class: 'knop stil klein', type: 'button', tekst: d.voorrang ? 'Voorrang weghalen' : 'Voorrang geven', onclick: function(){ pasAan(d.id, function(x){ x.voorrang = !d.voorrang; }).then(tekenWachtrij).catch(meld); } }),
+          el('button', { class: 'knop stil klein', type: 'button', tekst: 'Formulier printen', title: 'Het toestemmingsformulier voor de ouders', onclick: function(){ api('/dossiers/' + d.id).then(function(u){ toon(u.dossier); tekenToestemming(); }).catch(meld); } }),
+          el('button', { class: 'knop stil klein', type: 'button', tekst: 'Dossier openen', onclick: function(){ openDossier(d.id); } }),
+          el('button', { class: 'knop weg klein', type: 'button', tekst: 'Van de wachtrij af', onclick: function(ev){
+            var k = ev.currentTarget;
+            if (!k.dataset.zeker){ k.dataset.zeker = '1'; k.textContent = 'Zeker? Het dossier gaat weg'; return; }
+            stuur('DELETE', '/dossiers/' + d.id).then(laadLijst).then(function(){ S.wachtKies = null; toast('De aanmelding van ' + naam(d) + ' is verwijderd.'); tekenWachtrij(); }).catch(meld);
+          } })])];
+    }
+
+    function tekenKlaar(k){
+      return [
+        el('h2', { style: 'font-size:1.2rem', tekst: k.naam + ' heeft een plek' }),
+        el('p', { tekst: 'De intake staat op ' + langeDag(k.dag) + ', van ' + uur(k.begin) + ' tot ' + uur(k.begin + k.duur) + '.' }),
+        el('p', { class: 'zacht', tekst: 'Het dossier staat nu op Intake en is van de wachtrij af.' }),
+        el('div', { class: 'onder', style: 'margin-top:0' }, [
+          el('button', { class: 'knop', type: 'button', tekst: 'Naar het rooster', onclick: function(){ S.planVoor = null; S.verplaats = null; S.week = maandag(k.dag); S.roosterDag = null; S.wachtPaneel = 'detail'; tekenRooster(); } }),
+          el('button', { class: 'knop stil', type: 'button', tekst: 'Dossier openen', onclick: function(){ S.wachtPaneel = 'detail'; openDossier(k.id); } })]),
+        el('div', {}, [el('button', { class: 'knop stil klein', type: 'button', tekst: 'Ongedaan maken', onclick: function(){
+          /* de afspraak weer weg, en het dossier terug op de wachtrij */
+          api('/rooster?week=' + maandag(k.dag)).then(function(u){
+            var a = u.afspraken.filter(function(x){ return x.dossier === k.id && x.dag === k.dag && x.begin === k.begin; })[0];
+            return a ? stuur('DELETE', '/afspraken/' + a.id) : null;
+          }).then(function(){ return pasAan(k.id, function(x){ x.status = 'wacht'; if (x.start === k.dag) x.start = ''; }); })
+            .then(function(){ toast(k.naam + ' staat weer op de wachtrij.'); naarStand('detail', k.id); }).catch(meld);
+        } })])];
+    }
+
+    function tekenAanmelden(){
+      var vVoornaam = el('input', { type: 'text', id: 'w-voornaam', maxlength: '40', autocomplete: 'off', required: true });
+      var vLetter = el('input', { type: 'text', id: 'w-letter', maxlength: '3', autocomplete: 'off' });
+      var vKlas = el('input', { type: 'text', id: 'w-klas', maxlength: '12', autocomplete: 'off' });
+      var vOp = el('input', { type: 'date', id: 'w-op', value: vandaag(), max: vandaag() });
+      var vDoor = el('input', { type: 'text', id: 'w-door', maxlength: '60', autocomplete: 'off', placeholder: 'Mentor, zorgco\u00f6rdinator, ouders' });
+      var vReden = el('textarea', { id: 'w-reden', maxlength: '2000' });
+      var vVoor = el('input', { type: 'checkbox', id: 'w-voorrang', style: 'width:22px;height:22px;accent-color:var(--ocean);flex:none' });
+      setTimeout(function(){ vVoornaam.focus(); }, 0);
+      return [el('form', { onsubmit: function(ev){
+        ev.preventDefault();
+        if (!vVoornaam.value.trim()){ vVoornaam.focus(); return; }
+        stuur('POST', '/dossiers', { voornaam: vVoornaam.value, letter: vLetter.value, klas: vKlas.value, status: 'wacht', aangemeld: vOp.value, door: vDoor.value, hulpvraag: vReden.value, voorrang: vVoor.checked, proef: !!S.ik.proef })
+          .then(function(u){ S.wachtKies = u.dossier.id; return laadLijst(); }).then(function(){ naarStand('detail'); }).catch(meld);
+      } }, [
+        el('h2', { style: 'font-size:1.2rem', tekst: 'Leerling aanmelden' }),
+        el('div', { style: 'display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr);gap:10px' }, [el('label', {}, ['Voornaam', vVoornaam]), el('label', {}, ['Letter', vLetter]), el('label', {}, ['Klas', vKlas])]),
+        el('label', {}, ['Aangemeld op', vOp]),
+        el('label', {}, ['Aangemeld door', vDoor]),
+        el('label', {}, ['Waarom PMT? (de hulpvraag)', vReden]),
+        el('label', { style: 'flex-direction:row;align-items:center;gap:10px;color:var(--ink);min-height:44px' }, [vVoor, 'Deze leerling heeft voorrang']),
+        el('div', { class: 'onder', style: 'margin-top:0' }, [el('button', { class: 'knop', type: 'submit', tekst: 'Op de wachtrij zetten' }),
+          el('button', { class: 'knop stil', type: 'button', tekst: 'Toch niet', onclick: function(){ naarStand('detail'); } })])])];
+    }
+
+    var inhoud = stand === 'aanmelden' ? tekenAanmelden() : stand === 'klaar' && S.wachtKlaar ? tekenKlaar(S.wachtKlaar)
+      : gekozen ? tekenDetail(gekozen) : [el('h2', { style: 'font-size:1.2rem', tekst: 'Niemand wacht' }), el('p', { class: 'zacht', tekst: 'Meld een leerling aan met de knop bovenaan. Daarna zie je hier de eerste vrije plekken.' })];
+    inhoud.forEach(function(x){ if (x) paneel.appendChild(x); });
+
+    var langste = 0; rij.forEach(function(d){ if (d.aangemeld) langste = Math.max(langste, dagenGeleden(d.aangemeld)); });
     scherm([
-      el('div', { class: 'paginakop' }, [el('h1', { tekst: 'Wachtrij' }),
-        el('button', { class: 'knop', type: 'button', tekst: 'Leerling aanmelden', onclick: function(){ formulier.hidden = false; vVoornaam.focus(); } })]),
-      el('p', { class: 'zacht', style: 'margin-bottom:14px', tekst: 'Leerlingen die PMT moeten krijgen, maar voor wie nog geen plek is. Wie voorrang heeft staat bovenaan, daarna wie het langst wacht. Plan je iemand in het rooster in, dan gaat die van de wachtrij af.' }),
-      formulier,
-      rij.length ? el('ol', { class: 'wachtlijst' }, rij.map(function(d){
-        var n = dagenGeleden(d.aangemeld);
-        return el('li', {}, [avatar(d),
-          el('div', { class: 'wat' }, [
-            el('b', {}, [naam(d) + ' ', d.voorrang ? el('span', { class: 'chip voorrang', tekst: 'voorrang' }) : null]),
-            el('small', { tekst: [d.klas ? 'Klas ' + d.klas : '', n == null ? 'aanmelddatum onbekend' : 'wacht ' + (n === 1 ? '1 dag' : n + ' dagen') + ', sinds ' + korteDag(d.aangemeld), d.door ? 'aangemeld door ' + d.door : ''].filter(Boolean).join(' · ') }),
-            d.reden ? el('p', { tekst: d.reden }) : null]),
-          el('div', { class: 'doe' }, [
-            el('button', { class: 'knop klein', type: 'button', tekst: 'Plek geven', title: 'Naar het rooster om ' + d.voornaam + ' in te plannen', onclick: function(){ S.planVoor = d.id; S.verplaats = null; tekenRooster(); } }),
-            el('button', { class: 'knop stil klein', type: 'button', tekst: d.voorrang ? 'Voorrang weghalen' : 'Voorrang geven', onclick: function(){ pasAan(d.id, function(x){ x.voorrang = !d.voorrang; }).then(tekenWachtrij).catch(meld); } }),
-            el('button', { class: 'knop stil klein', type: 'button', tekst: 'Dossier', onclick: function(){ openDossier(d.id); } })])]);
-      })) : el('section', { class: 'vak' }, [el('p', { tekst: 'Er staat niemand op de wachtrij.' })])
+      el('div', { class: 'thuiskop' }, [
+        el('div', { class: 'titel' }, [el('h1', { tekst: 'Wachtrij' }),
+          el('span', { class: 'zacht', tekst: !rij.length ? 'Er staat niemand op de wachtrij.' : (rij.length === 1 ? '1 leerling wacht' : rij.length + ' leerlingen wachten') + (langste ? ', de langste ' + wachtTekst(langste) : '') + '.' })]),
+        el('button', { class: 'knop', type: 'button', tekst: 'Leerling aanmelden', onclick: function(){ naarStand('aanmelden'); } })]),
+      el('div', { class: 'wachtblad' }, [
+        el('section', { class: 'vak wachtvak', 'aria-label': 'Wie wacht' }, rij.length ? [
+          el('div', { class: 'wachtkop', 'aria-hidden': 'true' }, [el('span', { tekst: 'Nr' }), el('span', { tekst: 'Leerling' }), el('span', { tekst: 'Wacht' }), el('span', { tekst: 'Toestemming' })])
+        ].concat(rij.map(function(d, nr){
+          var n = d.aangemeld ? dagenGeleden(d.aangemeld) : null, aan = stand === 'detail' && gekozen && gekozen.id === d.id;
+          return el('button', { class: 'wachtrij', type: 'button', 'aria-pressed': aan ? 'true' : 'false', onclick: function(){ naarStand('detail', d.id); } }, [
+            el('span', { class: 'nr', 'aria-hidden': 'true', tekst: String(nr + 1) }),
+            el('span', { class: 'wie' }, [el('b', {}, [naam(d), d.voorrang ? el('span', { class: 'chip voorrang', tekst: 'voorrang' }) : null]),
+              el('small', { tekst: [d.klas ? 'klas ' + d.klas : '', d.door ? 'door ' + d.door : ''].filter(Boolean).join(', ') || 'geen klas ingevuld' })]),
+            el('span', {}, [el('span', { class: 'hoelang', tekst: wachtTekst(n) }),
+              el('span', { class: 'wachtbalk' + (n >= 42 ? ' lang' : ''), role: 'img', 'aria-label': 'Wacht ' + wachtTekst(n) }, [el('i', { style: 'width:' + Math.min(100, Math.round((n || 0) / 56 * 100)) + '%' })])]),
+            el('span', { class: 'toestcel' }, [el('span', { class: 'chip t-' + (d.toestemming || 'geen'), tekst: TOESTKORT[d.toestemming] || TOESTKORT.geen })])]);
+        })).concat([el('p', { class: 'zacht', style: 'margin:10px 8px 0;font-size:.8rem', tekst: 'Wie voorrang heeft staat bovenaan, daarna wie het langst wacht. Na zes weken wordt de balk oranjerood.' })])
+          : [el('p', { style: 'padding:12px 8px', tekst: 'Er staat niemand op de wachtrij.' })]),
+        paneel])
     ]);
     window.scrollTo(0, 0);
   }

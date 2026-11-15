@@ -407,6 +407,7 @@ export async function behandel(req, env, url, hulp){
     const i = await k.zetRooster(inhoud, s.naam);
     return i ? klaar({ instelling: i }) : klaar({ fout: "deze tijden kloppen niet: het eind moet na het begin liggen en een blok duurt 10 tot 120 minuten" }, 400);
   }
+  if (p === "/api/pmt/wachtrij/plekken" && m === "GET") return klaar({ plekken: await k.vrijePlekken(3) });
   if (p === "/api/pmt/agenda" && m === "GET") return klaar({ sleutel: await k.agenda() });
   if (p === "/api/pmt/agenda" && m === "POST") return klaar({ sleutel: await k.zetAgenda(true, s.naam) });
   if (p === "/api/pmt/agenda" && m === "DELETE") return klaar({ sleutel: await k.zetAgenda(false, s.naam) });
@@ -873,6 +874,37 @@ export class Pmt extends DurableObject {
     }
     uit.push("END:VCALENDAR");
     return uit.join("\r\n") + "\r\n";
+  }
+  /* De blokken van een dag waarin een afspraak kan: de eigen blokken, of gemaakt
+     uit begin, eind, bloklengte en pauzes (een rest onder de tien minuten telt niet). */
+  openBlokken(dagStr){
+    const eigen = this.blokkenVan(dagStr);
+    if (eigen) return eigen.filter(b => !b.vrij).map(b => ({ begin: b.van, duur: b.tot - b.van }));
+    const i = this.roosterInstelling(), uit = [];
+    let t = i.van;
+    const vul = grens => { while (t < grens){ const l = Math.min(i.blok, grens - t); if (l >= 10) uit.push({ begin: t, duur: l }); t += l; } };
+    for (const p of (i.pauzes || []).filter(p => p.tot > i.van && p.van < i.tot).sort((a, b) => a.van - b.van)){
+      vul(Math.max(t, p.van));
+      const pe = Math.min(p.tot, i.tot);
+      if (pe > t) t = pe;
+    }
+    vul(i.tot);
+    return uit;
+  }
+  /* De eerste vrije plekken voor iemand van de wachtrij: per schooldag het eerste
+     lege blok van minstens twintig minuten. Vakanties en vrije dagen tellen niet mee. */
+  vrijePlekken(aantal){
+    const uit = [], vrij = this.vrijeDagen(), dagEen = vandaagNL();
+    const klok = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Amsterdam", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date()).split(":").map(Number);
+    const minNu = klok[0] * 60 + klok[1];
+    for (let k = 0; k < 90 && uit.length < aantal; k++){
+      const dagNu = plusDagen(dagEen, k), wd = new Date(dagNu + "T12:00:00Z").getUTCDay();
+      if (wd === 0 || wd === 6 || this.vrijOp(dagNu, vrij)) continue;
+      const bezet = this.sql.exec("SELECT begin, duur FROM afspraak WHERE dag = ?", dagNu).toArray();
+      const b = this.openBlokken(dagNu).find(x => x.duur >= 20 && (k > 0 || x.begin > minNu) && !bezet.some(a => a.begin < x.begin + x.duur && a.begin + a.duur > x.begin));
+      if (b) uit.push({ dag: dagNu, begin: b.begin, duur: b.duur });
+    }
+    return uit;
   }
   /* valt dit moment in een pauze? */
   pauzeOp(begin, duur){ return (this.roosterInstelling().pauzes || []).find(p => begin < p.tot && begin + duur > p.van) || null; }
