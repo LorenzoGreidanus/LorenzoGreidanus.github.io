@@ -355,6 +355,7 @@ export async function behandel(req, env, url, hulp){
   if (im && m === "DELETE") return klaar({ ok: await k.trekIn(im[1].toUpperCase(), s.naam) });
   const mm = p.match(/^\/api\/pmt\/metingen\/([A-Za-z0-9_-]{8,24})$/);
   if (mm && m === "DELETE") return (await k.wegMeting(mm[1], s.naam)) ? klaar({ ok: true }) : klaar({ fout: "deze meting bestaat niet" }, 404);
+  if (p === "/api/pmt/afnames" && m === "GET") return klaar({ afnames: await k.uitstaand() });
   if (p === "/api/pmt/lijsten" && m === "GET") return klaar({ lijsten: await k.lijsten() });
   if (p === "/api/pmt/lijsten" && m === "POST"){
     let inhoud; try { inhoud = await leesInhoud(req); } catch (e){ return klaar({ fout: "dit kan de server niet lezen" }, 400); }
@@ -1375,6 +1376,20 @@ export class Pmt extends DurableObject {
     this.sql.exec("INSERT INTO meting (id, dossier, inhoud, t) VALUES (?, ?, ?, ?)", willekeur(9), dossier, await this.dicht(Object.assign(m, { lijst: lijstId, papier: true })), t);
     this.meld(wie, "papieren vragenlijst ingevoerd", dossier);
     return true;
+  }
+  /* Alle codes die nog uitstaan, over alle leerlingen heen: voor de pagina Vragenlijsten.
+     De e-mailadressen gaan mee, zodat de link opnieuw gemaild kan worden. */
+  async uitstaand(){
+    this.sql.exec("DELETE FROM afname WHERE tot < ?", Date.now());
+    const wie = {};
+    for (const d of await this.alles()) wie[d.id] = d;
+    return this.sql.exec("SELECT code, dossier, lijst, gemaakt, tot, vast, door, laatst FROM afname ORDER BY gemaakt DESC LIMIT 200").toArray().map(x => {
+      let l = {};
+      try { l = JSON.parse(x.lijst); } catch (e){ /* dan zonder titel */ }
+      const d = wie[x.dossier] || {};
+      return { code: x.code, dossier: x.dossier, titel: l.titel || "", lijst: l.id || "", monitor: !!l.monitor, gemaakt: x.gemaakt, tot: x.tot, vast: !!x.vast, door: x.door, laatst: x.laatst,
+        mail: d.mail || "", mentorMail: d.mentorMail || "" };
+    });
   }
   trekIn(code, wie){
     const a = this.sql.exec("SELECT dossier FROM afname WHERE code = ?", code).toArray()[0];

@@ -447,6 +447,40 @@ td.tijd{white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--muted)}
 .tekenvak div{border-bottom:1.5px solid var(--ink);height:52px;display:flex;align-items:flex-start}
 /* ---------- vandaag op het hoofdscherm ---------- */
 .vandaagvak{margin-top:0;margin-bottom:18px;gap:12px}
+/* ---- de vragenlijsten ---- */
+.lijstlinks{display:flex;flex-direction:column;gap:16px;min-width:0}
+.lijstvak{margin:0;gap:0;padding:14px 16px 6px}
+.lijstvak .lijstkaart{padding-bottom:6px}
+.uitrij{display:grid;grid-template-columns:34px minmax(0,1fr) auto auto;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--rand)}
+.uitrij .avatar{width:34px;height:34px;border-radius:11px;font-size:.78rem}
+.uitrij .wat{display:flex;flex-direction:column;line-height:1.25;min-width:0}
+.uitrij .wat b{font-weight:600}
+.uitrij .wat small{color:var(--muted);font-size:.8rem}
+.uitrij .wat small.laat{color:#9A3115}
+.uitrij .doe{display:flex;gap:6px;align-items:center}
+.codeklein,.codegroot{font-family:ui-monospace,'Cascadia Mono',Consolas,monospace;font-weight:600;background:var(--kaart2);color:var(--ink);border-radius:8px}
+.codeklein{font-size:.9rem;letter-spacing:.08em;padding:5px 8px}
+.codegroot{font-size:1.2rem;letter-spacing:.12em;padding:6px 10px;border-radius:10px}
+.kruis{width:40px;height:40px;border-radius:10px;border:1.5px solid #E9B7AA;background:transparent;color:#9A3115;font-size:1.1rem;padding:0}
+.eenlijst{margin:0;flex-direction:row;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:14px 16px}
+.eenlijst.gekozen{border:2px solid var(--accent)}
+.eenlijst .wat{flex:1 1 240px;min-width:0;display:flex;flex-direction:column;gap:3px}
+.eenlijst .wat b{font-weight:600;font-size:1.05rem;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.eenlijst .wat small{color:var(--muted);font-size:.84rem}
+.kiesknop{display:flex;align-items:center;gap:10px;padding:7px 10px;border:1.5px solid var(--rand);border-radius:12px;background:var(--kaart);color:var(--ink);text-align:left;width:100%;font-size:.9rem;min-height:44px}
+.kiesknop[aria-pressed="true"]{border:2px solid var(--accent);padding:6.5px 9.5px;background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.kiesknop:disabled{opacity:.55;cursor:default}
+.kiesknop .avatar{width:28px;height:28px;border-radius:9px;font-size:.68rem}
+.kiesknop b{flex:1;font-weight:600}
+.kiesknop small{color:var(--muted);font-size:.78rem}
+.gemaakt{border:1.5px solid var(--rand);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.gemaakt .boven{display:flex;align-items:center;gap:10px}
+.gemaakt .boven span{display:flex;flex-direction:column;line-height:1.2;flex:1}
+.gemaakt .boven small{color:var(--muted);font-size:.8rem}
+@media (max-width:760px){
+  .uitrij{grid-template-columns:34px minmax(0,1fr)}
+  .uitrij > :nth-child(n+3){grid-column:2;justify-self:start}
+}
 /* ---- de wachtrij ---- */
 .wachtblad{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:18px;align-items:start}
 .wachtvak{margin:0;gap:0;padding:8px 16px 12px}
@@ -477,7 +511,7 @@ td.tijd{white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--muted)}
 .tweeknop{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;border-top:1px solid var(--rand);padding-top:12px}
 .let3{background:#FCE9C8;color:#14224C;border-radius:12px;padding:10px 12px;font-size:.88rem}
 .wachtpaneel form{display:flex;flex-direction:column;gap:12px}
-@media (max-width:1180px){.wachtblad{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:1180px){.wachtblad{grid-template-columns:minmax(0,1fr)}.wachtpaneel.rustig{display:none}}
 @media (max-width:760px){
   .wachtkop{display:none}
   .wachtrij{grid-template-columns:34px minmax(0,1fr) 92px}
@@ -2837,22 +2871,136 @@ button.tegel:hover{border-color:var(--accent)}
 
   /* ---------- vragenlijsten maken ---------- */
   function laadLijsten(){ return api('/lijsten').then(function(j){ S.lijsten = j.lijsten; }); }
+  /* De pagina Vragenlijsten: wat er is ingevuld, welke codes nog uitstaan, en je lijsten.
+     Rechts een vast paneel om een lijst klaar te zetten, voor een of meer leerlingen. */
   function tekenLijsten(){
     bewaarNu(); S.d = null; S.zicht = 'lijsten'; tekenNamen();
-    var kaarten = S.lijsten.map(function(l){
-      return el('section', { class: 'vak' }, [el('div', { class: 'lijstkaart' }, [
-        el('div', { style: 'min-width:0;flex:1 1 260px' }, [el('h2', { tekst: l.titel }), el('p', { class: 'zacht', tekst: (l.monitor ? 'Wekelijkse check · ' : '') + l.vragen.length + (l.vragen.length === 1 ? ' vraag' : ' vragen') + ' · ' + l.schalen.join(', ') })]),
-        el('button', { class: 'knop stil', type: 'button', tekst: 'Bewerken', onclick: function(){ tekenLijst(l); } })])]);
-    });
+    var stand = S.lijstPaneel || 'rust';
+    var lijstNu = S.lijsten.filter(function(l){ return l.id === S.lijstKies; })[0] || null;
+    if (stand === 'kiezen' && !lijstNu) stand = 'rust';
+    if (stand === 'klaar' && !(S.lijstKlaar && S.lijstKlaar.length)) stand = 'rust';
+    function naar(st){ S.lijstPaneel = st; tekenLijsten(); }
+    function wieTekst(c){ var d = dossierVan(c.dossier), n = d ? naam(d) : 'Een leerling'; return c.door === 'mentor' ? 'Mentor van ' + n : n; }
+    function metMail(c){ return Object.assign({ voornaam: 'de leerling' }, dossierVan(c.dossier) || {}, { mail: c.mail, mentorMail: c.mentorMail }); }
+    var samenvatting = el('span', { class: 'zacht', tekst: S.lijsten.length === 1 ? '1 lijst.' : S.lijsten.length + ' lijsten.' });
+
+    /* wat er is ingevuld en nog niet bekeken */
+    var nieuw = (S.nieuw || []).slice(0, 6);
+    var nieuwVak = nieuw.length ? el('section', { class: 'vak lijstvak', 'aria-label': 'Nieuw ingevuld' }, [
+      el('div', { class: 'lijstkaart' }, [el('h2', { tekst: 'Nieuw ingevuld' }), el('span', { class: 'chip voorrang', tekst: String((S.nieuw || []).length) })])
+    ].concat(nieuw.map(function(n){
+      var d = dossierVan(n.dossier);
+      return el('div', { class: 'uitrij' }, [d ? avatar(d) : el('span'),
+        el('span', { class: 'wat' }, [el('b', { tekst: (n.door === 'mentor' ? 'De mentor van ' + (d ? naam(d) : 'een leerling') : d ? naam(d) : 'Een leerling') + ' vulde ' + (n.monitor ? 'de wekelijkse check' : 'een vragenlijst') + ' in' }),
+          el('small', { tekst: n.titel + ' \u00b7 ' + mooieTijd(n.t) })]),
+        el('span'),
+        el('span', { class: 'doe' }, [el('button', { class: 'knop stil klein', type: 'button', tekst: 'Bekijken', onclick: function(){ openDossier(n.dossier, n.monitor ? 'week' : 'lijsten'); } })])]);
+    }))) : null;
+
+    /* de codes die nog uitstaan */
+    var uitVak = el('section', { class: 'vak lijstvak', 'aria-label': 'Staat uit' }, [
+      el('div', { class: 'lijstkaart' }, [el('h2', { tekst: 'Staat uit' }), el('small', { class: 'zacht', tekst: 'codes die nog niet zijn ingevuld' })]),
+      el('p', { class: 'zacht', style: 'padding:10px 0', tekst: 'De codes worden opgehaald.' })]);
+    api('/afnames').then(function(u){
+      while (uitVak.children.length > 1) uitVak.lastChild.remove();
+      var nu = Date.now(), week = 7 * 86400000;
+      /* een vaste code die deze week al is ingevuld staat niet meer uit */
+      var open = u.afnames.filter(function(c){ return !c.vast || nu - c.laatst > week; });
+      samenvatting.textContent = (S.lijsten.length === 1 ? '1 lijst. ' : S.lijsten.length + ' lijsten. ') + (open.length === 1 ? '1 code staat uit' : open.length + ' codes staan uit') + ((S.nieuw || []).length ? ', ' + (S.nieuw.length === 1 ? '1 is' : S.nieuw.length + ' zijn') + ' nieuw ingevuld.' : '.');
+      if (!open.length){ uitVak.appendChild(el('p', { class: 'zacht', style: 'padding:10px 0', tekst: 'Er staat niets uit.' })); return; }
+      open.forEach(function(c){
+        var d = dossierVan(c.dossier), laat = c.vast && nu - Math.max(c.laatst, c.gemaakt) > 9 * 86400000;
+        var sub = c.vast ? 'Vaste code tot ' + kort(c.tot) + (c.laatst ? ', laatst ingevuld op ' + kort(c.laatst) : ', nog niet ingevuld') : 'Vandaag klaargezet, werkt tot vanavond';
+        uitVak.appendChild(el('div', { class: 'uitrij' }, [d ? avatar(d) : el('span'),
+          el('span', { class: 'wat' }, [el('b', { tekst: wieTekst(c) + ', ' + c.titel }), el('small', { class: laat ? 'laat' : '', tekst: sub })]),
+          el('code', { class: 'codeklein', tekst: c.code }),
+          el('span', { class: 'doe' }, [mailKnop(c, metMail(c), c.door),
+            el('button', { class: 'kruis', type: 'button', 'aria-label': 'De code van ' + wieTekst(c) + ' intrekken', title: 'Code intrekken', tekst: '\u00d7', onclick: function(){
+              stuur('DELETE', '/afname/' + c.code).then(function(){ toast('De code van ' + wieTekst(c) + ' is ingetrokken.'); tekenLijsten(); }).catch(meld);
+            } })])]));
+      });
+    }).catch(function(e){ if (e.message !== 'uit'){ while (uitVak.children.length > 1) uitVak.lastChild.remove(); uitVak.appendChild(el('p', { class: 'zacht', style: 'padding:10px 0', tekst: 'De codes konden niet worden opgehaald.' })); } });
+
+    /* het paneel rechts */
+    var paneel = el('aside', { class: 'zijpaneel wachtpaneel' + (stand === 'rust' ? ' rustig' : ''), 'aria-label': 'Klaarzetten' });
+    var inhoud;
+    if (stand === 'kiezen'){
+      var wie = S.lijstWie || {}, door = S.lijstDoor || 'leerling';
+      var kandidaten = S.lijst.filter(function(d){ return d.status === 'loopt' || d.status === 'intake'; });
+      var gekozen = kandidaten.filter(function(d){ return wie[d.id] && d.toestemming === 'ja'; });
+      var aantal = gekozen.length * (lijstNu.monitor && door === 'beide' ? 2 : 1);
+      var standTekst = el('span', { class: 'zacht', role: 'status' });
+      inhoud = [
+        el('div', {}, [el('b', { class: 'kopje', tekst: 'Klaarzetten' }), el('h2', { style: 'font-size:1.2rem', tekst: lijstNu.titel })]),
+        el('div', { class: 'paneeldeel' }, [el('b', { tekst: 'Voor wie? Je kunt er meer kiezen.' })].concat(kandidaten.length ? kandidaten.map(function(d){
+          var mag = d.toestemming === 'ja';
+          return el('button', { class: 'kiesknop', type: 'button', disabled: !mag, 'aria-pressed': wie[d.id] && mag ? 'true' : 'false', onclick: function(){ var w = Object.assign({}, wie); w[d.id] = !w[d.id]; S.lijstWie = w; tekenLijsten(); } },
+            [avatar(d), el('b', { tekst: naam(d) }), el('small', { tekst: mag ? (d.klas ? 'klas ' + d.klas : '') : 'geen toestemming' })]);
+        }) : [el('p', { class: 'zacht', tekst: 'Er zijn nog geen leerlingen in intake of behandeling.' })])),
+        lijstNu.monitor ? el('div', { class: 'paneeldeel' }, [el('b', { tekst: 'Wie vult in?' }),
+          el('div', { class: 'pillen', role: 'group', 'aria-label': 'Wie vult in?' }, [['leerling', 'De leerling'], ['mentor', 'De mentor'], ['beide', 'Allebei']].map(function(x){
+            return el('button', { type: 'button', 'aria-pressed': door === x[0] ? 'true' : 'false', tekst: x[1], onclick: function(){ S.lijstDoor = x[0]; tekenLijsten(); } });
+          })),
+          el('small', { class: 'zacht', tekst: 'Een wekelijkse check krijgt een vaste code. Die werkt elke week opnieuw, twaalf weken lang.' })])
+          : el('p', { class: 'zacht', tekst: 'De leerling vult zelf in. De code werkt vandaag, een keer.' }),
+        el('div', { class: 'onder', style: 'margin-top:0' }, [
+          el('button', { class: 'knop', type: 'button', disabled: !aantal, tekst: aantal > 1 ? aantal + ' codes maken' : 'Code maken', onclick: function(ev){
+            ev.currentTarget.disabled = true; standTekst.textContent = 'Bezig met klaarzetten';
+            var taken = [], gemaakt = [], mis = [];
+            gekozen.forEach(function(d){ (lijstNu.monitor ? (door === 'beide' ? ['leerling', 'mentor'] : [door]) : ['leerling']).forEach(function(wd){ taken.push([d, wd]); }); });
+            /* een voor een, zodat een fout bij de een de ander niet tegenhoudt */
+            var ketting = Promise.resolve();
+            taken.forEach(function(t){
+              ketting = ketting.then(function(){
+                return stuur('POST', '/dossiers/' + t[0].id + '/afname', { lijst: lijstNu.id, vast: !!lijstNu.monitor, door: t[1] })
+                  .then(function(a){ gemaakt.push(a.code); }, function(e){ if (e.message === 'uit') throw e; mis.push(naam(t[0])); });
+              });
+            });
+            ketting.then(function(){ return api('/afnames'); }).then(function(u){
+              S.lijstKlaar = u.afnames.filter(function(c){ return gemaakt.indexOf(c.code) >= 0; });
+              S.lijstKlaarTitel = lijstNu.titel; S.lijstWie = {};
+              if (mis.length) toast('Niet gelukt bij ' + mis.join(', ') + '.', true);
+              return laadLijst();
+            }).then(function(){ naar(S.lijstKlaar.length ? 'klaar' : 'rust'); }).catch(meld);
+          } }),
+          el('button', { class: 'knop stil', type: 'button', tekst: 'Toch niet', onclick: function(){ naar('rust'); } }), standTekst])];
+    } else if (stand === 'klaar'){
+      inhoud = [
+        el('div', {}, [el('b', { class: 'kopje', style: 'color:var(--accent)', tekst: 'Staat klaar' }), el('h2', { style: 'font-size:1.2rem', tekst: S.lijstKlaarTitel || 'Vragenlijst' })])
+      ].concat(S.lijstKlaar.map(function(c){
+        return el('div', { class: 'gemaakt' }, [
+          el('div', { class: 'boven' }, [el('span', {}, [el('b', { tekst: wieTekst(c) }), el('small', { tekst: c.door === 'mentor' ? 'vult in over de leerling' : 'vult zelf in' })]), el('code', { class: 'codegroot', tekst: c.code })]),
+          el('div', { style: 'display:flex;flex-wrap:wrap;gap:6px' }, [mailKnop(c, metMail(c), c.door), kopieerKnop(c, metMail(c), c.door)])]);
+      })).concat([
+        el('p', { class: 'zacht', tekst: 'Invullen kan op ' + location.host + INVUL + '. ' + (S.lijstKlaar[0].vast ? 'De code werkt elke week opnieuw.' : 'De code werkt vandaag, een keer.') }),
+        el('div', {}, [el('button', { class: 'knop stil', type: 'button', tekst: 'Klaar', onclick: function(){ S.lijstKlaar = null; naar('rust'); } })])]);
+    } else {
+      inhoud = [el('h2', { style: 'font-size:1.2rem', tekst: 'Klaarzetten' }),
+        el('p', { class: 'zacht', tekst: S.lijsten.length ? 'Kies bij een lijst Klaarzetten. Hier kies je daarna voor wie, en krijg je de code of de link.' : 'Maak eerst een vragenlijst. Daarna zet je hem hier klaar voor een leerling.' })];
+    }
+    inhoud.forEach(function(x){ if (x) paneel.appendChild(x); });
+
     scherm([
-      el('div', { class: 'kop' }, [el('h1', { tekst: 'Vragenlijsten' }),
-        el('button', { class: 'knop', type: 'button', style: 'margin-left:auto', tekst: 'Nieuwe vragenlijst', onclick: function(){ tekenLijst(null); } })]),
-      el('p', { class: 'zacht', tekst: 'Zet hier alleen lijsten in die van jezelf zijn of die vrij te gebruiken zijn. Een lijst van een uitgever mag je niet overtypen.' }),
-      !S.lijsten.length ? el('section', { class: 'vak' }, [el('p', { tekst: 'Er zijn nog geen vragenlijsten.' }),
-        S.ik.proef ? el('div', {}, [el('button', { class: 'knop stil', type: 'button', tekst: 'Voorbeeldlijst toevoegen', onclick: function(){
-          stuur('POST', '/proef/lijst').then(function(j){ S.lijsten = j.lijsten; tekenLijsten(); }).catch(meld);
-        } })]) : null]) : null
-    ].concat(kaarten));
+      el('div', { class: 'thuiskop' }, [
+        el('div', { class: 'titel' }, [el('h1', { tekst: 'Vragenlijsten' }), samenvatting]),
+        el('button', { class: 'knop stil', type: 'button', tekst: 'Nieuwe vragenlijst', onclick: function(){ tekenLijst(null); } })]),
+      el('div', { class: 'wachtblad' }, [
+        el('div', { class: 'lijstlinks' }, [nieuwVak, uitVak,
+          el('h2', { style: 'font-size:1.15rem;margin-bottom:-6px', tekst: 'Mijn lijsten' })
+        ].concat(S.lijsten.length ? S.lijsten.map(function(l){
+          return el('section', { class: 'vak eenlijst' + (stand === 'kiezen' && lijstNu && lijstNu.id === l.id ? ' gekozen' : '') }, [
+            el('div', { class: 'wat' }, [el('b', {}, [l.titel, el('span', { class: 'chip' + (l.monitor ? ' t-gevraagd' : ''), tekst: l.monitor ? 'Wekelijkse check' : 'Meting' })]),
+              el('small', { tekst: l.vragen.length + (l.vragen.length === 1 ? ' vraag' : ' vragen') + ' \u00b7 ' + l.schalen.join(', ') })]),
+            el('button', { class: 'knop', type: 'button', tekst: 'Klaarzetten', disabled: !l.vragen.length, title: l.vragen.length ? '' : 'Deze lijst heeft nog geen vragen', onclick: function(){ S.lijstKies = l.id; S.lijstWie = {}; naar('kiezen'); } }),
+            el('button', { class: 'knop stil', type: 'button', tekst: 'Bewerken', onclick: function(){ tekenLijst(l); } })]);
+        }) : [el('section', { class: 'vak' }, [el('p', { tekst: 'Er zijn nog geen vragenlijsten.' }),
+          S.ik.proef ? el('div', {}, [el('button', { class: 'knop stil', type: 'button', tekst: 'Voorbeeldlijst toevoegen', onclick: function(){
+            stuur('POST', '/proef/lijst').then(function(u){ S.lijsten = u.lijsten; tekenLijsten(); }).catch(meld);
+          } })]) : null])]).concat([
+          el('p', { class: 'zacht', style: 'font-size:.84rem', tekst: 'Zet hier alleen lijsten in die van jezelf zijn of die vrij te gebruiken zijn. Een lijst van een uitgever mag je niet overtypen. Printen op papier doe je vanuit het dossier van de leerling.' })])),
+        paneel])
+    ]);
+    window.scrollTo(0, 0);
   }
   function regels(t){ return t.split('\n').map(function(x){ return x.trim(); }).filter(Boolean); }
   function legendaDelen(l){
@@ -2954,6 +3102,9 @@ button.tegel:hover{border-color:var(--accent)}
       L.vragen.forEach(function(v, n){
         if (namen.indexOf(v.schaal) < 0) v.schaal = namen[0];
         var t = el('input', { type: 'text', maxlength: '300', autocomplete: 'off', 'aria-label': 'Vraag ' + (n + 1), value: v.tekst, oninput: function(){ v.tekst = t.value; } });
+        /* het voorbeeld volgt de vraag waar je op staat; Enter maakt een nieuwe vraag */
+        t.addEventListener('focus', function(){ var k = L.vragen.filter(function(x){ return x.tekst.trim(); }).indexOf(v); if (k >= 0 && k !== vbNr){ vbNr = k; tekenVoorbeeld(); } });
+        t.addEventListener('keydown', function(ev){ if (ev.key === 'Enter'){ ev.preventDefault(); var erbij = document.querySelector('.vraagerbij'); if (erbij && t.value.trim()) erbij.click(); } });
         var sch = el('select', { 'aria-label': 'Schaal van vraag ' + (n + 1), onchange: function(){ v.schaal = sch.value; } }, namen.map(function(x){ return el('option', { value: x, tekst: x }); }));
         sch.value = v.schaal;
         var om = el('input', { type: 'checkbox', id: 'om-' + n, onchange: function(){ v.om = om.checked; } }); om.checked = !!v.om;
@@ -2994,7 +3145,7 @@ button.tegel:hover{border-color:var(--accent)}
       el('section', { class: 'vak' }, [
         el('h2', { tekst: 'Vragen' }), vragen,
         el('p', { class: 'zacht', tekst: 'Omgekeerd: zet dit aan bij een zin waar een hoog antwoord juist slecht nieuws is, zoals "Ik blijf lang boos".' }),
-        el('div', {}, [el('button', { class: 'knop stil', type: 'button', tekst: 'Vraag toevoegen', onclick: function(){
+        el('div', {}, [el('button', { class: 'knop stil vraagerbij', type: 'button', tekst: 'Vraag toevoegen', onclick: function(){
           var namen = regels(schalen.value);
           var vorige = L.vragen[L.vragen.length - 1];
           L.vragen.push({ tekst: '', schaal: vorige ? vorige.schaal : (namen[0] || 'Totaal'), om: false });
@@ -3005,7 +3156,10 @@ button.tegel:hover{border-color:var(--accent)}
     links.addEventListener('input', tekenVoorbeeld);
     links.addEventListener('change', tekenVoorbeeld);
     scherm([
-      el('div', { class: 'paginakop' }, [el('h1', { tekst: bron ? 'Vragenlijst bewerken' : 'Nieuwe vragenlijst' })]),
+      el('div', { class: 'thuiskop' }, [
+        el('button', { class: 'knop stil klein', type: 'button', tekst: '\u2039 Alle lijsten', onclick: tekenLijsten }),
+        el('div', { class: 'titel' }, [el('h1', { style: 'font-size:1.6rem', tekst: bron ? 'Vragenlijst bewerken' : 'Nieuwe vragenlijst' })]),
+        el('button', { class: 'knop', type: 'button', tekst: 'Opslaan', onclick: bewaar })]),
       el('div', { class: 'maker' }, [links, el('aside', { class: 'makerrechts', 'aria-label': 'Voorbeeld' }, [el('h2', { tekst: 'Zo ziet de leerling het' }), vb])]),
       el('div', { class: 'onder' }, [
         el('button', { class: 'knop', type: 'button', tekst: 'Opslaan', onclick: bewaar }),
