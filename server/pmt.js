@@ -1096,11 +1096,29 @@ export class Pmt extends DurableObject {
     }
     for (const r of this.sql.exec("SELECT dossier, COUNT(*) AS n FROM afspraak WHERE dossier <> '' AND dag < ? AND dag >= ? AND komst = '' GROUP BY dossier", vandaagNL(), plusDagen(vandaagNL(), -14)).toArray()) open[r.dossier] = r.n;
     for (const r of this.sql.exec("SELECT dossier, MIN(gemaakt) AS sinds FROM afname WHERE vast = 1 AND tot >= ? GROUP BY dossier", Date.now()).toArray()) vast[r.dossier] = r.sinds;
+    /* voor het overzicht: hoeveel sessies er geweest zijn, en welke afspraken van de
+       laatste twee weken nog geen notitie hebben (afwezig telt niet mee) */
+    const geweestN = {}, recent = {};
+    for (const r of this.sql.exec("SELECT dossier, COUNT(*) AS n FROM afspraak WHERE dossier <> '' AND komst = 'aanwezig' GROUP BY dossier").toArray()) geweestN[r.dossier] = r.n;
+    for (const r of this.sql.exec("SELECT id, dossier, dag, begin, duur, komst, soort FROM afspraak WHERE dossier <> '' AND dag >= ? AND dag <= ? AND komst <> 'afwezig' ORDER BY dag DESC, begin DESC", plusDagen(vandaagNL(), -14), vandaagNL()).toArray()){
+      (recent[r.dossier] = recent[r.dossier] || []).push({ id: r.id, dag: r.dag, begin: r.begin, duur: r.duur, komst: r.komst, soort: r.soort });
+    }
+    const overzicht = d => {
+      const mag = d.toestemming && d.toestemming.status === "ja";
+      const notities = Array.isArray(d.notities) ? d.notities : [], doelen = Array.isArray(d.doelen) ? d.doelen : [];
+      const metNotitie = new Set(notities.map(n => n.datum));
+      const laatste = notities.slice().sort((a, b) => a.datum < b.datum ? 1 : a.datum > b.datum ? -1 : 0)[0];
+      const scores = doelen.map(x => Array.isArray(x.scores) && x.scores.length ? x.scores[x.scores.length - 1].s : 0).filter(Boolean);
+      return { sessies: geweestN[d.id] || 0,
+        punt: mag && laatste && laatste.volgende ? String(laatste.volgende).slice(0, 200) : "",
+        zonderNotitie: mag ? (recent[d.id] || []).filter(a => !metNotitie.has(a.dag)).slice(0, 5) : [],
+        doelen: doelen.length, doelGem: scores.length ? Math.round(10 * scores.reduce((a, x) => a + x, 0) / scores.length) / 10 : 0 };
+    };
     const volgende = {};
     for (const r of this.sql.exec("SELECT dossier, dag, begin FROM afspraak WHERE dag >= ? ORDER BY dag, begin", vandaagNL()).toArray()){
       if (!volgende[r.dossier]) volgende[r.dossier] = { dag: r.dag, begin: r.begin };
     }
-    return (await this.alles()).map(d => ({ id: d.id, volgende: volgende[d.id] || null,
+    return (await this.alles()).map(d => Object.assign(overzicht(d), { id: d.id, volgende: volgende[d.id] || null,
       toestemming: (d.toestemming && d.toestemming.status) || "geen",
       aangemeld: d.aangemeld || "", door: d.door || "", voorrang: !!d.voorrang, reden: d.status === "wacht" ? String(d.hulpvraag || "").slice(0, 160) : "", voornaam: d.voornaam, letter: d.letter, klas: d.klas, status: d.status, start: d.start,
       proef: !!d.proef, notities: d.notities.length, bijgewerkt: d.bijgewerkt,
