@@ -408,6 +408,9 @@ var BANK = (function(){
         /* iedereen krijgt de hele lijst, welk niveau je ook hebt */
         NIVOS.eigen = BRONNEN.eigen.map(function(){ return 1; });
         var v = VAKKEN.filter(function(x){ return x.id === "eigen"; })[0];
+        /* de naam en de kopjes komen van iemand anders en staan straks als titel op een tegel: zonder punthaken */
+        var kaal = function(x){ return String(x || "").replace(/[<>]/g, ""); };
+        m.naam = kaal(m.naam); m.kopA = kaal(m.kopA); m.kopB = kaal(m.kopB);
         if (v){ v.naam = m.naam; v.onder = (m.kopA && m.kopB ? m.kopA + " en " + m.kopB + ", " : "") + m.paren.length + " woorden"; }
         if (m.kopA && m.kopB) ONDERDELEN.eigen = [{id:'heen', naam:m.kopA + ' naar ' + m.kopB}, {id:'terug', naam:m.kopB + ' naar ' + m.kopA}];
       }

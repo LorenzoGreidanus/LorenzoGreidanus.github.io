@@ -584,6 +584,14 @@ function noodSom(r){
 }
 /* een gekozen avatar: v3k2o1m0e4, anders leeg (dan komt hij uit de bijnaam) */
 function schoonAv(a){ a = String(a || "").replace(/[^a-z0-9]/g, "").slice(0, 48); return /^v\d{1,2}k\do\d{1,2}m\de\d(c\d{1,2})?(x\d{1,2})?(w\d)?(h\d{1,2})?(r\d{1,2})?(z\d{1,2})?(b\d{1,2})?(a\d{1,2})?(q\d{1,2})?(f\d)?(p\d{1,2})?(s\d{1,2})?$/.test(a) ? a : ""; }
+/* Twee sleutels vergelijken zonder dat de rekentijd verraadt hoeveel tekens er goed waren:
+   altijd alle tekens langs, ook als het eerste al fout is. */
+function zelfde(a, b){
+  if (typeof a !== "string" || typeof b !== "string" || !a || !b) return false;
+  let v = a.length ^ b.length;
+  for (let i = 0; i < b.length; i++) v |= (a.charCodeAt(i % a.length) ^ b.charCodeAt(i));
+  return v === 0;
+}
 function sleutelMaken(n){
   const r = crypto.getRandomValues(new Uint8Array(n || 12));
   return Array.from(r, b => b.toString(16).padStart(2, "0")).join("");
@@ -764,7 +772,7 @@ export class Kamer extends DurableObject {
     let naam = nette(url.searchParams.get("naam"), "Leerling");   /* door het naamfilter */
     const av = schoonAv(url.searchParams.get("av"));
     if (rol === "host"){
-      if (url.searchParams.get("sleutel") !== this.stand.sleutel) return json({ fout: "dit is niet jouw kamer" }, 403);
+      if (!zelfde(url.searchParams.get("sleutel"), this.stand.sleutel)) return json({ fout: "dit is niet jouw kamer" }, 403);
       sid = "host";
     } else {
       if (!/^[A-Za-z0-9_-]{8,40}$/.test(sid)) return json({ fout: "geen geldig kenmerk" }, 400);
@@ -2258,7 +2266,7 @@ export class Kamer extends DurableObject {
   /* de docent heeft een vraag besproken: hij gaat van de lijst (h '*' is alles) */
   async besproken(inz){
     if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
-    if (!inz || inz.sleutel !== this.stand.sleutel) return json({ fout: "dit is niet jouw klas" }, 403);
+    if (!inz || !zelfde(inz.sleutel, this.stand.sleutel)) return json({ fout: "dit is niet jouw klas" }, 403);
     const h = String(inz.h || "");
     if (h === "*") this.stand.fk = {}; else if (this.stand.fk) delete this.stand.fk[h.replace(/[^a-z0-9]/g, "").slice(0, 12)];
     await this.bewaar();
@@ -2320,7 +2328,7 @@ export class Kamer extends DurableObject {
   async melden(inz){
     if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
     if (Date.now() - this.stand.laatst > KLAS_SLAAPT) return json({ fout: "deze klascode is opgeheven" }, 410);
-    if (!inz || inz.sleutel !== this.stand.sleutel) return json({ fout: "dit is niet jouw klas" }, 403);
+    if (!inz || !zelfde(inz.sleutel, this.stand.sleutel)) return json({ fout: "dit is niet jouw klas" }, 403);
     const spel = String(inz.spel || "");
     if (!SPELLEN_STRIJD[spel] && !KLAS_SPELLEN[spel]) return json({ fout: "onbekend spel" }, 400);
     const lijst = Array.isArray(inz.lijst) ? inz.lijst.slice(0, 80) : [];
@@ -2363,7 +2371,7 @@ export class Kamer extends DurableObject {
      alleen met de sleutel van de quiz, die de docent heeft. */
   async quizKenmerken(inz){
     if (!this.stand || !this.stand.spelers || this.stand.spel === "klas") return json({ fout: "geen quiz" }, 404);
-    if (!inz || inz.sleutel !== this.stand.sleutel) return json({ fout: "dit is niet jouw kamer" }, 403);
+    if (!inz || !zelfde(inz.sleutel, this.stand.sleutel)) return json({ fout: "dit is niet jouw kamer" }, 403);
     const kenmerken = {};
     Object.keys(this.stand.spelers).forEach(sid => { const p = this.stand.spelers[sid].pid; if (p) kenmerken[p] = sid.slice(0, 12); });
     return json({ kenmerken });
@@ -2381,13 +2389,23 @@ export class Kamer extends DurableObject {
   }
   async opdracht(inz){
     if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
-    if (!inz || inz.sleutel !== this.stand.sleutel) return json({ fout: "dit is niet jouw klas" }, 403);
+    if (!inz || !zelfde(inz.sleutel, this.stand.sleutel)) return json({ fout: "dit is niet jouw klas" }, 403);
     const lijst = this.opdrachtLijst();
     /* een weghalen */
     if (inz.weg){
       this.stand.opdrachten = lijst.filter(x => x.id !== String(inz.weg));
       await this.bewaar();
       return json({ ok: true, opdrachten: this.stand.opdrachten });
+    }
+    /* een week langer: alleen een opdracht met een eigen datum; een dictee of tafeltoets hoort bij zijn week */
+    if (inz.langer){
+      const x = lijst.find(y => y.id === String(inz.langer));
+      if (!x) return json({ fout: "deze opdracht staat er niet meer" }, 404);
+      if (x.spel === "dictee" || x.spel === "tafeltoets" || x.auto) return json({ fout: "deze opdracht hoort bij een week en kan niet langer" }, 400);
+      const nu = Date.now();
+      x.tot = Math.min(Math.max(getal(x.tot, 4e12), nu) + 7 * 86400000, nu + 120 * 86400000);
+      await this.bewaar();
+      return json({ ok: true, opdrachten: lijst.map(y => opdrachtNu(y, nu, this.stand.rooster)) });
     }
     const o = inz.opdracht;
     /* een oudere pagina haalt met null alles weg */
@@ -2499,7 +2517,7 @@ export class Kamer extends DurableObject {
      ROOSTER_MAX weken; de oudste gaan eerst. */
   async dicteeRooster(inz){
     if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
-    if (!inz || inz.sleutel !== this.stand.sleutel) return json({ fout: "dit is niet jouw klas" }, 403);
+    if (!inz || !zelfde(inz.sleutel, this.stand.sleutel)) return json({ fout: "dit is niet jouw klas" }, 403);
     const nu = Date.now();
     if (inz.week !== undefined){
       const week = dicteeWeekSleutel(inz.week);
@@ -2538,7 +2556,7 @@ export class Kamer extends DurableObject {
     keer: ["splitsen", "hokjes", "kolom", "cijferend", "compenseren", "verdubbelen"], deel: ["hap", "staart", "splitsen"] }; }
   async instelling(inz){
     if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
-    if (!inz || inz.sleutel !== this.stand.sleutel) return json({ fout: "dit is niet jouw klas" }, 403);
+    if (!inz || !zelfde(inz.sleutel, this.stand.sleutel)) return json({ fout: "dit is niet jouw klas" }, 403);
     if (Array.isArray(inz.spellen)) this.stand.spellen = inz.spellen.slice(0, 60).map(x => schoon(x, 30).replace(/[^a-z0-9-]/g, "")).filter(Boolean);
     if (typeof inz.lesmodus === "boolean"){
       this.stand.lesmodus = inz.lesmodus;
@@ -2565,7 +2583,7 @@ export class Kamer extends DurableObject {
      docent bewerkt ze toch als een lijstje. */
   async periodes(inz){
     if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
-    if (!inz || inz.sleutel !== this.stand.sleutel) return json({ fout: "dit is niet jouw klas" }, 403);
+    if (!inz || !zelfde(inz.sleutel, this.stand.sleutel)) return json({ fout: "dit is niet jouw klas" }, 403);
     if (!Array.isArray(inz.periodes)) return json({ fout: "geen periodes" }, 400);
     const grens = 3 * 365 * 86400000, nu = Date.now();
     const uit = [];
@@ -2586,7 +2604,7 @@ export class Kamer extends DurableObject {
      docent neemt hem over zodra hij de klas opent, ook op zijn andere apparaten. */
   async klasNaam(inz){
     if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
-    if (!inz || inz.sleutel !== this.stand.sleutel) return json({ fout: "dit is niet jouw klas" }, 403);
+    if (!inz || !zelfde(inz.sleutel, this.stand.sleutel)) return json({ fout: "dit is niet jouw klas" }, 403);
     const naam = schoon(inz.naam, 40).trim();
     if (naam.length < 2) return json({ fout: "geef je klas een naam van minstens twee tekens" }, 400);
     this.stand.naam = naam;
@@ -2600,7 +2618,7 @@ export class Kamer extends DurableObject {
      hem weg. De hele lijst gaat in een keer, net als de periodes. */
   async echteNamen(inz){
     if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
-    if (!inz || inz.sleutel !== this.stand.sleutel) return json({ fout: "dit is niet jouw klas" }, 403);
+    if (!inz || !zelfde(inz.sleutel, this.stand.sleutel)) return json({ fout: "dit is niet jouw klas" }, 403);
     const binnen = inz.namen && typeof inz.namen === "object" ? inz.namen : {};
     const uit = {}; let n = 0;
     for (const k of Object.keys(binnen)){
@@ -2667,7 +2685,7 @@ export class Kamer extends DurableObject {
      code, want dit is bedoeld voor wie er per ongeluk in zit, niet als straf. */
   async leerlingWeg(inz){
     if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
-    if (!inz || inz.sleutel !== this.stand.sleutel) return json({ fout: "dit is niet jouw klas" }, 403);
+    if (!inz || !zelfde(inz.sleutel, this.stand.sleutel)) return json({ fout: "dit is niet jouw klas" }, 403);
     const id = schoon(inz.id, 12);
     if (!id) return json({ fout: "geen leerling" }, 400);
     const l = this.stand.leerlingen || {};
@@ -2699,7 +2717,7 @@ export class Kamer extends DurableObject {
      eens op het oude apparaat, dan komt dat ook bij de goede regel. */
   async leerlingSamen(inz){
     if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
-    if (!inz || inz.sleutel !== this.stand.sleutel) return json({ fout: "dit is niet jouw klas" }, 403);
+    if (!inz || !zelfde(inz.sleutel, this.stand.sleutel)) return json({ fout: "dit is niet jouw klas" }, 403);
     const st = this.stand, l = st.leerlingen || {};
     st.alias = st.alias || {}; st.accounts = st.accounts || {};
     let van = schoon(inz.van, 12), naar = schoon(inz.naar, 12);
@@ -2725,7 +2743,7 @@ export class Kamer extends DurableObject {
   /* de docent heft de klascode op: alles weg, en de leerlingen merken het bij hun volgende melding */
   async opheffen(inz){
     if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
-    if (!inz || inz.sleutel !== this.stand.sleutel) return json({ fout: "dit is niet jouw klas" }, 403);
+    if (!inz || !zelfde(inz.sleutel, this.stand.sleutel)) return json({ fout: "dit is niet jouw klas" }, 403);
     this.beheerMeld(true);
     this.stand = null;
     await this.ctx.storage.deleteAll();
@@ -2733,7 +2751,7 @@ export class Kamer extends DurableObject {
   }
   async resultaten(sleutel, eigenaar){
     if (!this.stand || this.stand.spel !== "klas") return json({ fout: "dit is geen klascode" }, 404);
-    if (!sleutel || sleutel !== this.stand.sleutel) return json({ fout: "dit is niet jouw klas" }, 403);
+    if (!zelfde(sleutel, this.stand.sleutel)) return json({ fout: "dit is niet jouw klas" }, 403);
     /* de eigenaar van de site opent zijn eigen klas: dan krijgen de leerlingen alsnog wat erbij hoort (zie index.js) */
     if (eigenaar && !this.stand.vanEigenaar){ this.stand.vanEigenaar = true; await this.bewaar(); }
     /* oude dubbelingen eerst samenvoegen, zodat de uitslagen hieronder al goed staan */

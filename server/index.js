@@ -43,13 +43,23 @@ function eigenSite(req, url){
   if (!o) return true;
   try {
     const h = new URL(o).host;
-    return h === url.host || /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(h) || h.replace(/^www\./, "") === url.host.replace(/^www\./, "");
+    /* een pagina op localhost telt alleen als de server zelf ook lokaal draait (testen): op het echte
+       adres zou anders elk programma dat op de computer van een bezoeker een pagina serveert meetellen als de site */
+    const lokaal = /^(localhost|127\.0\.0\.1)$/.test(url.hostname);
+    return h === url.host || (lokaal && /^(localhost|127\.0\.0\.1)(:\d+)?$/.test(h)) || h.replace(/^www\./, "") === url.host.replace(/^www\./, "");
   } catch (e){ return false; }
 }
 /* De poortwachter telt per adres hoe vaak er iets gemaakt of ingestuurd wordt.
    Een hele school zit achter één adres, dus de grenzen zijn ruim: het gaat om
    het afremmen van een stroom, niet om een enkele klas. Met kijk telt het
    verzoek zelf niet mee: dan vragen we alleen of er nog ruimte is. */
+/* Klascodes zijn kort (vier letters). Wie ze afloopt, of bij een klas sleutels probeert, krijgt
+   steeds "bestaat niet" of "niet jouw klas": die antwoorden tellen we per adres. Een goed antwoord
+   telt nooit, dus een school merkt hier niets van. */
+async function klasMis(env, req, r){
+  if (r && (r.status === 404 || r.status === 403)) await magDoor(env, req, "klas-mis", 300, 600);
+  return r;
+}
 /* streng: lukt het tellen niet, dan is het antwoord nee (voor PMT: liever even dicht
    dan zonder rem). alle: een teller voor alle adressen samen in plaats van per adres. */
 async function magDoor(env, req, wat, per, seconden, kijk, streng, alle){
@@ -482,7 +492,10 @@ async function verdeel(req, env, ctx){
     if (kl){
       const stub = env.KAMERS.get(env.KAMERS.idFromName(kl[1].toUpperCase()));
       /* de leerling: heb ik de opdracht gehaald? */
-      if (kl[2] === "/mijn") return stub.fetch("https://kamer/mijn?sid=" + encodeURIComponent(url.searchParams.get("sid") || ""));
+      if (kl[2] === "/mijn" || !kl[2]){
+        if (!await magDoor(env, req, "klas-mis", 300, 600, true)) return json({ fout: "even wachten" }, 429);
+      }
+      if (kl[2] === "/mijn") return klasMis(env, req, await stub.fetch("https://kamer/mijn?sid=" + encodeURIComponent(url.searchParams.get("sid") || "")));
       if (kl[2]){
         if (req.method !== "POST") return json({ fout: "onbekend" }, 404);
         if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
@@ -515,7 +528,7 @@ async function verdeel(req, env, ctx){
          van de eigenaar: klassen van voor 20 september misten die vlag, en hun leerlingen dus de baret en het krijtje.
          Net als bij het maken van een klascode bepaalt de server dit zelf, uit het sessiekoekje. */
       const eigenaar = sleutel && await isEigenaar(req, env);
-      return stub.fetch("https://kamer/resultaten?sleutel=" + encodeURIComponent(sleutel) + (eigenaar ? "&eigenaar=1" : ""));
+      return klasMis(env, req, await stub.fetch("https://kamer/resultaten?sleutel=" + encodeURIComponent(sleutel) + (eigenaar ? "&eigenaar=1" : "")));
     }
 
     /* De stad. De portier zoekt een potje met plek; is er geen, dan

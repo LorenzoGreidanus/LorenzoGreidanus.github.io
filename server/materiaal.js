@@ -68,6 +68,10 @@ function json(obj, status){
 }
 /* tekst zonder stuurtekens, ingekort */
 function t(x, max){ return String(x == null ? "" : x).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, "").replace(/\s+/g, " ").trim().slice(0, max); }
+/* Een naam of een kopje: zonder punthaken. Die tekst staat op veel plekken als titel in een
+   pagina (een tegel, een kop boven een klassement), en met punthaken kon iemand er html van
+   maken. In vragen en antwoorden mogen ze wel (3 < 5): die zet elke pagina zelf veilig neer. */
+function tn(x, max){ return t(String(x == null ? "" : x).replace(/[<>]/g, ""), max); }
 /* een tekst met alinea's: lege regels tussen de alinea's blijven staan */
 function alineas(x, max){ return String(x == null ? "" : x).replace(/\r\n?/g, "\n").replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, "").split(/\n\s*\n/).map(a => a.replace(/\s+/g, " ").trim()).filter(Boolean).join("\n\n").slice(0, max); }
 /* De teksten van een leestoets: hoogstens zes, met de letters A tot en met F. Een tekst uit de
@@ -235,7 +239,7 @@ function dictee(inz){
   const lang = zinnen.findIndex(z => z.length > ZIN_MAX);
   if (lang >= 0) return { fout: "zin " + (lang + 1) + " is te lang: hoogstens " + ZIN_MAX + " tekens" };
   if (zinnen.join(" ").length > DICTEE_TEKENS) return { fout: "het dictee is te lang: hoogstens " + DICTEE_TEKENS + " tekens" };
-  const naam = t(inz.naam, 80) || "Dictee", uitleg = t(inz.uitleg, 600);
+  const naam = tn(inz.naam, 80) || "Dictee", uitleg = t(inz.uitleg, 600);
   if ([naam, uitleg].concat(zinnen).some(x => /[<>]/.test(x))) return { fout: "alleen gewone tekst: haal de tekens < en > weg" };
   if (ongepast(naam)) return { fout: "in de naam staat een woord dat hier niet kan" };
   const vies = zinnen.findIndex(ongepast);
@@ -256,14 +260,14 @@ function netjes(inz){
   const soort = SOORTEN[inz.soort] ? inz.soort : null;
   if (!soort) return null;
   if (soort === "dictee") return dictee(inz);
-  const uit = { soort, naam: t(inz.naam, 80) || (soort === "lijst" ? "Woordenlijst" : soort === "topo" ? "Topografie" : "Oefening"), vak: t(inz.vak, 12) };
+  const uit = { soort, naam: tn(inz.naam, 80) || (soort === "lijst" ? "Woordenlijst" : soort === "topo" ? "Topografie" : "Oefening"), vak: t(inz.vak, 12) };
   if (soort === "topo"){
     if (!TOPO_KAARTEN[inz.kaart]) return { fout: "kies een kaart" };
     uit.kaart = inz.kaart;
     uit.plekken = [...new Set(lijstVan(inz.plekken, TOPO_MAX, 80))];
     if (uit.plekken.length < 2) return { fout: "kies minstens twee plekken op de kaart" };
   } else if (soort === "lijst"){
-    uit.kopA = t(inz.kopA, 30); uit.kopB = t(inz.kopB, 30);
+    uit.kopA = tn(inz.kopA, 30); uit.kopB = tn(inz.kopB, 30);
     uit.paren = (Array.isArray(inz.paren) ? inz.paren : []).map(p => ({ a: t(p && p.a, 120), b: t(p && p.b, 120) }))
       .filter(p => p.a && p.b).slice(0, MAX_ITEMS);
     if (uit.paren.length < 4) return { fout: "een woordenlijst heeft minstens vier paren nodig" };
@@ -439,6 +443,14 @@ function schoonNorm(n){
   return { methode, cesuur: Math.round(cesuur * 10) / 10, n: Math.round(nt * 10) / 10 };
 }
 
+/* Twee sleutels vergelijken zonder dat de rekentijd verraadt hoeveel tekens er goed waren:
+   altijd alle tekens langs, ook als het eerste al fout is. */
+function zelfde(a, b){
+  if (typeof a !== "string" || typeof b !== "string" || !a || !b) return false;
+  let v = a.length ^ b.length;
+  for (let i = 0; i < b.length; i++) v |= (a.charCodeAt(i % a.length) ^ b.charCodeAt(i));
+  return v === 0;
+}
 export class Materiaal extends DurableObject {
   async fetch(req){
     try {
@@ -470,7 +482,7 @@ export class Materiaal extends DurableObject {
   async vanMij(code, inz){
     const m = await this.ctx.storage.get("m:" + code);
     if (!m) return { fout: json({ fout: "dit materiaal bestaat niet (meer)" }, 404) };
-    if (!inz || inz.sleutel !== m.sleutel) return { fout: json({ fout: "dit is niet jouw materiaal" }, 403) };
+    if (!inz || !zelfde(inz.sleutel, m.sleutel)) return { fout: json({ fout: "dit is niet jouw materiaal" }, 403) };
     return { m };
   }
   async zet(inz){
@@ -514,7 +526,7 @@ export class Materiaal extends DurableObject {
   async weg(code, inz){
     const oud = await this.ctx.storage.get("m:" + code);
     if (!oud) return json({ ok: true });
-    if (!inz || inz.sleutel !== oud.sleutel) return json({ fout: "je kunt alleen je eigen materiaal weghalen" }, 403);
+    if (!inz || !zelfde(inz.sleutel, oud.sleutel)) return json({ fout: "je kunt alleen je eigen materiaal weghalen" }, 403);
     await this.afbWeg(code, oud, new Set());
     await this.ctx.storage.delete("m:" + code);
     await this.uitslagenWeg(code);
@@ -573,8 +585,8 @@ export class Materiaal extends DurableObject {
     if (!m || Date.now() - (m.gebruikt || m.gemaakt) > BEWAAR) return json({ fout: "geen materiaal met deze code" }, 404);
     /* gebruik bijhouden, hoogstens een keer per dag schrijven */
     if (Date.now() - (m.gebruikt || 0) > DAG){ m.gebruikt = Date.now(); await this.ctx.storage.put("m:" + code, m); }
-    const uit = { code, soort: m.soort, naam: m.naam, vak: m.vak };
-    if (m.soort === "lijst") Object.assign(uit, { kopA: m.kopA, kopB: m.kopB, paren: m.paren });
+    const uit = { code, soort: m.soort, naam: tn(m.naam, 80), vak: m.vak };
+    if (m.soort === "lijst") Object.assign(uit, { kopA: tn(m.kopA, 30), kopB: tn(m.kopB, 30), paren: m.paren });
     else if (m.soort === "dictee") Object.assign(uit, { niveau: m.niveau || "", zinnen: m.zinnen, uitleg: m.uitleg || "" }, Array.isArray(m.zu) ? { zu: m.zu } : {});
     else if (m.soort === "topo") Object.assign(uit, { kaart: m.kaart, plekken: m.plekken });
     else if (m.modus === "toets") Object.assign(uit, { modus: "toets", verborgen: true, husselen: !!m.husselen, items: m.items.map(verborgen) });
