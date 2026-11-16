@@ -3215,6 +3215,20 @@ button.tegel:hover{border-color:var(--accent)}
       }
       function grootDag(i){ return DAGEN[i].charAt(0).toUpperCase() + DAGEN[i].slice(1); }
       function vers(){ if (!B.alle.length) autoLijst = uitTijden(); tekenWeek(); }
+      /* Links iets veranderd: de standaarddagen worden opnieuw gevuld. Stonden er
+         blokken die met de hand waren gezet, dan kun je die nog terughalen. */
+      var bewaardeAlle = null;
+      var terugKnop = el('button', { class: 'knop stil klein', type: 'button', hidden: true, tekst: 'Mijn eigen blokken terugzetten', onclick: function(){
+        if (!bewaardeAlle) return;
+        B.alle = bewaardeAlle; bewaardeAlle = null; terugKnop.hidden = true; kies = null;
+        iStand.textContent = 'Je eigen blokken staan er weer.'; tekenWeek();
+      } });
+      function hervul(){
+        if (B.alle.length && !bewaardeAlle){ bewaardeAlle = B.alle; terugKnop.hidden = false; }
+        B.alle = []; kies = null; autoLijst = uitTijden(); tekenWeek();
+        var eigen = Object.keys(B.dag).filter(function(i){ return !B.dag[i].uit; }).map(function(i){ return DAGEN[i]; });
+        iStand.textContent = 'De standaarddagen zijn opnieuw gevuld.' + (eigen.length ? ' De ' + eigen.join(' en ') + (eigen.length > 1 ? ' hebben' : ' heeft') + ' een eigen indeling en ' + (eigen.length > 1 ? 'veranderen' : 'verandert') + ' niet mee.' : '') + ' Sla op om het te bewaren.';
+      }
       function tekenWeek(){
         if (kies && lijstVan(kiesD).indexOf(kies) < 0) kies = null;
         var van = minuten(iVan.value), tot = minuten(iTot.value);
@@ -3335,12 +3349,13 @@ button.tegel:hover{border-color:var(--accent)}
       function tekenChips(){
         blokChips.textContent = '';
         [20, 30, 45, 60].forEach(function(m){
-          blokChips.appendChild(el('button', { type: 'button', 'aria-pressed': +iBlok.value === m ? 'true' : 'false', tekst: minTekst(m), onclick: function(){ iBlok.value = String(m); tekenChips(); vers(); } }));
+          blokChips.appendChild(el('button', { type: 'button', 'aria-pressed': +iBlok.value === m ? 'true' : 'false', tekst: minTekst(m), onclick: function(){ iBlok.value = String(m); tekenChips(); hervul(); } }));
         });
       }
-      [iVan, iTot, iBlok].forEach(function(x){ x.addEventListener('input', function(){ tekenChips(); vers(); }); });
-      pLijst.addEventListener('change', function(){ vers(); });
-      pLijst.addEventListener('click', function(ev){ if (ev.target.tagName === 'BUTTON') setTimeout(vers, 0); });
+      [iVan, iTot, iBlok].forEach(function(x){ x.addEventListener('input', function(){ tekenChips(); hervul(); }); });
+      pLijst.addEventListener('change', function(){ hervul(); });
+      pLijst.addEventListener('input', function(){ hervul(); });
+      pLijst.addEventListener('click', function(ev){ if (ev.target.tagName === 'BUTTON') setTimeout(hervul, 0); });
       iBlok.setAttribute('aria-label', 'Een eigen aantal minuten per blok'); iBlok.removeAttribute('style');
       var instel = el('form', { class: 'weekmaker', onsubmit: function(ev){
         ev.preventDefault();
@@ -3360,12 +3375,18 @@ button.tegel:hover{border-color:var(--accent)}
           el('label', {}, ['Een blok duurt', blokChips]),
           el('label', {}, ['Of een eigen aantal minuten', iBlok]),
           el('span', { class: 'zacht', style: 'font-size:.84rem;font-weight:500', tekst: 'Pauzes' }), pLijst,
-          el('div', {}, [el('button', { class: 'knop stil klein', type: 'button', tekst: 'Pauze toevoegen', onclick: function(){ P.push({ naam: 'Pauze', van: 12 * 60, tot: 12 * 60 + 30 }); tekenPauzes(); vers(); } })]),
-          el('button', { class: 'knop stil', type: 'button', tekst: 'Vul de dagen zo', onclick: function(){
-            B.alle = []; kies = null; vers();
-            iStand.textContent = Object.keys(B.dag).length ? 'De standaarddagen zijn opnieuw gevuld. Dagen met een eigen indeling zijn niet veranderd.' : 'De dagen zijn opnieuw gevuld. Sla op om het te bewaren.';
-          } }),
-          el('p', { class: 'zacht', style: 'font-size:.82rem', tekst: 'Daarna pas je in de week aan wat anders moet. Afspraken die er al staan blijven op hun eigen tijd.' }),
+          el('div', {}, [el('button', { class: 'knop stil klein', type: 'button', tekst: 'Pauze toevoegen', onclick: function(){
+            /* op een plek waar nog geen pauze staat, anders zie je hem niet verschijnen */
+            var dagVan = minuten(iVan.value), dagTot = minuten(iTot.value), plek = null;
+            [720, 600, 840, 660, 780, 540, 900].concat([dagVan + 60, dagVan + 120]).forEach(function(t){
+              if (plek !== null || !(t >= dagVan && t + 15 <= dagTot)) return;
+              if (!P.some(function(p){ return t < p.tot && t + 15 > p.van; })) plek = t;
+            });
+            if (plek === null) plek = 720;
+            P.push({ naam: 'Pauze', van: plek, tot: plek + 15 }); tekenPauzes(); hervul();
+            iStand.textContent = 'Er staat een pauze bij van ' + uur(plek) + ' tot ' + uur(plek + 15) + '. Pas links de tijden aan als hij ergens anders moet.';
+          } })]),
+          el('p', { class: 'zacht', style: 'font-size:.82rem', tekst: 'Wat je hier verandert, zie je meteen in de week. Daarna pas je in de week aan wat anders moet. Afspraken die er al staan blijven op hun eigen tijd.' }),
           el('label', {}, ['Laatste schooldag', iEind])]),
         el('div', {}, [
           el('p', { class: 'pen', tekst: 'stap 2' }), el('h3', { tekst: 'Sleep en klik in de week zelf' }),
@@ -3377,7 +3398,7 @@ button.tegel:hover{border-color:var(--accent)}
           el('p', { class: 'zacht', style: 'font-size:.82rem', tekst: 'Klik op een blok om het te kiezen. Sleep daarna het streepje boven of onder om het korter of langer te maken, in stappen van 5 minuten.' })]),
         blokVak,
         el('div', { class: 'wm-onder' }, [el('button', { class: 'knop', type: 'submit', tekst: 'Opslaan' }),
-          el('button', { class: 'knop stil', type: 'button', tekst: 'Toch niet', onclick: sluitInst }), iStand])]);
+          el('button', { class: 'knop stil', type: 'button', tekst: 'Toch niet', onclick: sluitInst }), terugKnop, iStand])]);
       tekenChips(); vers();
 
       if (perDagAnders){
