@@ -507,7 +507,7 @@ const TOESTEMMINGSTEKST = [
   "U mag het dossier inzien, laten verbeteren en laten verwijderen. U kunt uw toestemming altijd intrekken. Dat heeft geen gevolgen voor het onderwijs aan uw kind."
 ].join("\n");
 function mailadres(v){ const t = tekst(v, 120).toLowerCase(); return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t) ? t : ""; }
-const LIJFPLEKKEN = ["hoofd", "schouders", "borst", "buik", "armen", "handen", "benen", "voeten"];
+const LIJFPLEKKEN = ["hoofd", "nek", "schouders", "borst", "buik", "armen", "handen", "benen", "voeten"];
 function schoon(d){
   d = d && typeof d === "object" ? d : {};
   const uit = {
@@ -691,7 +691,7 @@ function voorbeelden(){
       hulpvraag: "Sam raakt snel gespannen in de klas en merkt dat pas als het te laat is.",
       doelen: [{ tekst: "Spanning eerder opmerken in het lijf", klaar: true, scores: [[-70, 2], [-49, 2], [-35, 3], [-21, 4], [-7, 4]].map(x => ({ datum: dag(x[0]), s: x[1] })) },
         { tekst: "Zelf een ademoefening doen in de les", klaar: false, scores: [[-35, 1], [-21, 2], [-7, 3]].map(x => ({ datum: dag(x[0]), s: x[1] })) }],
-      lijf: [[-35, { buik: 3, schouders: 2, handen: 2 }], [-21, { buik: 2, schouders: 2 }], [-7, { buik: 1, schouders: 1 }]].map(x => ({ datum: dag(x[0]), plekken: x[1] })),
+      lijf: [[-35, { buik: 3, nek: 3, schouders: 2, handen: 2 }], [-21, { buik: 2, nek: 2, schouders: 2 }], [-7, { buik: 1, nek: 1 }]].map(x => ({ datum: dag(x[0]), plekken: x[1] })),
       notities: [{ datum: dag(-84), tekst: "Intake en beginmeting. Sam vertelt weinig maar doet goed mee met de oefeningen." },
         { datum: dag(-42), tekst: "Tweede meting. Doel bijgesteld: eerst opmerken, dan pas iets doen." },
         { datum: dag(-7), tekst: "Sessie 9: de ademoefening lukt nu zonder hulp.", volgende: "De ademoefening proberen vlak voor de les begint." }] },
