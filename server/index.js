@@ -50,14 +50,16 @@ function eigenSite(req, url){
    Een hele school zit achter één adres, dus de grenzen zijn ruim: het gaat om
    het afremmen van een stroom, niet om een enkele klas. Met kijk telt het
    verzoek zelf niet mee: dan vragen we alleen of er nog ruimte is. */
-async function magDoor(env, req, wat, per, seconden, kijk){
+/* streng: lukt het tellen niet, dan is het antwoord nee (voor PMT: liever even dicht
+   dan zonder rem). alle: een teller voor alle adressen samen in plaats van per adres. */
+async function magDoor(env, req, wat, per, seconden, kijk, streng, alle){
   try {
-    const ip = req.headers.get("CF-Connecting-IP") || "?";
+    const ip = alle ? "alle" : (req.headers.get("CF-Connecting-IP") || "?");
     const r = await env.POORT.get(env.POORT.idFromName("poort")).fetch("https://poort/tel", { method: "POST",
       body: JSON.stringify({ wat, ip, per, seconden, kijk: !!kijk }) });
     const j = await r.json();
     return !!j.ok;
-  } catch (e){ return true; }
+  } catch (e){ return !streng; }
 }
 
 /* Geen I, O, 0 en 1: die lees je van een digibord niet uit elkaar. */
@@ -164,7 +166,14 @@ export default {
   }
 };
 
-/* De pagina van PMT: nooit bewaren, nooit in een frame, niet voor zoekmachines. */
+/* De pagina van PMT: nooit bewaren, nooit in een frame, niet voor zoekmachines.
+   De pagina's hebben hun script en stijl in het bestand zelf en laden verder
+   alleen de lettertypen van dit adres. De regels hieronder laten niets anders
+   toe: geen script van elders, en de pagina kan alleen met dit adres praten.
+   Mocht er ooit toch vreemde code in de pagina belanden, dan kan die de
+   gegevens niet naar een ander adres sturen. */
+const PMT_REGELS = "default-src 'none'; script-src 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; " +
+  "connect-src 'self'; manifest-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'";
 async function pmtPagina(env, req, url, bestand){
   const r = await env.ASSETS.fetch(new Request(url.origin + "/pmt/" + bestand, { headers: req.headers }));
   const h = new Headers(r.headers);
@@ -172,6 +181,11 @@ async function pmtPagina(env, req, url, bestand){
   h.set("x-frame-options", "DENY");
   h.set("x-robots-tag", "noindex, nofollow");
   h.set("referrer-policy", "no-referrer");
+  h.set("content-security-policy", PMT_REGELS);
+  h.set("x-content-type-options", "nosniff");
+  h.set("strict-transport-security", "max-age=31536000");
+  h.set("permissions-policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()");
+  h.set("cross-origin-opener-policy", "same-origin");
   return new Response(r.body, { status: r.status, headers: h });
 }
 
@@ -193,7 +207,8 @@ async function verdeel(req, env, ctx){
     const lokaal = url.hostname === "localhost" || url.hostname === "127.0.0.1";
     if (p === "/api/pmt" || p.startsWith("/api/pmt/")){
       if (!opPmt && !lokaal) return json({ fout: "onbekend" }, 404);
-      return pmtBehandel(req, env, url, { magDoor: (wat, per, s, kijk) => magDoor(env, req, wat, per, s, kijk) });
+      return pmtBehandel(req, env, url, { magDoor: (wat, per, s, kijk) => magDoor(env, req, wat, per, s, kijk, true),
+        magDoorAlle: (wat, per, s, kijk) => magDoor(env, req, wat, per, s, kijk, true, true) });
     }
     if (opPmt){
       if (p.startsWith("/api/") || p.startsWith("/ws/")) return json({ fout: "onbekend" }, 404);

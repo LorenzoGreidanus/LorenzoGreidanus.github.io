@@ -90,6 +90,8 @@ import { DurableObject } from "cloudflare:workers";
 import { teken, lees, koekjes, controleer, basis, willekeur, b64url, vanB64url, sha256 } from "./account.js";
 
 const SESSIE_MIN = 15, SESSIE_MAX_UUR = 10, AANMELD_SECONDEN = 600;
+/* hoeveel verkeerde codes er in tien minuten vanaf alle adressen samen mogen komen */
+const CODE_MIS_ALLE = 1500;
 /* na hoeveel minuten zonder iets te doen de sessie sluit: de therapeut kiest uit deze */
 const SESSIE_KEUZES = [15, 30, 60, 120];
 function sessieMin(s){ return SESSIE_KEUZES.indexOf(s && s.min) >= 0 ? s.min : SESSIE_MIN; }
@@ -153,11 +155,15 @@ async function sessieKoekje(env, url, s){
   return zet(koekNaam(url), pak, url, min * 60, "/", true);
 }
 async function wie(env, req){
-  const s = await lees(env, koekjes(req)[koekNaam(new URL(req.url))]);
+  const url = new URL(req.url);
+  const s = await lees(env, koekjes(req)[koekNaam(url)]);
   if (!s || s.pmt !== 1) return null;
   /* een demosessie geldt alleen zolang de demo bestaat; een echte alleen voor wie op de lijst staat */
   if (s.demo ? !demoKan(env) : !magErin(env, s.mail)) return null;
   if (!(Date.now() - s.sinds < SESSIE_MAX_UUR * 3600000)) return null;
+  /* Uitloggen sluit elke sessie van dat account die daarvoor begon, ook op een
+     ander apparaat en ook als iemand het koekje had overgenomen. */
+  if (!s.demo && s.sinds <= await kluis(env, url).uitSinds(s.mail)) return null;
   return s;
 }
 /* een adres dat niet op de lijst staat komt half in het logboek: genoeg om het te herkennen */
@@ -258,6 +264,7 @@ export async function behandel(req, env, url, hulp){
   if (p === "/api/pmt/uitloggen" && m === "POST"){
     const s = await wie(env, req);
     if (s) await (s.demo ? demoKluis(env, url) : kluis(env, url)).meld(s.naam, "uitgelogd", "");
+    if (s && !s.demo) await kluis(env, url).zetUit(s.mail);
     return json({ ok: true }, 200, { "set-cookie": zet(koekNaam(url), "", url, 0, "/", true) });
   }
 
@@ -267,7 +274,14 @@ export async function behandel(req, env, url, hulp){
   if (am && (m === "GET" || m === "POST")){
     const code = am[1].toUpperCase();
     if (!await hulp.magDoor("pmt-code-mis", 30, 600, true)) return json({ fout: "even wachten" }, 429);
-    const mis = async () => { await hulp.magDoor("pmt-code-mis", 30, 600); return json({ fout: "deze code klopt niet of is verlopen" }, 404); };
+    /* Per adres is niet genoeg: wie vanaf veel adressen tegelijk codes afloopt,
+       blijft overal onder de grens. Daarom ook een grens voor alle adressen samen.
+       Is die bereikt, dan staat het in het logboek en gaat het invullen even dicht. */
+    if (!await hulp.magDoorAlle("pmt-code-mis-alle", CODE_MIS_ALLE, 600, true)){
+      await kluis(env, url).meld("de server", "veel verkeerde codes geprobeerd: invullen met een code staat even dicht", "");
+      return json({ fout: "even wachten" }, 429);
+    }
+    const mis = async () => { await hulp.magDoor("pmt-code-mis", 30, 600); await hulp.magDoorAlle("pmt-code-mis-alle", CODE_MIS_ALLE, 600); return json({ fout: "deze code klopt niet of is verlopen" }, 404); };
     const kluizen = demoKan(env) ? [kluis(env, url), demoKluis(env, url)] : [kluis(env, url)];
     if (m === "GET"){
       for (const x of kluizen){ const a = await x.afname(code); if (a) return json(a); }
@@ -1056,6 +1070,14 @@ export class Pmt extends DurableObject {
   /* Hoeveel maanden na het afronden een dossier blijft staan. 0 betekent dat er
      niets vanzelf verdwijnt; de school hoort de termijn zelf vast te stellen. */
   /* na hoeveel minuten zonder iets te doen de sessie sluit */
+  /* wanneer dit account voor het laatst zelf uitlogde: sessies van daarvoor gelden niet meer */
+  uitSinds(mail){
+    const r = this.sql.exec("SELECT v FROM stand WHERE k = ?", "uit:" + String(mail)).toArray()[0];
+    return Number(r && r.v) || 0;
+  }
+  zetUit(mail){
+    this.sql.exec("INSERT OR REPLACE INTO stand (k, v) VALUES (?, ?)", "uit:" + String(mail).slice(0, 200), String(Date.now()));
+  }
   sessieMinuten(){
     const r = this.sql.exec("SELECT v FROM stand WHERE k = 'sessie'").toArray()[0];
     const n = Math.round(Number(r && r.v));
