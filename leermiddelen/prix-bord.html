@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="nl"><head><meta charset="utf-8"><title>Grand Prix · bord</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<script src="cosmetica.js"></script>
+<script src="avatar.js"></script>
+<script src="prix-banen.js"></script>
+<style>
+/* Het bord van de Grand Prix: het circuit van boven, de stand ernaast. Een vast
+   vlak van 1366 bij 768 dat meeschaalt met het venster (zoals dijk-bord.html).
+   De kleuren staan vast: het bord is altijd nacht. */
+html,body{height:100%}
+body{margin:0;background:#070D24;font-family:Poppins,system-ui,sans-serif;color:#FBF6F1;overflow:hidden}
+*{box-sizing:border-box}
+.bord{position:absolute;left:0;top:0;width:1366px;height:768px;overflow:hidden;background:#0B1230;transform-origin:0 0;padding:18px 22px;display:flex;flex-direction:column;gap:12px}
+.kop{display:flex;align-items:center;justify-content:space-between;gap:20px}
+.kop h1{margin:0;font-size:30px;font-weight:700;letter-spacing:-.02em;display:inline}
+.kop .hand{font-family:Caveat,cursive;font-size:26px;color:#EA9836;margin-left:14px}
+.pil{display:flex;align-items:baseline;gap:8px;background:#16204A;border:2px solid #2B3A78;border-radius:14px;padding:6px 16px}
+.pil small{font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#B3BBD0}
+.pil b{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums}
+.pil.licht{background:#FBF6F1;color:#14224C;border-color:#FBF6F1}.pil.licht small{color:#14224C}.pil.licht b{letter-spacing:.14em}
+.rechts{display:flex;gap:10px;align-items:center}
+.midden{flex:1;min-height:0;display:flex;gap:16px}
+.baanvak{flex:1;min-width:0;position:relative;background:#101A40;border:2px solid #2B3A78;border-radius:24px;overflow:hidden}
+.baanvak svg{width:100%;height:100%;display:block}
+.melding{position:absolute;left:16px;top:14px;background:#EA9836;color:#14224C;border-radius:14px;padding:8px 14px;font-weight:600;font-size:15px}
+.melding:empty{display:none}
+.zij{width:372px;flex:none;display:flex;flex-direction:column;gap:10px;min-height:0}
+.stand{background:#16204A;border:2px solid #2B3A78;border-radius:20px;padding:12px 12px 10px;flex:1;min-height:0;display:flex;flex-direction:column;gap:5px}
+.stand h2{margin:0 2px 2px;font-size:17px;font-weight:600;display:flex;justify-content:space-between;align-items:baseline}
+.stand h2 small{font-size:12.5px;font-weight:400;color:#B3BBD0}
+.rijen{flex:1;min-height:0;display:flex;flex-direction:column;gap:3px;overflow:hidden}
+.rij{flex:1 1 0;min-height:0;max-height:54px;display:flex;align-items:center;gap:8px;padding:0 10px;border-radius:10px;background:#101A40;font-size:var(--f,14px);line-height:1.15}
+.rij.kop1{background:#FBF6F1;color:#14224C}
+.rij .p{width:24px;font-weight:700;font-variant-numeric:tabular-nums;font-size:1.15em}
+.rij .kl{width:12px;align-self:stretch;margin:5px 0;border-radius:4px;border:2px solid #0B1230;flex:none}
+.rij .wie{flex:1;min-width:0;display:flex;flex-direction:column}
+.rij .wie b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rij .wie small{font-size:.86em;opacity:.8;white-space:nowrap}
+.rij.krap .wie small{display:none}
+.band{min-width:74px;text-align:center;padding:2px 7px;border-radius:999px;font-size:.84em;font-weight:600;white-space:nowrap;background:#2B3A78;color:#FBF6F1}
+.band.zacht{background:#83A5F2;color:#14224C}
+.band.laag{background:#FCDED6;color:#8F2D16;box-shadow:inset 0 0 0 1.5px #F26749}
+.band.pit{background:#EA9836;color:#14224C}
+.band.klaar{background:#204ECF;color:#fff}
+.rij .g{width:44px;text-align:right;font-size:.9em;font-variant-numeric:tabular-nums}
+.pitvak{background:#16204A;border:2px solid #2B3A78;border-radius:20px;padding:10px 14px;display:flex;flex-direction:column;gap:2px}
+.pitvak small{font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#B3BBD0}
+.pitvak b{font-size:18px;font-weight:600}
+.pitvak span{font-size:13px;color:#B3BBD0}
+/* over het bord heen: het aftellen en de klasvraag */
+.over{position:absolute;inset:0;background:rgba(7,13,36,.86);display:flex;align-items:center;justify-content:center;padding:40px}
+.over.hide,.hide{display:none}
+.kaart{background:#FBF6F1;color:#14224C;border-radius:28px;padding:30px 36px;width:min(100%,1040px);display:flex;flex-direction:column;gap:16px}
+.kaart small{font-size:13px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#5b6480}
+.kaart h2{margin:0;font-size:40px;font-weight:600;line-height:1.2}
+.kaart .opties{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.kaart .optie{display:flex;align-items:center;gap:14px;min-height:76px;padding:10px 18px;border-radius:18px;border:2px solid rgba(20,34,76,.22);background:#fff;font-size:26px;font-weight:600}
+.kaart .optie i{font-style:normal;display:inline-grid;place-items:center;width:38px;height:38px;border-radius:12px;background:#14224C;color:#FBF6F1;font-size:18px;flex:none}
+.kaart .optie.goed{background:#204ECF;color:#fff;border-color:#204ECF}.kaart .optie.goed i{background:#fff;color:#204ECF}
+.kaart .optie.weg{opacity:.45}
+.kaart .voet{display:flex;align-items:center;justify-content:space-between;gap:20px;font-size:18px}
+.tijdbalk{flex:1;height:12px;border-radius:6px;background:#E6DDD2;overflow:hidden}.tijdbalk i{display:block;height:100%;background:#F26749;width:100%}
+.aftel{text-align:center;display:flex;flex-direction:column;gap:18px;align-items:center}
+.aftel h2{margin:0;font-size:46px;font-weight:700}
+.lichten{display:flex;gap:16px}.lichten i{width:54px;height:54px;border-radius:50%;background:#2B3A78;border:4px solid #0B1230;box-shadow:0 0 0 3px #3A4680}
+.lichten i.aan{background:#F26749;box-shadow:0 0 0 3px #3A4680,0 0 26px #F26749}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,220px));gap:6px 18px;font-size:18px;text-align:left}
+.grid div{background:#16204A;border-radius:10px;padding:6px 12px;display:flex;gap:10px}.grid div:nth-child(even){margin-top:14px}
+.grid b{width:24px}
+</style></head>
+<body>
+<div class="bord" id="bord">
+  <div class="kop">
+    <div><h1>Grand Prix</h1><span class="hand" id="waar"></span></div>
+    <div class="rechts">
+      <div class="pil"><small id="rondeW">Ronde</small><b id="ronde">–</b><span id="rondeVan"></span></div>
+      <div class="pil licht"><small>Doe mee</small><b id="code">····</b></div>
+    </div>
+  </div>
+  <div class="midden">
+    <div class="baanvak">
+      <svg id="baan" role="img" aria-label="Het circuit van boven met alle auto's"></svg>
+      <div class="melding" id="melding" role="status"></div>
+    </div>
+    <div class="zij">
+      <div class="stand"><h2><span id="standKop">De stand</span><small id="standUit"></small></h2><div class="rijen" id="rijen"></div></div>
+      <div class="pitvak"><small>Snelste pitstop</small><b id="pitWie">nog geen</b><span id="pitUit">vier wielen, vier goede antwoorden</span></div>
+    </div>
+  </div>
+  <div class="over hide" id="overAftel"><div class="aftel"><div class="lichten" id="lichten"><i></i><i></i><i></i><i></i><i></i></div><h2 id="aftelKop">De race begint</h2><div class="grid" id="grid"></div></div></div>
+  <div class="over hide" id="overKv"><div class="kaart"><small id="kvKop">Klasvraag · het veld schuift bij elkaar</small><h2 id="kvVraag"></h2><div class="opties" id="kvOpties"></div><div class="voet"><span id="kvUit">Antwoord op je eigen scherm.</span><div class="tijdbalk"><i id="kvBalk"></i></div></div></div></div>
+</div>
+<script>
+/* Het bord krijgt elke stand van strijd.html (PRIXBORD.zet) en de losse
+   berichten van de kamer (PRIXBORD.bericht): het startschot van de race, de
+   klasvraag en de uitslag daarvan. Het rekent niets uit wat de kamer al weet. */
+window.PRIXBORD = (function(){
+  'use strict';
+  var $ = function(id){ return document.getElementById(id); };
+  function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+  var veld = PRIX.veld($('baan'), { gezicht: function(naam, av){ return window.AVATAR ? AVATAR.svg(naam, 12, av) : ''; } });
+  var st = null, verschil = 0, aftelT = null, kvT = null, kv = null;
+  function pas(){ var s = Math.min(innerWidth / 1366, innerHeight / 768); $('bord').style.transform = 'translate(' + ((innerWidth - 1366 * s) / 2) + 'px,' + ((innerHeight - 768 * s) / 2) + 'px) scale(' + s + ')'; }
+  addEventListener('resize', pas); pas();
+  function sec(x){ return x.toFixed(1).replace('.', ','); }
+  function zet(m){
+    st = m;
+    var P = m.prix; if (!P) return;
+    verschil = P.nu - Date.now();
+    var b = PRIX.baan(P.baan), lijst = (m.spelers || []).filter(function(s){ return s.px && !s.weg; });
+    $('code').textContent = m.code || '';
+    $('waar').textContent = b.naam.replace(/^De |^Het /, function(x){ return x.toLowerCase(); }) + (m.set ? ' · ' + m.set : '');
+    veld.zet(m.spelers || [], P);
+    var kwal = P.fase2 === 'kwal', kop = lijst[0];
+    if (kwal){
+      var klaar = lijst.filter(function(s){ return s.px.kwTijd; }).length;
+      $('rondeW').textContent = 'Kwalificatie'; $('ronde').textContent = klaar; $('rondeVan').textContent = 'van ' + lijst.length + ' klaar';
+      $('standKop').textContent = 'De startopstelling'; $('standUit').textContent = 'tijd · goed van 8';
+      $('melding').textContent = 'Kwalificatie: acht bochten, acht vragen. Een fout kost 3 seconden.';
+    } else {
+      var kd = kop ? kop.px.d + (kop.px.v || 0) * (kop.px.oud || 0) / 1000 : 0;
+      $('rondeW').textContent = 'Ronde'; $('ronde').textContent = Math.max(1, Math.min(P.rondes, Math.floor(Math.max(0, kd)) + 1)); $('rondeVan').textContent = 'van ' + P.rondes;
+      $('standKop').textContent = 'De stand'; $('standUit').textContent = 'banden · goed van gevraagd';
+      $('melding').textContent = '';
+    }
+    var krap = lijst.length > 12;
+    $('rijen').style.setProperty('--f', lijst.length > 22 ? '11px' : lijst.length > 16 ? '12px' : lijst.length > 12 ? '13px' : '14px');
+    var kopD = kop && !kwal ? kop.px.d + (kop.px.v || 0) * (kop.px.oud || 0) / 1000 : 0;
+    $('rijen').innerHTML = lijst.map(function(s, i){
+      var px = s.px, gat, band, bk = '';
+      if (kwal){
+        gat = px.kwTijd ? PRIX.tijd(px.kwTijd) : 'bocht ' + Math.min(8, px.kwI + 1) + ' van 8';
+        band = px.kwTijd ? 'klaar' : 'rijdt'; bk = px.kwTijd ? ' klaar' : '';
+      } else if (px.klaar){ gat = 'binnen in ' + PRIX.tijd(px.klaar); band = 'finish'; bk = ' klaar'; }
+      else if (px.pit >= 0){ gat = 'in de pits'; band = 'wiel ' + Math.min(4, px.pit + 1) + ' van 4'; bk = ' pit'; }
+      else {
+        var d = px.d + (px.v || 0) * (px.oud || 0) / 1000;
+        gat = i === 0 ? 'voorop' : '+ ' + sec(Math.max(0, kopD - d) * b.ronde) + ' s' + (px.boost ? ' · extra vaart' : '');
+        band = (px.slijt < 25 ? '! ' : '') + px.band + ' ' + px.slijt + '%'; bk = px.slijt < 25 ? ' laag' : px.band === 'zacht' ? ' zacht' : '';
+      }
+      return '<div class="rij' + (i === 0 ? ' kop1' : '') + (krap ? ' krap' : '') + '"><span class="p">' + (i + 1) + '</span><span class="kl" style="background:' + PRIX.kleur(px.nr) + '"></span>' +
+        '<span class="wie"><b>' + schoon(s.naam) + (krap ? ' <span style="font-weight:400;opacity:.8">' + schoon(gat) + '</span>' : '') + '</b><small>' + schoon(gat) + '</small></span>' +
+        '<span class="band' + bk + '">' + schoon(band) + '</span><span class="g">' + (kwal ? px.goed + '/8' : px.goed + '/' + px.n) + '</span></div>';
+    }).join('');
+    if (P.pit){ $('pitWie').textContent = 'Team ' + P.pit.naam + ' · ' + sec(P.pit.ms / 1000) + ' s'; }
+    /* een bord dat midden in het aftellen of de klasvraag opent, loopt vanzelf bij */
+    if (P.fase2 === 'race' && P.raceStart - nu() > 300 && !aftelT) aftel(P.raceStart, []);
+    if (!P.kv && kv && !kv.uit) $('overKv').classList.add('hide');
+  }
+  function nu(){ return Date.now() + verschil; }
+  function aftel(start, grid){
+    clearInterval(aftelT);
+    $('overAftel').classList.remove('hide');
+    if (grid && grid.length) $('grid').innerHTML = grid.slice(0, 10).map(function(g, i){ return '<div><b>' + (i + 1) + '</b><span>' + schoon(g.naam) + '</span></div>'; }).join('');
+    function tik(){
+      var over = start - nu(), aan = Math.max(0, Math.min(5, 5 - Math.floor(over / 1000)));
+      [].forEach.call($('lichten').children, function(l, i){ l.className = i < aan && over > 0 ? 'aan' : ''; });
+      $('aftelKop').textContent = over > 0 ? 'De race begint over ' + Math.ceil(over / 1000) : 'Start!';
+      if (over < -900){ clearInterval(aftelT); aftelT = null; $('overAftel').classList.add('hide'); }
+    }
+    tik(); aftelT = setInterval(tik, 200);
+  }
+  function klasvraag(m){
+    kv = { tot: m.tot, uit: false };
+    if (m.nu) verschil = m.nu - Date.now();
+    $('overKv').classList.remove('hide');
+    $('kvKop').textContent = 'Klasvraag · ' + (m.kop || '') + ' · het veld schuift bij elkaar';
+    $('kvVraag').textContent = m.v;
+    $('kvOpties').innerHTML = (m.o || []).map(function(t, i){ return '<div class="optie"><i>' + (i + 1) + '</i><span>' + schoon(t) + '</span></div>'; }).join('');
+    $('kvUit').textContent = 'Antwoord op je eigen scherm.';
+    var duur = Math.max(1, m.tot - nu());
+    clearInterval(kvT);
+    kvT = setInterval(function(){ var over = Math.max(0, kv.tot - nu()); $('kvBalk').style.width = (over / duur * 100).toFixed(1) + '%'; if (!over) clearInterval(kvT); }, 200);
+  }
+  function klasuit(m){
+    clearInterval(kvT);
+    if (!kv) return;
+    kv.uit = true;
+    [].forEach.call($('kvOpties').children, function(o, i){ o.classList.add(i === m.g ? 'goed' : 'weg'); });
+    $('kvBalk').style.width = '0%';
+    $('kvUit').textContent = m.goed + ' van de ' + m.van + ' goed.' + (m.u ? ' ' + m.u : '');
+    setTimeout(function(){ $('overKv').classList.add('hide'); kv = null; }, 6000);
+  }
+  function bericht(m){
+    if (m.t === 'race'){ if (m.nu) verschil = m.nu - Date.now(); aftel(m.start, m.grid || []); }
+    else if (m.t === 'klasvraag') klasvraag(m);
+    else if (m.t === 'klasuit') klasuit(m);
+  }
+  return { zet: zet, bericht: bericht };
+})();
+</script>
+</body></html>

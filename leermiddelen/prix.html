@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script src="cosmetica.js"></script>
+<script src="avatar.js"></script>
+<script src="profiel.js"></script>
+<script src="prix-banen.js"></script>
+<title>Grand Prix · meneer Greidanus</title>
+<meta name="description" content="Grand Prix: elke leerling is een raceteam. Goede antwoorden maken je auto sneller.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0B1230">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%230B1230'/><rect x='20' y='40' width='60' height='22' rx='10' fill='%23EA9836'/><circle cx='46' cy='51' r='8' fill='%23FCDED6'/></svg>">
+<style>
+/* De Grand Prix op de laptop van de leerling. Links het circuit met alle
+   auto's, rechts wat je moet doen: de teamradio, de pitstop of de bocht van de
+   kwalificatie. Altijd nacht, zoals het bord: de kleuren staan vast. */
+:root{--nacht:#0B1230;--vlak:#16204A;--vlak2:#101A40;--rand:#2B3A78;--inkt:#14224C;--creme:#FBF6F1;--amber:#EA9836;--koraal:#F26749;--vista:#83A5F2;--zee:#204ECF;--zand:#FCDED6;--grijs:#B3BBD0;--fout:#8F2D16}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--nacht);color:var(--creme);font-family:'Poppins',system-ui,-apple-system,'Segoe UI',Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.4;font-size:15px}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer;touch-action:manipulation}
+.hide{display:none !important}
+.wrap{width:min(100% - 32px,1340px);margin-inline:auto;min-height:100svh;display:flex;flex-direction:column;gap:12px;padding:14px 0}
+/* de kop: je team, je plek, wie er voor en achter je rijdt */
+.kop{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.kop .kl{width:18px;height:42px;border-radius:6px;border:2px solid var(--nacht);box-shadow:0 0 0 2px var(--creme);flex:none}
+.kop .gezicht{flex:none;display:grid;place-items:center}
+.kop .team{flex:1;min-width:150px;line-height:1.1}
+.kop .team b{display:block;font-size:1.45rem;font-weight:700}
+.kop .team small{color:var(--grijs);font-size:.86rem}
+.pil{background:var(--vlak);border:2px solid var(--rand);border-radius:14px;padding:5px 14px;line-height:1.2;min-width:96px}
+.pil small{display:block;font-size:.7rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--grijs)}
+.pil b{font-weight:600;font-variant-numeric:tabular-nums}
+.pil.licht{background:var(--creme);color:var(--inkt);border-color:var(--creme);text-align:center}
+.pil.licht small{color:var(--inkt)}.pil.licht b{font-size:1.7rem;font-weight:700;line-height:1}
+.pil.let b{color:var(--zand)}
+.midden{flex:1;min-height:0;display:flex;gap:14px;flex-wrap:wrap}
+.links{flex:999 1 520px;min-width:0;display:flex;flex-direction:column;gap:10px}
+.baanvak{position:relative;flex:1;min-height:300px;background:var(--vlak2);border:2px solid var(--rand);border-radius:22px;overflow:hidden}
+.baanvak svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.baanvak .hand{position:absolute;left:14px;top:10px;font-family:Caveat,cursive;font-size:1.5rem;color:var(--amber);pointer-events:none}
+.baanvak .over{position:absolute;inset:0;background:rgba(7,13,36,.78);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center}
+.baanvak .over b{font-size:2.6rem;font-weight:700}
+.px-auto.mij .px-ring{animation:ring 2.4s linear infinite;transform-box:fill-box;transform-origin:center}
+@keyframes ring{to{transform:rotate(360deg)}}
+.onder{display:flex;align-items:center;gap:14px;background:var(--vlak);border:2px solid var(--rand);border-radius:16px;padding:10px 14px;flex-wrap:wrap}
+.banden{flex:1;min-width:200px}
+.banden .rij{display:flex;justify-content:space-between;font-size:.86rem}
+.banden .rij b{font-weight:600}
+.meter{margin-top:5px;height:14px;border-radius:7px;background:var(--rand);overflow:hidden}
+.meter i{display:block;height:100%;width:100%;border-radius:7px;background:var(--vista);transition:width .6s,background .3s}
+.meter i.laag{background:var(--koraal)}
+.pitknop{min-height:48px;padding:0 20px;border-radius:12px;border:2px solid var(--amber);background:none;color:var(--amber);font-weight:600}
+.pitknop:disabled{opacity:.4;cursor:default}
+.pitknop.nu{background:var(--amber);color:var(--inkt);animation:klop 1.4s ease-in-out infinite}
+@keyframes klop{50%{box-shadow:0 0 0 6px rgba(234,152,54,.3)}}
+.pitknop:focus-visible,.bandkeuze button:focus-visible,.antw button:focus-visible,.verder:focus-visible,.stuur:focus-visible{outline:4px solid var(--vista);outline-offset:2px}
+.rechts{flex:1 1 400px;max-width:520px;min-width:0;display:flex;flex-direction:column;gap:10px}
+@media(max-width:980px){.rechts{max-width:none}}
+/* het paneel: de vraag */
+.paneel{flex:1;background:var(--creme);color:var(--inkt);border-radius:22px;padding:18px 20px;display:flex;flex-direction:column;gap:12px;min-height:380px}
+.soort{display:flex;align-items:center;gap:10px}
+.soort i{flex:none;display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:var(--inkt);color:var(--creme);font-style:normal;font-weight:700}
+.soort i svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.soort small{display:block;font-size:.72rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#5b6480}
+.soort b{font-weight:600;font-size:.95rem;line-height:1.25}
+.wielen{display:flex;gap:6px;align-items:center}
+.wielen span{flex:1;height:30px;border-radius:9px;display:grid;place-items:center;font-size:.8rem;font-weight:600;background:#E6DDD2;color:#5b6480}
+.wielen span.vast{background:var(--zee);color:#fff}
+.wielen span.nu{background:var(--amber);color:var(--inkt)}
+.wielen em{font-style:normal;font-weight:700;font-variant-numeric:tabular-nums;min-width:62px;text-align:right}
+.paneel h1{margin:0;font-size:clamp(1.2rem,1.9vw,1.55rem);font-weight:600;line-height:1.3;overflow-wrap:anywhere}
+.antw{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.antw button{display:flex;align-items:center;gap:12px;text-align:left;min-height:70px;padding:10px 14px;border-radius:16px;background:#fff;color:var(--inkt);border:2px solid rgba(20,34,76,.22);font-size:1.05rem;font-weight:600;line-height:1.3;overflow-wrap:anywhere}
+.antw button .nr{flex:none;width:28px;height:28px;border-radius:9px;background:var(--inkt);color:var(--creme);display:grid;place-items:center;font-size:.85rem}
+.antw button:hover:not(:disabled){border-color:var(--inkt)}
+.antw button[disabled]{cursor:default}
+.antw button.gekozen{border-color:var(--inkt)}
+.antw button.goed{background:var(--zee);color:#fff;border-color:var(--zee)}.antw button.goed .nr{background:#fff;color:var(--zee)}
+.antw button.mis{background:var(--zand);color:var(--fout);border-color:var(--koraal)}
+.antw button.weg{opacity:.5}
+.open{display:flex;gap:10px;align-items:stretch}
+.open input{flex:1;min-width:0;min-height:60px;border-radius:16px;border:2px solid var(--inkt);background:#fff;color:var(--inkt);font-size:1.4rem;font-weight:600;padding:0 16px}
+.open .eenheid{align-self:center;font-size:1.3rem;font-weight:600}.open .eenheid:empty{display:none}
+.open input.goed{background:#DCE5FB;border-color:var(--zee)}.open input.mis{background:var(--zand);border-color:var(--koraal);color:var(--fout)}
+.stuur{min-height:60px;padding:0 22px;border-radius:16px;border:none;background:var(--koraal);color:var(--inkt);font-weight:700;box-shadow:0 4px 0 #B4472B}
+.stuur:disabled{opacity:.5;box-shadow:none;cursor:default}
+.oordeel{margin-top:auto;border-radius:16px;padding:12px 16px;min-height:74px;display:flex;align-items:center;gap:12px;background:#F1EAE2}
+.oordeel.goed{background:#DCE5FB}.oordeel.mis{background:var(--zand);color:var(--fout)}
+.oordeel .uit{flex:1;min-width:0;font-size:.95rem}
+.oordeel b{font-weight:700}
+.verder{flex:none;min-height:48px;padding:0 20px;border-radius:12px;border:none;background:var(--inkt);color:var(--creme);font-weight:600}
+.verder[disabled]{opacity:.5;cursor:wait}
+/* de startopstelling na je kwalificatie */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:5px 10px;font-size:.9rem}
+.grid div{display:flex;gap:8px;align-items:center;background:#F1EAE2;border-radius:10px;padding:5px 10px;min-width:0}
+.grid div.ik{background:var(--inkt);color:var(--creme)}
+.grid div.bezig{background:none;border:1.5px dashed rgba(20,34,76,.3)}
+.grid b{width:20px}.grid span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.grid small{font-variant-numeric:tabular-nums}
+/* de bandenkeuze */
+.bandkeuze{background:var(--vlak);border:2px solid var(--rand);border-radius:18px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.bandkeuze .rij{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.bandkeuze .rij b{font-weight:600}.bandkeuze .rij small{color:var(--grijs);font-size:.8rem}
+.bandkeuze .knoppen{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.bandkeuze button{min-height:68px;padding:7px 10px;border-radius:13px;text-align:left;display:flex;flex-direction:column;gap:1px;background:var(--vlak2);color:var(--creme);border:2px solid var(--rand)}
+.bandkeuze button b{font-weight:700}.bandkeuze button small{font-size:.74rem;line-height:1.25}
+.bandkeuze button[aria-pressed="true"]{background:var(--vista);color:var(--inkt);border-color:var(--vista)}
+/* wachten en het einde */
+.scherm{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:14px;padding:30px 0}
+.scherm h2{margin:0;font-size:clamp(1.6rem,3vw,2.4rem);font-weight:600}
+.scherm p{margin:0;color:#DCE0EA;max-width:34em}
+.scherm .hand{font-family:Caveat,cursive;font-size:1.6rem;color:var(--amber)}
+.knop{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 24px;border-radius:999px;border:0;background:var(--amber);color:var(--inkt);font-weight:600;text-decoration:none}
+.knop.stil{background:transparent;border:2px solid rgba(243,239,233,.7);color:var(--creme)}
+.stats{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.stats div{background:var(--vlak);border:2px solid var(--rand);border-radius:16px;padding:10px 18px;min-width:130px}
+.stats b{display:block;font-size:1.6rem;font-weight:600}
+.stats small{color:var(--grijs)}
+@media (max-width:640px){.antw{grid-template-columns:1fr}.bandkeuze .knoppen{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="kop" id="kop">
+    <span class="kl" id="kl"></span><span class="gezicht" id="gezicht"></span>
+    <div class="team"><b id="teamNaam">Team</b><small id="waar"></small></div>
+    <div class="pil licht"><small id="plekW">Plek</small><b id="plek">–</b></div>
+    <div class="pil" id="pilA"><small id="aW">Voor je</small><b id="a">–</b></div>
+    <div class="pil" id="pilB"><small id="bW">Achter je</small><b id="b">–</b></div>
+  </header>
+
+  <div class="midden hide" id="spel">
+    <section class="links">
+      <div class="baanvak">
+        <svg id="baan" role="img" aria-label="Het circuit van boven. Jouw auto heeft een ring."></svg>
+        <span class="hand" id="baanHand">je auto rijdt zelf, jij maakt hem sneller</span>
+        <div class="over hide" id="aftel"><span class="hand" style="position:static">de race begint</span><b id="aftelN">5</b><span id="aftelUit"></span></div>
+      </div>
+      <div class="onder" id="onder">
+        <div class="banden"><div class="rij"><b id="bandNaam">Banden: medium</b><span id="bandPct">100%</span></div><div class="meter" role="img" id="meter" aria-label="De banden zijn nog voor 100 procent goed"><i id="meterI"></i></div></div>
+        <button type="button" class="pitknop" id="pitKnop" disabled>Naar de pits</button>
+      </div>
+    </section>
+    <section class="rechts">
+      <div class="paneel" id="paneel">
+        <div class="soort"><i id="soortI"></i><div><small id="soortW"></small><b id="soortUit"></b></div></div>
+        <div class="wielen hide" id="wielen"></div>
+        <h1 id="vraagTekst">Even wachten…</h1>
+        <div class="antw" id="antw"></div>
+        <form class="open hide" id="open" autocomplete="off"><span class="eenheid" id="openVoor"></span><input type="text" inputmode="decimal" id="openIn" aria-label="Jouw antwoord" placeholder="typ het getal" maxlength="30" autocapitalize="off" spellcheck="false"><span class="eenheid" id="openNa"></span><button type="submit" class="stuur" id="openKnop">Klaar</button></form>
+        <div class="grid hide" id="grid"></div>
+        <div class="oordeel" id="oordeel" role="status"><div class="uit" id="oordeelUit"></div></div>
+      </div>
+      <div class="bandkeuze" id="bandkeuze">
+        <div class="rij"><b>Welke banden bij de volgende stop?</b><small>jouw keuze is hoe moeilijk</small></div>
+        <div class="knoppen" role="group" aria-label="Banden" id="bandKnoppen">
+          <button type="button" data-band="zacht" aria-pressed="false"><b>Zacht</b><small>moeilijkere vragen, meer vaart, slijt snel</small></button>
+          <button type="button" data-band="medium" aria-pressed="true"><b>Medium</b><small>gewone vragen, gewone vaart</small></button>
+          <button type="button" data-band="hard" aria-pressed="false"><b>Hard</b><small>makkelijkere vragen, gaat lang mee</small></button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="scherm" id="wacht">
+    <div class="hand" id="wachtHand">even geduld</div>
+    <h2 id="wachtKop">Verbinden…</h2>
+    <p id="wachtUit"></p>
+    <a class="knop stil hide" id="wachtTerug" href="strijd.html">Andere code invullen</a>
+  </section>
+
+  <section class="scherm hide" id="einde">
+    <div class="hand" id="eindHand"></div>
+    <h2 id="eindKop"></h2>
+    <p id="eindUit"></p>
+    <div class="stats" id="eindStats"></div>
+    <a class="knop stil" href="strijd.html">Nog een keer meedoen</a>
+  </section>
+</div>
+<script src="/vangnet.js" defer></script>
+<script src="naamfilter.js"></script>
+<script src="wakker.js"></script>
+<script src="verbinding.js"></script>
+<script>
+/* De Grand Prix op de laptop. De kamer (server/prix.js, game "prix") is de
+   baas: hij stuurt je vraag zonder het goede antwoord, kijkt na en rekent uit
+   waar je auto is. Deze pagina laat zien wat de kamer zegt en rijdt tussen
+   twee standen zelf door met de snelheid die meekwam. Na een fout lees je
+   eerst de uitleg; de kamer telt een antwoord ook pas na de leestijd. */
+(function(){
+  'use strict';
+  var $ = function(id){ return document.getElementById(id); };
+  var LEES = 2500;
+  function param(k){ try { return new URLSearchParams(location.search).get(k); } catch (e){ return null; } }
+  function schoon(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+  function kenmerk(){
+    var k = null;
+    try { k = localStorage.getItem('lg-quiz-sid'); } catch (e){}
+    if (!k){
+      var r = new Uint8Array(12); crypto.getRandomValues(r);
+      k = Array.prototype.map.call(r, function(b){ return ('0' + b.toString(16)).slice(-2); }).join('');
+      try { localStorage.setItem('lg-quiz-sid', k); } catch (e){}
+    }
+    return k;
+  }
+  var CODE = String(param('kamer') || '').toUpperCase().replace(/[^A-Z]/g, '');
+  var NAAM = String(param('naam') || '').trim().slice(0, 16);
+  if (!NAAM){ try { NAAM = (localStorage.getItem('lg-quiz-naam') || '').trim().slice(0, 16); } catch (e){} }
+  var AV = window.PROFIEL && PROFIEL.avatar ? PROFIEL.avatar() : '';
+  var ICO = {
+    radio: '<svg viewBox="0 0 24 24"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="2.5" y="13" width="5" height="7" rx="2"/><rect x="16.5" y="13" width="5" height="7" rx="2"/></svg>',
+    pit: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3"/><path d="M12 3.5v5.5M12 15v5.5M3.5 12H9M15 12h5.5"/></svg>',
+    kwal: '<svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 13V8.5M9.5 2.5h5M12 2.5V5"/></svg>',
+    klas: '<svg viewBox="0 0 24 24"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.5"/></svg>'
+  };
+  var v = null, vraag = null, gekozen = null, oordeelK = -1, wachtVolgende = null, verderKlok = null, verschil = 0;
+  var st = null, mij = null, mijnSid = '', volg = 'medium', fase2 = '', raceStart = 0, kwKlaar = 0, binnen = null, kv = null, kvKeuze = -1, pitSinds = 0, kwSinds = 0, kwStraf = 0, klokT = null, pitWiel = 0, inPit = false;
+  var veld = PRIX.veld($('baan'), { mij: '', gezicht: function(naam, av){ return window.AVATAR ? AVATAR.svg(naam, 12, av) : ''; } });
+
+  function nu(){ return Date.now() + verschil; }
+  function sec(x){ return x.toFixed(1).replace('.', ','); }
+  function toon(id){ ['spel', 'wacht', 'einde'].forEach(function(x){ $(x).classList.toggle('hide', x !== id); }); }
+  function wacht(hand, kop, uit, terug){ toon('wacht'); $('wachtHand').textContent = hand; $('wachtKop').textContent = kop; $('wachtUit').textContent = uit || ''; $('wachtTerug').classList.toggle('hide', !terug); }
+  $('teamNaam').textContent = 'Team ' + NAAM;
+  if (window.AVATAR && NAAM) $('gezicht').innerHTML = AVATAR.svg(NAAM, 38, AV, { stemming:'blij' });
+
+  /* ---------- de stand: de baan, je plek en je banden ---------- */
+  function zetStand(m){
+    if (!m.prix) return;
+    st = m; verschil = m.prix.nu - Date.now();
+    var P = m.prix, lijst = (m.rijders || []).filter(function(r){ return r.px && !r.weg; }), b = PRIX.baan(P.baan);
+    if (m.jouw && m.jouw.sid && m.jouw.sid !== mijnSid){ mijnSid = m.jouw.sid; veld.stop(); veld = PRIX.veld($('baan'), { mij: mijnSid, gezicht: function(naam, av){ return window.AVATAR ? AVATAR.svg(naam, 12, av) : ''; } }); }
+    fase2 = P.fase2; raceStart = P.raceStart || 0;
+    veld.zet(lijst, P);
+    var i = -1; lijst.forEach(function(r, j){ if (r.sid === mijnSid) i = j; });
+    mij = i >= 0 ? lijst[i] : null;
+    if (!mij) return;
+    var px = mij.px;
+    $('kl').style.background = PRIX.kleur(px.nr);
+    if ($('spel').classList.contains('hide') && $('einde').classList.contains('hide')) toon('spel');
+    function dVan(r){ return r.px.d + (r.px.v || 0) * (r.px.oud || 0) / 1000; }
+    if (fase2 === 'kwal'){
+      $('waar').textContent = b.naam + ' · kwalificatie';
+      $('plekW').textContent = 'Bocht'; $('plek').textContent = Math.min(8, px.kwI + (px.kwTijd ? 0 : 1));
+      $('aW').textContent = 'Rondetijd'; $('bW').textContent = 'Straftijd';
+      kwStraf = px.kwStraf || 0;
+      $('pilB').classList.toggle('let', kwStraf > 0);
+      $('baanHand').textContent = 'acht bochten, acht vragen';
+      $('onder').classList.add('hide'); $('bandkeuze').classList.add('hide');
+      if (px.kwTijd) tekenGrid(lijst);
+    } else {
+      var ronde = Math.max(1, Math.min(P.rondes, Math.floor(Math.max(0, dVan(mij))) + 1));
+      $('waar').textContent = b.naam + ' · ronde ' + ronde + ' van ' + P.rondes;
+      $('plekW').textContent = 'Plek'; $('plek').textContent = i + 1;
+      $('aW').textContent = 'Voor je'; $('bW').textContent = 'Achter je'; $('pilB').classList.remove('let');
+      var voor = lijst[i - 1], achter = lijst[i + 1];
+      $('a').textContent = px.klaar ? 'binnen' : voor ? (voor.px.klaar ? voor.naam + ', binnen' : voor.naam + ', ' + sec(Math.max(0, dVan(voor) - dVan(mij)) * b.ronde) + ' s') : 'niemand: je rijdt voorop';
+      $('b').textContent = achter ? (achter.px.klaar ? achter.naam : achter.naam + ', ' + sec(Math.max(0, dVan(mij) - dVan(achter)) * b.ronde) + ' s') : 'niemand';
+      $('baanHand').textContent = px.klaar ? 'je bent binnen' : px.pit >= 0 ? 'je staat in de pits' : px.boost ? 'extra vaart!' : 'je auto rijdt zelf, jij maakt hem sneller';
+      $('onder').classList.remove('hide'); $('bandkeuze').classList.toggle('hide', !!px.klaar);
+      zetBanden(px.slijt, px.band);
+      inPit = px.pit >= 0;
+      var kan = !px.klaar && !inPit && !P.kv && nu() >= raceStart;
+      $('pitKnop').disabled = !kan;
+      $('pitKnop').classList.toggle('nu', kan && px.slijt < 25);
+      $('pitKnop').textContent = inPit ? 'In de pits' : px.slijt < 25 && kan ? 'Banden bijna op: naar de pits' : 'Naar de pits';
+      if (nu() < raceStart) aftel();
+    }
+    if (!klokT) klokT = setInterval(klok, 200);
+  }
+  function zetBanden(slijt, band){
+    $('bandNaam').textContent = 'Banden: ' + (PRIX.BANDNAAM[band] || band);
+    $('bandPct').textContent = slijt + '%';
+    $('meterI').style.width = Math.max(2, slijt) + '%';
+    $('meterI').classList.toggle('laag', slijt < 25);
+    $('meter').setAttribute('aria-label', 'De banden zijn nog voor ' + slijt + ' procent goed');
+  }
+  function klok(){
+    if (fase2 === 'kwal' && mij){
+      $('a').textContent = kwKlaar ? PRIX.tijd(kwKlaar) : kwSinds ? PRIX.tijd(Math.max(0, nu() - kwSinds) + kwStraf) : '0:00,0';
+      $('b').textContent = kwStraf ? '! + ' + sec(kwStraf / 1000) + ' s' : 'geen';
+    }
+    if (inPit && pitSinds){ var e = $('wielen').querySelector('em'); if (e) e.textContent = sec(Math.max(0, nu() - pitSinds) / 1000) + ' s'; }
+    if (kv && !kv.uit){ var over = Math.max(0, kv.tot - nu()); $('soortUit').textContent = 'Nog ' + Math.ceil(over / 1000) + ' tellen. Het veld schuift bij elkaar.'; }
+  }
+  var aftelT = null;
+  function aftel(){
+    if (aftelT) return;
+    $('aftel').classList.remove('hide');
+    aftelT = setInterval(function(){
+      var over = raceStart - nu();
+      $('aftelN').textContent = over > 0 ? Math.ceil(over / 1000) : 'Start!';
+      $('aftelUit').textContent = mij && st ? 'Je start op plek ' + ($('plek').textContent) : '';
+      if (over < -700){ clearInterval(aftelT); aftelT = null; $('aftel').classList.add('hide'); }
+    }, 150);
+  }
+  function tekenGrid(lijst){
+    $('grid').classList.remove('hide');
+    $('grid').innerHTML = lijst.slice(0, 12).map(function(r, i){
+      return '<div class="' + (r.sid === mijnSid ? 'ik' : r.px.kwTijd ? '' : 'bezig') + '"><b>' + (r.px.kwTijd ? i + 1 : '·') + '</b><span>' + schoon(r.naam) + '</span><small>' + (r.px.kwTijd ? PRIX.tijd(r.px.kwTijd) : 'bocht ' + Math.min(8, r.px.kwI + 1)) + '</small></div>';
+    }).join('');
+  }
+
+  /* ---------- het paneel: welke soort vraag ---------- */
+  function zetSoort(soort, b){
+    $('soortI').innerHTML = ICO[soort] || ICO.radio;
+    $('wielen').classList.toggle('hide', soort !== 'pit');
+    if (soort === 'kwal'){ $('soortW').textContent = 'Kwalificatie · bocht ' + (b.bocht || 1) + ' van 8'; $('soortUit').textContent = 'Goed is strak door de bocht. Fout kost 3 seconden.'; }
+    else if (soort === 'pit'){
+      $('soortW').textContent = 'Pitstop · wiel ' + (b.wiel || 1) + ' van 4'; $('soortUit').textContent = 'Elk goed antwoord zet één wiel vast.';
+      pitWiel = (b.wiel || 1) - 1; tekenWielen();
+    } else if (soort === 'klas'){ $('soortW').textContent = 'Klasvraag'; }
+    else { $('soortW').textContent = b && b.terug ? 'Teamradio · deze had je fout' : 'Teamradio' + (b && b.kop ? ' · ' + b.kop : ''); $('soortUit').textContent = b && b.terug ? 'Nu goed: dubbele vaart.' : 'Goed antwoord: extra vaart.'; }
+  }
+  function tekenWielen(){
+    $('wielen').innerHTML = [0, 1, 2, 3].map(function(i){ return '<span class="' + (i < pitWiel ? 'vast' : i === pitWiel ? 'nu' : '') + '">' + (i < pitWiel ? '✓ ' : '') + 'wiel ' + (i + 1) + '</span>'; }).join('') + '<em></em>';
+  }
+  function rust(tekst){ $('oordeel').className = 'oordeel'; $('oordeel').innerHTML = '<div class="uit">' + tekst + '</div>'; }
+  function toonVraag(b){
+    vraag = b; gekozen = null; kv = null;
+    $('grid').classList.add('hide');
+    if (b.soort === 'kwal' && !kwSinds && b.sinds) kwSinds = b.sinds;
+    if (b.soort === 'pit' && !pitSinds) pitSinds = nu();
+    zetSoort(b.soort, b);
+    $('vraagTekst').textContent = b.v;
+    var open = !!b.open;
+    $('open').classList.toggle('hide', !open); $('antw').classList.toggle('hide', open);
+    if (open){
+      var inv = $('openIn'); inv.value = ''; inv.disabled = false; inv.className = ''; $('openKnop').disabled = false;
+      $('openVoor').textContent = b.open.voor || ''; $('openNa').textContent = b.open.na || '';
+      if (!/Mobi|Android/i.test(navigator.userAgent)) inv.focus();
+    } else {
+      $('antw').innerHTML = (b.o || []).map(function(t, i){ return '<button type="button" data-i="' + i + '"><span class="nr">' + (i + 1) + '</span><span>' + schoon(t) + '</span></button>'; }).join('');
+    }
+    rust(b.soort === 'radio' ? 'Je auto rijdt door terwijl je nadenkt. Een fout kost geen plek, alleen wat banden.' : b.soort === 'pit' ? 'Hoe sneller goed, hoe korter je stilstaat.' : 'De klok loopt.');
+  }
+  function kies(i){
+    if (kv){ if (kvKeuze >= 0 || kv.uit) return; kvKeuze = i; merk(i); v.stuur({ t:'kv', b:i }); rust('Je antwoord is binnen. Even wachten op de rest van de klas.'); return; }
+    if (!vraag || gekozen !== null || !v) return;
+    gekozen = i; merk(i);
+    v.stuur({ t:'antwoord', k:vraag.k, b:i });
+  }
+  function merk(i){ Array.prototype.forEach.call($('antw').querySelectorAll('button'), function(k){ k.disabled = true; if (+k.getAttribute('data-i') === i) k.classList.add('gekozen'); }); }
+  $('antw').addEventListener('click', function(e){ var k = e.target.closest('button[data-i]'); if (k && !k.disabled) kies(+k.getAttribute('data-i')); });
+  $('open').addEventListener('submit', function(e){
+    e.preventDefault();
+    var t = $('openIn').value.trim();
+    if (!vraag || !vraag.open || gekozen !== null || !t || !v) return;
+    gekozen = t; $('openIn').disabled = true; $('openKnop').disabled = true;
+    v.stuur({ t:'antwoord', k:vraag.k, tekst:t });
+  });
+  function oordeel(b){
+    if (b.k === oordeelK) return;
+    oordeelK = b.k;
+    if (typeof b.slijt === 'number' && mij) zetBanden(b.slijt, b.band || mij.px.band);
+    if (typeof b.straf === 'number') kwStraf = b.straf;
+    if (b.pitKlaar){ inPit = false; pitSinds = 0; }
+    else if (typeof b.wiel === 'number'){ pitWiel = b.wiel; tekenWielen(); }
+    if (!vraag || vraag.k !== b.k) return;
+    if (vraag.open){ $('openIn').classList.add(b.goed ? 'goed' : 'mis'); }
+    else Array.prototype.forEach.call($('antw').querySelectorAll('button'), function(k){
+      var i = +k.getAttribute('data-i'); k.disabled = true;
+      if (i === b.g) k.classList.add('goed'); else if (i === gekozen) k.classList.add('mis'); else k.classList.add('weg');
+    });
+    var o = $('oordeel'), goedTekst = b.soort === 'kwal' ? 'Strak door de bocht.' : b.soort === 'pit' ? (b.pitKlaar ? 'Vier wielen vast in ' + sec(b.pitKlaar / 1000) + ' seconden. Rijden maar!' : 'Wiel vast.') : (b.terug ? 'Nu wel: dubbele vaart!' : 'Extra vaart op het rechte stuk.');
+    if (b.goed){
+      o.className = 'oordeel goed';
+      o.innerHTML = '<div class="uit"><b>Goed!</b> ' + goedTekst + '</div>';
+      verderKlok = setTimeout(volgende, 900);
+    } else {
+      o.className = 'oordeel mis';
+      var gevolg = b.soort === 'kwal' ? '3 seconden erbij.' : b.soort === 'pit' ? (b.geholpen ? 'De monteur helpt: het wiel gaat er toch op.' : 'Het wiel klemt: je krijgt een nieuwe vraag.') : 'Je banden slijten wat harder. Je rijdt wel door.';
+      o.innerHTML = '<div class="uit"><b>! Niet goed.</b> Het goede antwoord is <b>' + schoon(b.juist) + '</b>.' + (b.u ? ' ' + schoon(b.u) : '') + ' ' + gevolg + '</div><button type="button" class="verder" id="verder" disabled>Verder</button>';
+      var knop = $('verder');
+      knop.addEventListener('click', volgende);
+      verderKlok = setTimeout(function(){ knop.disabled = false; knop.focus(); }, LEES);
+    }
+  }
+  function volgende(){
+    clearTimeout(verderKlok);
+    if (wachtVolgende){ var b = wachtVolgende; wachtVolgende = null; toonVraag(b); return; }
+    vraag = null; $('antw').innerHTML = ''; $('open').classList.add('hide');
+    if (binnen) toonBinnen();
+    else if (kwKlaar) toonKwKlaar();
+    else { $('vraagTekst').textContent = 'Even wachten op je volgende vraag…'; rust(''); }
+  }
+  function toonKwKlaar(){
+    vraag = null; $('antw').innerHTML = ''; $('open').classList.add('hide');
+    $('soortI').innerHTML = ICO.kwal; $('soortW').textContent = 'Kwalificatie klaar'; $('soortUit').textContent = 'Je rondetijd: ' + PRIX.tijd(kwKlaar);
+    $('vraagTekst').textContent = 'De startopstelling tot nu toe';
+    if (st) tekenGrid((st.rijders || []).filter(function(r){ return r.px && !r.weg; }));
+    rust('De snelste tijd start vooraan. De race begint als iedereen klaar is, of als je docent start.');
+  }
+  function toonBinnen(){
+    vraag = null; $('antw').innerHTML = ''; $('open').classList.add('hide'); $('wielen').classList.add('hide'); $('grid').classList.add('hide');
+    $('soortI').innerHTML = ICO.kwal; $('soortW').textContent = 'Over de streep'; $('soortUit').textContent = 'Plek ' + binnen.rang + ' in ' + PRIX.tijd(binnen.tijd);
+    $('vraagTekst').textContent = binnen.rang === 1 ? 'Je hebt gewonnen!' : 'Je bent binnen op plek ' + binnen.rang + '.';
+    rust('De anderen rijden nog. Kijk op de baan hoe het afloopt.');
+  }
+  /* de klasvraag: dezelfde vraag voor iedereen, de auto's staan stil */
+  function klasvraag(b){
+    clearTimeout(verderKlok); wachtVolgende = null;
+    kv = { tot: b.tot, uit: false }; kvKeuze = -1; vraag = null;
+    if (b.nu) verschil = b.nu - Date.now();
+    zetSoort('klas'); $('wielen').classList.add('hide'); $('grid').classList.add('hide');
+    $('vraagTekst').textContent = b.v;
+    $('open').classList.add('hide'); $('antw').classList.remove('hide');
+    $('antw').innerHTML = (b.o || []).map(function(t, i){ return '<button type="button" data-i="' + i + '"><span class="nr">' + (i + 1) + '</span><span>' + schoon(t) + '</span></button>'; }).join('');
+    rust('De vraag staat ook op het bord. Iedereen staat even stil.');
+  }
+  function klasuit(b){
+    if (!kv) return;
+    kv.uit = true;
+    Array.prototype.forEach.call($('antw').querySelectorAll('button'), function(k){ var i = +k.getAttribute('data-i'); k.disabled = true; if (i === b.g) k.classList.add('goed'); else if (i === kvKeuze) k.classList.add('mis'); else k.classList.add('weg'); });
+    var goed = kvKeuze === b.g;
+    $('soortUit').textContent = b.goed + ' van de ' + b.van + ' goed';
+    $('oordeel').className = 'oordeel ' + (goed ? 'goed' : 'mis');
+    $('oordeel').innerHTML = '<div class="uit"><b>' + (goed ? 'Goed!' : kvKeuze < 0 ? 'Te laat.' : '! Niet goed.') + '</b> ' + (goed ? 'Je krijgt extra vaart bij de herstart.' : 'Het goede antwoord is <b>' + schoon(b.juist) + '</b>.') + (b.u ? ' ' + schoon(b.u) : '') + '</div>';
+    /* de eigen vraag komt direct na de uitslag binnen; die wacht tot je dit gelezen hebt */
+    setTimeout(function(){ if (kv && kv.uit){ kv = null; volgende(); } }, 3500);
+  }
+  /* toetsen: 1 tot 4 kiest */
+  addEventListener('keydown', function(e){
+    if (e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;
+    var n = parseInt(e.key, 10);
+    if (n >= 1 && n <= 4){ var k = $('antw').querySelector('[data-i="' + (n - 1) + '"]'); if (k && !k.disabled && !$('antw').classList.contains('hide')){ e.preventDefault(); kies(n - 1); } }
+  });
+  /* de banden en de pits */
+  function zetVolg(b){ volg = b; Array.prototype.forEach.call($('bandKnoppen').querySelectorAll('button'), function(k){ k.setAttribute('aria-pressed', k.getAttribute('data-band') === b ? 'true' : 'false'); }); }
+  $('bandKnoppen').addEventListener('click', function(e){ var k = e.target.closest('[data-band]'); if (!k || !v) return; zetVolg(k.getAttribute('data-band')); v.stuur({ t:'band', band:volg }); });
+  $('pitKnop').addEventListener('click', function(){ if (!v || $('pitKnop').disabled) return; $('pitKnop').disabled = true; v.stuur({ t:'pit', band:volg }); });
+
+  /* ---------- de kamer ---------- */
+  function einde(b){
+    clearInterval(klokT); klokT = null; clearInterval(aftelT);
+    if (v) v.zetDicht();
+    veld.stop();
+    var x = b.prix || {}, j = b.jouw || {};
+    toon('einde');
+    $('eindHand').textContent = j.rang === 1 ? 'kampioen' : j.rang && j.rang <= 3 ? 'op het podium' : 'goed gereden';
+    $('eindKop').textContent = j.rang ? 'Plek ' + j.rang + ' van ' + j.van : 'De race is afgelopen';
+    $('eindUit').textContent = x.klaar ? 'Je was binnen in ' + PRIX.tijd(x.klaar) + '.' : x.gereden ? 'Je was nog onderweg toen de race stopte.' : 'De race is niet gereden.';
+    $('eindStats').innerHTML = '<div><b>' + (x.goed | 0) + ' van ' + (x.n | 0) + '</b><small>goed</small></div><div><b>' + (x.beste | 0) + '</b><small>beste reeks</small></div><div><b>' + (x.pits | 0) + '</b><small>pitstops</small></div>' +
+      (x.pitMs ? '<div><b>' + sec(x.pitMs / 1000) + ' s</b><small>snelste stop</small></div>' : '') + (x.kwTijd ? '<div><b>' + PRIX.tijd(x.kwTijd) + '</b><small>kwalificatie</small></div>' : '');
+  }
+  function bericht(b){
+    if (b.t === 'welkom'){
+      if (b.spel !== 'strijd' || b.game !== 'prix'){ location.href = '/q/' + CODE; return; }
+      if (b.fase === 'lobby') wacht('je doet mee', 'Wacht tot je docent start', 'Je bent binnen als ' + NAAM + '. Eerst komt de kwalificatie: acht vragen, zo snel en zo goed als je kunt.');
+      if (b.fase === 'einde') wacht('helaas', 'Deze race is al afgelopen', '', true);
+      return;
+    }
+    if (b.t === 'start'){ wacht('daar gaan we', 'De kwalificatie begint…', ''); return; }
+    if (b.t === 'stand'){ zetStand(b); return; }
+    if (b.t === 'race'){
+      if (b.nu) verschil = b.nu - Date.now();
+      raceStart = b.start; fase2 = 'race'; kwKlaar = 0; oordeelK = -1; vraag = null; wachtVolgende = null; clearTimeout(verderKlok);
+      $('grid').classList.add('hide'); toon('spel'); aftel();
+      return;
+    }
+    if (b.t === 'vraag'){
+      if (!(b.k >= 0) || (!b.open && !Array.isArray(b.o))) return;
+      /* tijdens een oordeel of de uitslag van de klasvraag wacht de nieuwe vraag tot je verder gaat */
+      if ((vraag && gekozen !== null && $('oordeel').classList.contains('mis') && $('verder')) || (kv && kv.uit) || (vraag && gekozen !== null && $('oordeel').classList.contains('goed'))) wachtVolgende = b;
+      else if (!vraag || vraag.k !== b.k || vraag.soort !== b.soort) toonVraag(b);
+      return;
+    }
+    if (b.t === 'uitslag'){ oordeel(b); return; }
+    if (b.t === 'kwklaar'){ kwKlaar = b.tijd; if (!vraag || gekozen === null || $('oordeel').classList.contains('goed')) setTimeout(function(){ if (kwKlaar && fase2 === 'kwal' && !wachtVolgende) toonKwKlaar(); }, 1000); return; }
+    if (b.t === 'pit'){ inPit = true; pitSinds = nu(); pitWiel = b.wiel | 0; zetVolg(b.band || volg); /* de vraag van de teamradio vervalt: de eerste pitvraag komt er direct voor in de plaats */ clearTimeout(verderKlok); vraag = null; gekozen = null; wachtVolgende = null; return; }
+    if (b.t === 'band'){ zetVolg(b.volg); return; }
+    if (b.t === 'klasvraag'){ klasvraag(b); return; }
+    if (b.t === 'klasuit'){ klasuit(b); return; }
+    if (b.t === 'finish'){ binnen = b; if (!vraag || gekozen === null) toonBinnen(); else setTimeout(function(){ if (binnen) toonBinnen(); }, 1200); return; }
+    if (b.t === 'einde'){ einde(b); return; }
+    if (b.t === 'eruit'){ if (v) v.zetDicht(); wacht('jammer', 'Je bent uit dit spel gehaald', 'Was dat een vergissing? Vul de code opnieuw in.', true); return; }
+    if (b.t === 'verhuis' && /^[A-Z]{4}$/.test(b.code || '') && b.code !== CODE){
+      if (v) v.sluit();
+      location.href = 'prix.html?kamer=' + b.code + '&naam=' + encodeURIComponent(NAAM);
+    }
+  }
+  function verbind(){
+    v = VERBINDING.maak({ pad: CODE + '?rol=speler&sid=' + encodeURIComponent(kenmerk()) + '&naam=' + encodeURIComponent(NAAM) + '&av=' + encodeURIComponent(AV), rol:'speler',
+      onBericht: bericht,
+      /* weer verbonden: een antwoord waar nog geen oordeel op kwam, gaat nog een keer (dubbel telt de kamer niet) */
+      onOpen: function(opnieuw){ if (opnieuw && vraag && gekozen !== null && oordeelK !== vraag.k) v.stuur(vraag.open ? { t:'antwoord', k:vraag.k, tekst:gekozen } : { t:'antwoord', k:vraag.k, b:gekozen }, { rij:false }); },
+      onEruit: function(){ wacht('jammer', 'Je bent uit dit spel gehaald', 'Was dat een vergissing? Vul de code opnieuw in.', true); },
+      onDicht: function(){ if ($('einde').classList.contains('hide')) wacht('helaas', 'Het spel is gesloten', 'Vraag je docent om de nieuwe code.', true); } });
+  }
+  if (CODE.length !== 4){ wacht('oeps', 'Geen code', 'Vul de code van je docent in om mee te doen.', true); return; }
+  if (!NAAM || (window.NAAMFILTER && NAAMFILTER.verboden(NAAM))){ location.href = 'strijd.html?k=' + CODE; return; }
+  fetch('/api/kamer/' + CODE).then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); }).then(function(x){
+    if (!x.ok){ wacht('oeps', 'Deze code bestaat niet', 'Kijk of je hem goed hebt overgenomen.', true); return; }
+    if (x.j.spel !== 'strijd' || x.j.game !== 'prix'){ location.href = '/q/' + CODE; return; }
+    if (x.j.fase === 'einde'){ wacht('helaas', 'Deze race is al afgelopen', '', true); return; }
+    try { localStorage.setItem('lg-quiz-naam', NAAM); } catch (e){}
+    verbind();
+  }).catch(function(){ wacht('oeps', 'Geen verbinding', 'De server is nu niet bereikbaar. Probeer het zo nog eens.', true); });
+})();
+</script>
+</body>
+</html>

@@ -28,6 +28,7 @@ import TORENMOTOR from "../leermiddelen/toren-motor.js";
 /* de regels van Poortrace: welke vraag, welke antwoorden op de banen, hoe snel, hoeveel punten */
 import POORTREGELS from "../leermiddelen/poortrace-regels.js";
 import { laadVragen } from "./stadvragen.js";
+import { PRIX_BANEN, PRIX_RONDES, prixMethoden } from "./prix.js";
 const TORENSTAP = 60, TOREN_STAND_OM = 2;   /* Torenverdediging: een tik van zestig milliseconden, de stand om de andere tik */
 const TOREN_WACHT_KEUZE = 1500;             /* zolang wacht de kamer op de keuze van de tweede speler */
 const RANGEN = { bb: 1, kgt: 2, havo: 3, vwo: 4 };
@@ -41,7 +42,7 @@ const OPRUIMEN_NA = 3 * 60 * 60 * 1000;     /* een kamer leeft hoogstens drie uu
 const NA_EINDE = 30 * 60 * 1000;             /* na de eindstand nog een half uur te bekijken */
 /* wat een leerling hoort die de docent uit de klas haalde; klas.js herkent "uit de klas gehaald" */
 const WEG_FOUT = "je docent heeft je uit deze klas gehaald";
-const SPELLEN_STRIJD = { toren: "Torenverdediging", zwaard: "Zwaardvechter", poortrace: "Poortrace", dijk: "Dijkbouwers" };
+const SPELLEN_STRIJD = { toren: "Torenverdediging", zwaard: "Zwaardvechter", poortrace: "Poortrace", dijk: "Dijkbouwers", prix: "Grand Prix" };
 /* Dijkbouwers: de hele klas bouwt samen een dijk. Iedereen beantwoordt op zijn
    eigen laptop vragen uit dezelfde set (een vak, een woordenlijst of een
    oefening van de docent); elk goed antwoord is een zandzak op de gezamenlijke
@@ -679,6 +680,8 @@ export class Kamer extends DurableObject {
   get race(){ return this.strijd && this.stand.game === "poortrace"; }
   get oneindig(){ return this.race && this.stand.modus === "oneindig"; }
   get dijk(){ return this.strijd && this.stand.game === "dijk"; }
+  /* Grand Prix: een race van boven, zie prix.js */
+  get prix(){ return this.strijd && this.stand.game === "prix"; }
 
   /* ---------- binnenkomend ---------- */
   async fetch(req){
@@ -738,6 +741,8 @@ export class Kamer extends DurableObject {
       if (game === "poortrace" && opzet.modus === "oneindig") this.stand.modus = "oneindig";
       /* Dijkbouwers: hoeveel minuten de klas heeft */
       if (game === "dijk") this.stand.duur = Math.max(3, Math.min(20, Math.round(Number(opzet.duur) || DIJK_DUUR)));
+      /* Grand Prix: op welke baan en hoeveel rondes */
+      if (game === "prix"){ this.stand.baan = PRIX_BANEN[opzet.baan] ? String(opzet.baan) : "duinen"; this.stand.rondes = PRIX_RONDES.indexOf(Number(opzet.rondes)) >= 0 ? Number(opzet.rondes) : 8; }
     } else {
       const vragen = Array.isArray(opzet.vragen) ? opzet.vragen.slice(0, MAX_VRAGEN).map(q => q && typeof q === "object" ? ({
         v: schoon(q.v, 300),
@@ -754,7 +759,8 @@ export class Kamer extends DurableObject {
     }
     /* wat er nog aan oude sockets hangt, mag weg; en wat een vorige race in het geheugen had ook */
     this.ctx.getWebSockets().forEach(ws => { try { ws.close(1000, "nieuwe kamer"); } catch (e){} });
-    this.raceBankP = null; this.racePot = {}; this.raceNaFinish = {}; this.dijkPot = {};
+    this.raceBankP = null; this.racePot = {}; this.raceNaFinish = {}; this.dijkPot = {}; this.prixPot = {};
+    Object.keys(this.prixWacht || {}).forEach(k => clearTimeout(this.prixWacht[k])); this.prixWacht = {};
     clearTimeout(this.raceTankKlok); this.raceTankKlok = null;
     Object.keys(this.raceWacht || {}).forEach(k => clearTimeout(this.raceWacht[k])); this.raceWacht = {};
     await this.zetAlarm({ wat: "opruimen" }, this.stand.spel === "klas" ? KLAS_SLAAPT : OPRUIMEN_NA);
@@ -849,6 +855,7 @@ export class Kamer extends DurableObject {
         /* in een race: waar hij is, het oordeel over zijn laatste poort en de vraag van zijn volgende */
         if (this.race) this.ctx.waitUntil(this.raceHerstel(sid));
         if (this.dijk) this.ctx.waitUntil(this.dijkHerstel(sid));
+        if (this.prix) this.ctx.waitUntil(this.prixHerstel(sid));
       }
       if (this.stand.fase === "einde") this.stuur(server, this.strijdEinde(rol === "speler" ? sid : null));
       else this.stuur(server, this.standBericht(rol === "speler" ? sid : null));
@@ -1112,6 +1119,7 @@ export class Kamer extends DurableObject {
     if (a.wat === "duelstart" && this.strijd && this.stand.fase === "aftellen") return this.strijdStart();
     if (a.wat === "raceslot" && this.race && this.stand.fase === "bezig") return this.strijdKlaar();
     if (a.wat === "dijkslot" && this.dijk && this.stand.fase === "bezig") return this.strijdKlaar();
+    if (a.wat === "prixtik" && this.prix && this.stand.fase === "bezig") return this.prixTik();
     if (a.wat === "opruimen"){
       this.motorStop();
       this.ctx.getWebSockets().forEach(ws => { try { ws.close(1000, "de kamer is gesloten"); } catch (e){} });
@@ -1149,7 +1157,8 @@ export class Kamer extends DurableObject {
       const n = Object.keys(st.spelers).filter(s => !st.spelers[s].weg).length;
       st.dijkSt = { zakken: 0, fouten: 0, doel: Math.max(DIJK_MIN_DOEL, Math.round(n * DIJK_PER / 10) * 10), dicht: 0, per: {} };
       await this.zetAlarm({ wat: "dijkslot" }, (st.duur || DIJK_DUUR) * 60000);
-    } else await this.zetAlarm({ wat: "opruimen" }, OPRUIMEN_NA);
+    } else if (this.prix) await this.prixBegin();
+    else await this.zetAlarm({ wat: "opruimen" }, OPRUIMEN_NA);
     await this.bewaar();
     if (st.duel && st.game === "zwaard") this.motorStart();
     if (this.motorSids && this.motorSpel === "zwaard"){
@@ -1159,6 +1168,7 @@ export class Kamer extends DurableObject {
     /* een race: iedereen krijgt de vraag van zijn eerste poort */
     if (this.race) Object.keys(st.spelers).forEach(sid => this.ctx.waitUntil(this.raceHerstel(sid)));
     if (this.dijk) Object.keys(st.spelers).forEach(sid => this.ctx.waitUntil(this.dijkHerstel(sid)));
+    if (this.prix) Object.keys(st.spelers).forEach(sid => this.ctx.waitUntil(this.prixHerstel(sid)));
     this.planStand();
     if (st.duel && st.game === "toren"){
       /* het bord komt zodra de keuze van allebei binnen is, en anders na een korte wachttijd */
@@ -1372,6 +1382,8 @@ export class Kamer extends DurableObject {
     if (wie.rol === "host"){
       if (m.t === "start" && st.fase === "lobby") return this.strijdStart();
       if (m.t === "stop" && st.fase !== "einde") return this.strijdKlaar();
+      /* Grand Prix: de docent wacht de kwalificatie niet af en start de race */
+      if (m.t === "race" && this.prix && st.fase === "bezig") return this.prixRaceStart();
       return;
     }
     const sp = st.spelers[wie.sid];
@@ -1434,6 +1446,7 @@ export class Kamer extends DurableObject {
     if (st.fase !== "bezig") return;
     if (this.race) return this.raceBericht(wie.sid, sp, m);
     if (this.dijk) return this.dijkBericht(wie.sid, sp, m);
+    if (this.prix) return this.prixBericht(wie.sid, sp, m);
     if (m.t === "stand"){
       const nu0 = Date.now();
       if (sp.standLaatst && nu0 - sp.standLaatst < 400) return;   /* vaker dan dit hoeft niet */
@@ -1583,7 +1596,7 @@ export class Kamer extends DurableObject {
     const m = await r.json();
     if (m && m.soort === "lijst") return lijstVragen(m);
     /* een oefening (geen toets: daarvan geeft de bak de antwoorden niet) kan alleen in Dijkbouwers */
-    if (m && m.soort === "oefening" && m.modus !== "toets" && this.dijk) return setVragen(m);
+    if (m && m.soort === "oefening" && m.modus !== "toets" && (this.dijk || this.prix)) return setVragen(m);
     return [];
   }
   /* ---------- Dijkbouwers ---------- */
@@ -1962,12 +1975,14 @@ export class Kamer extends DurableObject {
       return { sid: sp.pid, naam: sp.naam, av: sp.av || "", ronde: sp.ronde, gehaald: sp.gehaald, leven: sp.leven, punten: sp.punten,
                af: !!sp.af, aanvallen: sp.aanvallen || 0, aan: aan.has(sid), stijl: sp.stijl || "", klaar: !!sp.klaar, weg: !!sp.weg,
                voort: sp.voort || 0, tijd: sp.tijd || 0, bij: sp.rit ? sp.rit.bij || 0 : 0,
+               px: this.prix ? this.prixRij(sp, nu) : undefined,
                /* in een race: de plek in duizendsten van een poort, de snelheid en hoe oud die melding is */
                plek: this.race ? sp.plek || 0 : undefined, vs: this.race ? sp.vs : undefined, oud: this.race && sp.plekT ? Math.min(5000, nu - sp.plekT) : undefined,
                tank: this.oneindig && sp.rit ? (sp.af ? 0 : Math.max(0, Math.round(this.raceTank(sp, nu)))) : undefined,
                /* Oneindig: de kilometers, op drie decimalen */
                km: this.oneindig ? Math.round(POORTREGELS.km((sp.plek || 0) / 1000) * 1000) / 1000 : undefined };
     }).sort((a, b) => this.race ? this.raceVolgorde(a, b)
+        : this.prix ? this.prixVolgorde(a, b)
         : (this.stand.duel && a.af !== b.af) ? (a.af ? 1 : -1)   /* in een duel wint wie overeind blijft */
         : (b.gehaald - a.gehaald || b.punten - a.punten || (a.af === b.af ? 0 : a.af ? 1 : -1) || a.naam.localeCompare(b.naam)))
       .map((r, i) => Object.assign(r, { rang: i + 1 }));
@@ -1977,7 +1992,7 @@ export class Kamer extends DurableObject {
     const bezig = lijst.filter(r => !r.af).length;
     const kop = lijst[0] ? { naam: lijst[0].naam, ronde: lijst[0].ronde } : null;
     /* het bord: ook de klok van de kamer en het startschot, voor de tijd van de race */
-    if (!sid) return { t: "stand", spelers: lijst, bezig, fase: this.stand.fase, modus: this.stand.modus || undefined, nu: this.race ? Date.now() : undefined, gestart: this.race ? this.stand.gestart : undefined, dijk: this.dijkStand(), duur: this.dijk ? this.stand.duur : undefined };
+    if (!sid) return { t: "stand", spelers: lijst, bezig, fase: this.stand.fase, modus: this.stand.modus || undefined, nu: this.race ? Date.now() : undefined, gestart: this.race ? this.stand.gestart : undefined, dijk: this.dijkStand(), duur: this.dijk ? this.stand.duur : undefined, prix: this.prixStand() };
     const pid = this.pid(sid);
     const mij = lijst.filter(r => r.sid === pid)[0];
     const tegen = this.stand.duel ? (lijst.filter(r => r.sid !== pid)[0] || null) : null;
@@ -1989,10 +2004,11 @@ export class Kamer extends DurableObject {
        merkt niets van je fouten, en dan gooi je een goed antwoord weg */
     const doelen = (mij && mij.af) ? lijst.filter(r => !r.af && r.aan && r.sid !== pid).map(r => ({ sid: r.sid, naam: r.naam, av: r.av || "", ronde: r.ronde })) : undefined;
     /* in een race ziet iedereen iedereen: waar ze op de baan zijn, en wie er al binnen is */
-    const rijders = this.race ? lijst.map(r => ({ sid: r.sid, naam: r.naam, av: r.av || "", voort: r.voort, plek: r.plek, vs: r.vs, oud: r.oud, tank: r.tank, km: r.km, ronde: r.ronde, af: r.af, tijd: r.tijd, rang: r.rang, weg: r.weg, aan: r.aan, bij: r.bij })) : undefined;
+    const rijders = this.race ? lijst.map(r => ({ sid: r.sid, naam: r.naam, av: r.av || "", voort: r.voort, plek: r.plek, vs: r.vs, oud: r.oud, tank: r.tank, km: r.km, ronde: r.ronde, af: r.af, tijd: r.tijd, rang: r.rang, weg: r.weg, aan: r.aan, bij: r.bij }))
+      : this.prix ? lijst.map(r => ({ sid: r.sid, naam: r.naam, av: r.av || "", rang: r.rang, aan: r.aan, weg: r.weg, px: r.px })) : undefined;
     const dijk = this.dijkStand();
     if (dijk && mij) dijk.gelegd = mij.gehaald | 0;
-    return { t: "stand", dijk, modus: this.stand.modus || undefined, jouw: mij ? { rang: mij.rang, van: lijst.length, af: !!mij.af } : null, bezig, koploper: kop, fase: this.stand.fase, maten, doelen, rijders, max: this.stand.duel ? this.samenMax() : undefined,
+    return { t: "stand", dijk, prix: this.prixStand(), modus: this.stand.modus || undefined, jouw: mij ? { rang: mij.rang, van: lijst.length, af: !!mij.af, sid: pid } : null, bezig, koploper: kop, fase: this.stand.fase, maten, doelen, rijders, max: this.stand.duel ? this.samenMax() : undefined,
              tegen: tegen ? { naam: tegen.naam, av: tegen.av || "", ronde: tegen.ronde, leven: tegen.leven, punten: tegen.punten, af: tegen.af, aan: tegen.aan } : null };
   }
   stuurStand(){
@@ -2017,6 +2033,7 @@ export class Kamer extends DurableObject {
       else uit.dijk.vragen = Object.keys(d.per).map(v => Object.assign({ v }, d.per[v])).filter(x => x.f > 0)
         .sort((a, b) => b.f - a.f || b.f / (b.f + b.g) - a.f / (a.f + a.g)).slice(0, 10);
     }
+    if (this.prix) uit.prix = this.prixEinde(sid);
     return uit;
   }
   async strijdKlaar(){
@@ -2025,6 +2042,7 @@ export class Kamer extends DurableObject {
     /* Oneindig: de tanks staan stil op het moment dat de race klaar is */
     this.stand.eindT = Date.now();
     Object.keys(this.dijkWacht || {}).forEach(k => clearTimeout(this.dijkWacht[k])); this.dijkWacht = {};
+    Object.keys(this.prixWacht || {}).forEach(k => clearTimeout(this.prixWacht[k])); this.prixWacht = {};
     this.stand.fase = "einde";
     await this.zetAlarm({ wat: "opruimen" }, NA_EINDE);
     await this.bewaar();
@@ -2810,3 +2828,5 @@ export class Kamer extends DurableObject {
   iedereen(bericht){ const s = JSON.stringify(bericht); this.ctx.getWebSockets().forEach(ws => { try { ws.send(s); } catch (e){} }); }
   naarHost(bericht){ const s = JSON.stringify(bericht); this.ctx.getWebSockets("host").forEach(ws => { try { ws.send(s); } catch (e){} }); }
 }
+/* Grand Prix (prix.js): de methoden komen bij de kamer, met de vragenmotor van Dijkbouwers */
+Object.assign(Kamer.prototype, prixMethoden({ dijkGeschikt, dijkStapel, noodSom, R: POORTREGELS }));
