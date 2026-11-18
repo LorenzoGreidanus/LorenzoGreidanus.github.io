@@ -20,7 +20,7 @@
    De server (server/materiaal.js) rekent hem na. */
 var TOPO = (function(){
   'use strict';
-  var VOLGORDE = ['nlp', 'nlh', 'nlw', 'nlr', 'nla', 'eu', 'euh', 'wl', 'wlh'];
+  var VOLGORDE = ['nlp', 'nlh', 'nlw', 'nlr', 'nla', 'eu', 'euh', 'wl', 'wlh', 'af', 'afh'];
   var MEER = { land:'landen', provincie:'provincies', stad:'steden', hoofdstad:'hoofdsteden', rivier:'rivieren', eiland:'eilanden', onderdeel:'onderdelen' };
   var HET = { land:1, eiland:1, onderdeel:1 };
   /* Delen van de wereld, dezelfde als in topografie.html: een snelknop bij het kiezen. */

@@ -7,7 +7,7 @@
 (function(){
   'use strict';
   if (!window.KAARTEN || !window.SPELBLAD) return;
-  var VOLGORDE = ['nlp', 'nlh', 'nlw', 'nlr', 'nla', 'eu', 'euh', 'wl', 'wlh'].filter(function(k){ return KAARTEN[k]; });
+  var VOLGORDE = ['nlp', 'nlh', 'nlw', 'nlr', 'nla', 'eu', 'euh', 'wl', 'wlh', 'af', 'afh'].filter(function(k){ return KAARTEN[k]; });
   var NIVEAU = { 1:'basis', 2:'uitgebreid', 3:'alles' };
   var ENKEL = { land:'land', provincie:'provincie', stad:'stad', hoofdstad:'hoofdstad', rivier:'rivier', eiland:'eiland', onderdeel:'onderdeel' };
   var HET = { land:1, eiland:1, onderdeel:1 };
