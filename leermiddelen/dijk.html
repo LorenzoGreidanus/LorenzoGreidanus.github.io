@@ -54,6 +54,12 @@ main{flex:1;display:flex;flex-direction:column;justify-content:center;gap:16px;p
 .antw button.goed{background:#FCE0B4;border-color:var(--inkt);box-shadow:0 0 0 4px var(--amber)}
 .antw button.mis{background:#F7C9BE;opacity:.9}
 .antw button.weg{opacity:.45}
+/* een topografievraag: links de kaart, rechts de vraag en de antwoorden */
+main.topo{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:14px 18px;align-content:center;align-items:start}
+main.topo .topokaart{grid-row:1 / span 3;height:min(430px,calc(100svh - 330px));min-height:240px;border-radius:20px;overflow:hidden;background:#DCE5FB;border:3px solid var(--inkt);box-shadow:0 0 0 2px rgba(243,239,233,.4)}
+main.topo .antw{grid-template-columns:1fr}
+main.topo .antw button{min-height:54px}
+@media (max-width:760px){main.topo{grid-template-columns:1fr}main.topo .topokaart{grid-row:auto;height:260px}}
 /* na een antwoord */
 .oordeel{min-height:58px;display:flex;align-items:center;gap:14px;border-radius:16px;padding:10px 16px;font-size:1rem}
 .oordeel.goed{background:rgba(242,162,62,.16);border:2px solid var(--amber)}
@@ -100,6 +106,7 @@ main{flex:1;display:flex;flex-direction:column;justify-content:center;gap:16px;p
   </header>
 
   <main id="spel" class="hide">
+    <div class="topokaart hide" id="topoKaart"></div>
     <section class="vraag" aria-live="polite">
       <div class="soort" id="soort"></div>
       <h1 id="vraagTekst"></h1>
@@ -143,6 +150,7 @@ main{flex:1;display:flex;flex-direction:column;justify-content:center;gap:16px;p
 <script src="naamfilter.js"></script>
 <script src="wakker.js"></script>
 <script src="verbinding.js"></script>
+<script src="topo-vraag.js"></script>
 <script>
 /* Dijkbouwers op de laptop. De kamer (server/kamer.js, game "dijk") is de
    baas: hij stuurt je vraag zonder het goede antwoord, kijkt je keuze na en
@@ -210,16 +218,23 @@ main{flex:1;display:flex;flex-direction:column;justify-content:center;gap:16px;p
     toon('spel');
     $('soort').textContent = b.kop || '';
     $('vraagTekst').textContent = b.v;
-    $('antw').innerHTML = b.o.map(function(t, i){
+    $('antw').innerHTML = (b.o || []).map(function(t, i){
       return '<button type="button" data-i="' + i + '"><span class="nr">' + (i + 1) + '</span><span>' + schoon(t) + '</span></button>';
     }).join('');
     Array.prototype.forEach.call($('antw').querySelectorAll('button'), function(k){ k.addEventListener('click', function(){ kies(+k.getAttribute('data-i')); }); });
     $('oordeel').classList.add('hide'); $('oordeel').innerHTML = '';
+    /* een topografievraag: de kaart erbij; bij aanwijzen klik je de plek aan in plaats van een antwoord */
+    var tk = $('topoKaart');
+    $('spel').classList.toggle('topo', !!b.topo); tk.classList.toggle('hide', !b.topo);
+    if (b.topo && window.TOPOVRAAG) TOPOVRAAG.toon(tk, b.topo, { kies: function(naam){
+      if (!vraag || vraag.k !== b.k || gekozen !== -1 || !v) return;
+      gekozen = naam; v.stuur({ t:'antwoord', k:b.k, naam:naam });
+    } }).catch(function(){ tk.innerHTML = ''; });
     var eerste = $('antw').querySelector('button');
     if (eerste && document.activeElement && document.activeElement.classList.contains('verder')) eerste.focus();
   }
   function kies(i){
-    if (!vraag || gekozen >= 0 || !v) return;
+    if (!vraag || gekozen !== -1 || !v) return;
     gekozen = i;
     Array.prototype.forEach.call($('antw').querySelectorAll('button'), function(k){ k.disabled = true; if (+k.getAttribute('data-i') === i) k.classList.add('gekozen'); });
     v.stuur({ t:'antwoord', k:vraag.k, b:i });
@@ -231,6 +246,7 @@ main{flex:1;display:flex;flex-direction:column;justify-content:center;gap:16px;p
     if (dijk){ dijk.zakken = b.zakken; dijk.doel = b.doel; dijk.gelegd = b.gelegd; zetDijk(dijk); }
     /* het oordeel over een vraag die hier niet (meer) staat, na een herlaad: alleen de tellers */
     if (!vraag || vraag.k !== b.k) return;
+    if (vraag.topo && window.TOPOVRAAG) TOPOVRAAG.merk($('topoKaart'), b.juist, typeof gekozen === 'string' && !b.goed ? gekozen : null);
     var knoppen = $('antw').querySelectorAll('button');
     Array.prototype.forEach.call(knoppen, function(k){
       var i = +k.getAttribute('data-i'); k.disabled = true;
@@ -246,7 +262,7 @@ main{flex:1;display:flex;flex-direction:column;justify-content:center;gap:16px;p
       verderKlok = setTimeout(volgende, 900);
     } else {
       o.classList.add('mis');
-      var goed = vraag && vraag.o ? vraag.o[b.g] : '';
+      var goed = b.juist || (vraag && vraag.o ? vraag.o[b.g] : '');
       o.innerHTML = '<div class="uit"><b>Helaas.</b> Het goede antwoord is <b>' + schoon(goed) + '</b>.' + (b.u ? ' ' + schoon(b.u) : '') + '</div>' +
         '<button type="button" class="verder" id="verder" disabled>Volgende</button>';
       var knop = $('verder');
@@ -264,7 +280,7 @@ main{flex:1;display:flex;flex-direction:column;justify-content:center;gap:16px;p
   addEventListener('keydown', function(e){
     if (e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;
     var n = parseInt(e.key, 10);
-    if (n >= 1 && n <= 4 && vraag && gekozen < 0 && $('oordeel').classList.contains('hide')){ var k = $('antw').querySelector('[data-i="' + (n - 1) + '"]'); if (k){ e.preventDefault(); kies(n - 1); } }
+    if (n >= 1 && n <= 4 && vraag && gekozen === -1 && $('oordeel').classList.contains('hide')){ var k = $('antw').querySelector('[data-i="' + (n - 1) + '"]'); if (k){ e.preventDefault(); kies(n - 1); } }
   });
 
   /* ---------- de kamer ---------- */
@@ -290,9 +306,9 @@ main{flex:1;display:flex;flex-direction:column;justify-content:center;gap:16px;p
     if (b.t === 'start'){ wacht('daar gaan we', 'Je eerste vraag komt eraan…', ''); return; }
     if (b.t === 'stand'){ if (b.dijk) zetDijk(b.dijk); return; }
     if (b.t === 'vraag'){
-      if (!Array.isArray(b.o) || !(b.k >= 0)) return;
+      if ((!Array.isArray(b.o) && !(b.topo && b.topo.soort === 'wijs')) || !(b.k >= 0)) return;
       /* tijdens een oordeel wacht de nieuwe vraag tot je verder gaat */
-      if (vraag && gekozen >= 0 && !$('oordeel').classList.contains('hide')) wachtVolgende = b;
+      if (vraag && gekozen !== -1 && !$('oordeel').classList.contains('hide')) wachtVolgende = b;
       else if (!vraag || vraag.k !== b.k) toonVraag(b);
       return;
     }
@@ -308,7 +324,7 @@ main{flex:1;display:flex;flex-direction:column;justify-content:center;gap:16px;p
     v = VERBINDING.maak({ pad: CODE + '?rol=speler&sid=' + encodeURIComponent(kenmerk()) + '&naam=' + encodeURIComponent(NAAM) + '&av=' + encodeURIComponent(AV), rol:'speler',
       onBericht: bericht,
       /* weer verbonden: een keuze waar nog geen oordeel op kwam, gaat nog een keer (dubbel telt de kamer niet) */
-      onOpen: function(opnieuw){ if (opnieuw && vraag && gekozen >= 0 && oordeelK !== vraag.k) v.stuur({ t:'antwoord', k:vraag.k, b:gekozen }, { rij:false }); },
+      onOpen: function(opnieuw){ if (opnieuw && vraag && gekozen !== -1 && oordeelK !== vraag.k) v.stuur(typeof gekozen === 'string' ? { t:'antwoord', k:vraag.k, naam:gekozen } : { t:'antwoord', k:vraag.k, b:gekozen }, { rij:false }); },
       onEruit: function(){ wacht('jammer', 'Je bent uit dit spel gehaald', 'Was dat een vergissing? Vul de code opnieuw in.', true); },
       onDicht: function(){ if ($('einde').classList.contains('hide')) wacht('helaas', 'Het spel is gesloten', 'Vraag je docent om de nieuwe code.', true); } });
   }

@@ -45,6 +45,10 @@ button{cursor:pointer;touch-action:manipulation}
 .baanvak .hand{position:absolute;left:14px;top:10px;font-family:Caveat,cursive;font-size:1.5rem;color:var(--amber);pointer-events:none}
 .baanvak .over{position:absolute;inset:0;background:rgba(7,13,36,.78);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center}
 .baanvak .over b{font-size:2.6rem;font-weight:700}
+/* een topografievraag: de kaart groot, het circuit klein in de hoek */
+.topokaart{position:absolute;inset:0 27% 0 0;overflow:hidden;background:#DCE5FB}
+.baanvak.topo #baan{inset:0 0 0 auto;width:27%;height:100%;background:var(--vlak2);border-left:2px solid var(--rand)}
+.baanvak.topo .hand{display:none}
 .px-auto.mij .px-ring{animation:ring 2.4s linear infinite;transform-box:fill-box;transform-origin:center}
 @keyframes ring{to{transform:rotate(360deg)}}
 .onder{display:flex;align-items:center;gap:14px;background:var(--vlak);border:2px solid var(--rand);border-radius:16px;padding:10px 14px;flex-wrap:wrap}
@@ -151,6 +155,7 @@ button{cursor:pointer;touch-action:manipulation}
     <section class="links">
       <div class="baanvak">
         <svg id="baan" role="img" aria-label="Het circuit van boven. Jouw auto heeft een ring."></svg>
+        <div class="topokaart hide" id="topoKaart"></div>
         <span class="hand" id="baanHand">je auto rijdt zelf, jij maakt hem sneller</span>
         <div class="over hide" id="aftel"><span class="hand" style="position:static">de race begint</span><b id="aftelN">5</b><span id="aftelUit"></span></div>
       </div>
@@ -212,6 +217,7 @@ button{cursor:pointer;touch-action:manipulation}
 <script src="naamfilter.js"></script>
 <script src="wakker.js"></script>
 <script src="verbinding.js"></script>
+<script src="topo-vraag.js"></script>
 <script>
 /* De Grand Prix op de laptop. De kamer (server/prix.js, game "prix") is de
    baas: hij stuurt je vraag zonder het goede antwoord, kijkt na en rekent uit
@@ -365,6 +371,17 @@ button{cursor:pointer;touch-action:manipulation}
       $('antw').innerHTML = (b.o || []).map(function(t, i){ return '<button type="button" data-i="' + i + '"><span class="nr">' + (i + 1) + '</span><span>' + schoon(t) + '</span></button>'; }).join('');
     }
     rust(b.soort === 'radio' ? 'Je auto rijdt door terwijl je nadenkt. Een fout kost geen plek, alleen wat banden.' : b.soort === 'pit' ? 'Hoe sneller goed, hoe korter je stilstaat.' : 'De klok loopt.');
+    zetKaart(b.topo, function(naam){
+      if (!vraag || vraag.k !== b.k || gekozen !== null || !v) return;
+      gekozen = naam; v.stuur({ t:'antwoord', k:b.k, naam:naam });
+    });
+    if (b.topo && b.topo.soort === 'wijs'){ $('antw').classList.add('hide'); rust('Klik de plek aan op de kaart.'); }
+  }
+  /* de kaart bij een topografievraag: groot over de baan, het circuit schuift naar de hoek */
+  function zetKaart(topo, kies){
+    var tk = $('topoKaart');
+    tk.parentNode.classList.toggle('topo', !!topo); tk.classList.toggle('hide', !topo);
+    if (topo && window.TOPOVRAAG) TOPOVRAAG.toon(tk, topo, { kies: kies }).catch(function(){ tk.innerHTML = ''; });
   }
   function kies(i){
     if (kv){ if (kvKeuze >= 0 || kv.uit) return; kvKeuze = i; merk(i); v.stuur({ t:'kv', b:i }); rust('Je antwoord is binnen. Even wachten op de rest van de klas.'); return; }
@@ -389,6 +406,7 @@ button{cursor:pointer;touch-action:manipulation}
     if (b.pitKlaar){ inPit = false; pitSinds = 0; }
     else if (typeof b.wiel === 'number'){ pitWiel = b.wiel; tekenWielen(); }
     if (!vraag || vraag.k !== b.k) return;
+    if (vraag.topo && window.TOPOVRAAG) TOPOVRAAG.merk($('topoKaart'), b.juist, typeof gekozen === 'string' && !b.goed ? gekozen : null);
     if (vraag.open){ $('openIn').classList.add(b.goed ? 'goed' : 'mis'); }
     else Array.prototype.forEach.call($('antw').querySelectorAll('button'), function(k){
       var i = +k.getAttribute('data-i'); k.disabled = true;
@@ -439,12 +457,14 @@ button{cursor:pointer;touch-action:manipulation}
     $('open').classList.add('hide'); $('antw').classList.remove('hide');
     $('antw').innerHTML = (b.o || []).map(function(t, i){ return '<button type="button" data-i="' + i + '"><span class="nr">' + (i + 1) + '</span><span>' + schoon(t) + '</span></button>'; }).join('');
     rust('De vraag staat ook op het bord. Iedereen staat even stil.');
+    zetKaart(b.topo, null);
   }
   function klasuit(b){
     if (!kv) return;
     kv.uit = true;
     Array.prototype.forEach.call($('antw').querySelectorAll('button'), function(k){ var i = +k.getAttribute('data-i'); k.disabled = true; if (i === b.g) k.classList.add('goed'); else if (i === kvKeuze) k.classList.add('mis'); else k.classList.add('weg'); });
     var goed = kvKeuze === b.g;
+    if (window.TOPOVRAAG && !$('topoKaart').classList.contains('hide')) TOPOVRAAG.merk($('topoKaart'), b.juist, null);
     $('soortUit').textContent = b.goed + ' van de ' + b.van + ' goed';
     $('oordeel').className = 'oordeel ' + (goed ? 'goed' : 'mis');
     $('oordeel').innerHTML = '<div class="uit"><b>' + (goed ? 'Goed!' : kvKeuze < 0 ? 'Te laat.' : '! Niet goed.') + '</b> ' + (goed ? 'Je krijgt extra vaart bij de herstart.' : 'Het goede antwoord is <b>' + schoon(b.juist) + '</b>.') + (b.u ? ' ' + schoon(b.u) : '') + '</div>';
@@ -515,7 +535,7 @@ button{cursor:pointer;touch-action:manipulation}
       return;
     }
     if (b.t === 'vraag'){
-      if (!(b.k >= 0) || (!b.open && !Array.isArray(b.o))) return;
+      if (!(b.k >= 0) || (!b.open && !Array.isArray(b.o) && !(b.topo && b.topo.soort === 'wijs'))) return;
       /* tijdens een oordeel of de uitslag van de klasvraag wacht de nieuwe vraag tot je verder gaat */
       if ((vraag && gekozen !== null && $('oordeel').classList.contains('mis') && $('verder')) || (kv && kv.uit) || (vraag && gekozen !== null && $('oordeel').classList.contains('goed'))) wachtVolgende = b;
       else if (!vraag || vraag.k !== b.k || vraag.soort !== b.soort) toonVraag(b);
@@ -539,7 +559,7 @@ button{cursor:pointer;touch-action:manipulation}
     v = VERBINDING.maak({ pad: CODE + '?rol=speler&sid=' + encodeURIComponent(kenmerk()) + '&naam=' + encodeURIComponent(NAAM) + '&av=' + encodeURIComponent(AV), rol:'speler',
       onBericht: bericht,
       /* weer verbonden: een antwoord waar nog geen oordeel op kwam, gaat nog een keer (dubbel telt de kamer niet) */
-      onOpen: function(opnieuw){ if (opnieuw && vraag && gekozen !== null && oordeelK !== vraag.k) v.stuur(vraag.open ? { t:'antwoord', k:vraag.k, tekst:gekozen } : { t:'antwoord', k:vraag.k, b:gekozen }, { rij:false }); },
+      onOpen: function(opnieuw){ if (opnieuw && vraag && gekozen !== null && oordeelK !== vraag.k) v.stuur(vraag.open ? { t:'antwoord', k:vraag.k, tekst:gekozen } : vraag.topo && vraag.topo.soort === 'wijs' ? { t:'antwoord', k:vraag.k, naam:gekozen } : { t:'antwoord', k:vraag.k, b:gekozen }, { rij:false }); },
       onEruit: function(){ wacht('jammer', 'Je bent uit dit spel gehaald', 'Was dat een vergissing? Vul de code opnieuw in.', true); },
       onDicht: function(){ if ($('einde').classList.contains('hide')) wacht('helaas', 'Het spel is gesloten', 'Vraag je docent om de nieuwe code.', true); } });
   }

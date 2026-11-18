@@ -157,7 +157,7 @@ export function prixMethoden(H){
       let q = null, terug = false;
       if (M.terug && !kwal && px.fouten.length && Math.random() < 0.5){
         const f = px.fouten[0];
-        q = { v: f.v, o: [f.goed].concat(f.fout), g: 0, u: f.u, k: f.kop, t: "" }; terug = true;
+        q = { v: f.v, o: [f.goed].concat(f.fout), g: 0, u: f.u, k: f.kop, t: "", topo: f.topo, sl: f.sl }; terug = true;
       }
       this.prixPot = this.prixPot || {};
       /* rekenen en wiskunde zonder rekenmachine: alleen sommen om uit het hoofd te doen */
@@ -170,7 +170,7 @@ export function prixMethoden(H){
         const x = pot.pop();
         q = x.s === "j" ? R.jaarVraag(b.jaren, x.i, b.r, b.tvNamen) : b.bron[x.i];
         if (!dijkGeschikt(q) || (hoofd && !hoofdreken(q))){ q = null; continue; }
-        if (rit.gehad.indexOf(q.v) >= 0 && pot.length > 3) q = null;
+        if (rit.gehad.indexOf(q.sl || q.v) >= 0 && pot.length > 3) q = null;
       }
       if (!q) q = noodSom(b.r);
       const goed = String(q.o[q.g]).trim(), gezien = [goed.toLowerCase()], fout = [];
@@ -183,13 +183,15 @@ export function prixMethoden(H){
       const opties = R.schud([goed].concat(fout.slice(0, 3)));
       const naam = terug ? (q.k || "nog een keer") : q.t === "jaartallen" ? "jaartallen" : b.vak === "eigen" ? (b.delen[q.t] || "eigen vragen") : (q.k || b.delen[q.t] || q.t || "vraag");
       rit.vraag = { k: rit.k, v: String(q.v).slice(0, 320), o: opties, g: opties.indexOf(goed), kop: String(naam).replace(/^tijdvak \d+ /, "tijdvak ").slice(0, 60), sinds,
-                    u: String(q.u || "").slice(0, 400), open: (M.open && openDeel(goed)) || undefined, terug, soort: kwal ? "kwal" : px.pit ? "pit" : "radio" };
-      if (!terug){ rit.gehad.push(q.v); if (rit.gehad.length > 30) rit.gehad.shift(); }
+                    u: String(q.u || "").slice(0, 400), open: (!q.topo && M.open && openDeel(goed)) || undefined, terug, topo: q.topo || undefined, sl: q.sl || undefined, soort: kwal ? "kwal" : px.pit ? "pit" : "radio" };
+      if (!terug){ rit.gehad.push(q.sl || q.v); if (rit.gehad.length > 30) rit.gehad.shift(); }
     },
     prixZendVraag(sid){
       const sp = this.stand.spelers[sid], v = sp && sp.rit && sp.rit.vraag, px = sp && sp.px;
       if (!v || !px) return;
-      this.naarSpeler(sid, { t: "vraag", k: v.k, v: v.v, o: v.open ? undefined : v.o, open: v.open || undefined, kop: v.kop, soort: v.soort, terug: v.terug || undefined,
+      /* aanwijzen op de kaart: de namen gaan niet mee, de leerling klikt de plek aan */
+      const wijs = v.topo && v.topo.soort === "wijs";
+      this.naarSpeler(sid, { t: "vraag", k: v.k, v: v.v, o: v.open || wijs ? undefined : v.o, open: v.open || undefined, topo: v.topo, kop: v.kop, soort: v.soort, terug: v.terug || undefined,
                              bocht: v.soort === "kwal" ? px.kw.i + 1 : undefined, wiel: v.soort === "pit" && px.pit ? px.pit.wiel + 1 : undefined, sinds: v.sinds });
     },
     /* hoe hard een auto nu rijdt, in rondes per seconde */
@@ -289,19 +291,19 @@ export function prixMethoden(H){
     /* de klasvraag: een vraag voor iedereen, de auto's staan stil */
     prixKvBericht(nu){
       const k = this.stand.prix.kv;
-      return k ? { t: "klasvraag", v: k.v, o: k.o, kop: k.kop, tot: k.tot, nu } : null;
+      return k ? { t: "klasvraag", v: k.v, o: k.o, kop: k.kop, tot: k.tot, nu, topo: k.topo } : null;
     },
     async prixKvStart(nu){
       const st = this.stand, P = st.prix, b = await this.raceBereid();
       if (!this.stand || this.stand.prix !== P || P.kv || P.kvGehad) return;
       let q = null;
       const pot = dijkStapel(b);
-      for (let i = 0; i < 80 && pot.length && !q; i++){ const x = pot.pop(); const c = x.s === "j" ? R.jaarVraag(b.jaren, x.i, b.r, b.tvNamen) : b.bron[x.i]; if (dijkGeschikt(c) && c.o.filter(Boolean).length >= 3 && (!this.prixHoofd(b) || hoofdreken(c))) q = c; }
+      for (let i = 0; i < 80 && pot.length && !q; i++){ const x = pot.pop(); const c = x.s === "j" ? R.jaarVraag(b.jaren, x.i, b.r, b.tvNamen) : b.bron[x.i]; if (dijkGeschikt(c) && c.o.filter(Boolean).length >= 3 && (!this.prixHoofd(b) || hoofdreken(c)) && (!c.topo || c.topo.soort === "naam")) q = c; }
       if (!q) q = noodSom(b.r);
       const goed = String(q.o[q.g]).trim(), ander = R.schud(q.o.filter((o, j) => j !== q.g && String(o == null ? "" : o).trim()).map(o => String(o).trim()).filter((t, i, l) => t.toLowerCase() !== goed.toLowerCase() && l.indexOf(t) === i)).slice(0, 3);
       const opties = R.schud([goed].concat(ander));
       P.kvGehad = true;
-      P.kv = { v: String(q.v).slice(0, 320), o: opties, g: opties.indexOf(goed), u: String(q.u || "").slice(0, 400), kop: String(q.k || b.delen[q.t] || "klasvraag").slice(0, 60), tot: nu + KV_MS, antw: {} };
+      P.kv = { v: String(q.v).slice(0, 320), o: opties, g: opties.indexOf(goed), u: String(q.u || "").slice(0, 400), kop: String(q.k || b.delen[q.t] || "klasvraag").slice(0, 60), tot: nu + KV_MS, antw: {}, topo: q.topo || undefined };
       Object.keys(this.prixWacht || {}).forEach(k => clearTimeout(this.prixWacht[k])); this.prixWacht = {};
       this.iedereen(this.prixKvBericht(nu));
     },
@@ -369,7 +371,10 @@ export function prixMethoden(H){
       if (rit.laatste && k === rit.laatste.k && (!v || v.k !== k)){ this.naarSpeler(sid, rit.laatste); return; }
       if (!v || k !== v.k || this.prixWacht[sid]) return;
       let goed;
-      if (v.open){
+      if (v.topo && v.topo.soort === "wijs"){
+        if (typeof m.naam !== "string" || !m.naam.trim()) return;
+        goed = String(m.naam).trim().slice(0, 80) === v.o[v.g];
+      } else if (v.open){
         const tekst = String(m.tekst == null ? "" : m.tekst).slice(0, 80);
         if (!tekst.trim()) return;
         goed = prixGelijk(tekst, v.o[v.g]);
@@ -391,11 +396,11 @@ export function prixMethoden(H){
       rit.uit[v.k] = goed; rit.k = v.k + 1; sp.ronde = rit.k; sp.laatst = nu1;
       px.n++; if (goed){ px.goed++; sp.gehaald = px.goed; rit.reeks++; rit.beste = Math.max(rit.beste, rit.reeks); } else rit.reeks = 0;
       /* per vraag: hoe vaak goed en fout, voor de docent na afloop */
-      const sl = v.v.slice(0, 140);
+      const sl = (v.sl || v.v).slice(0, 140);
       let p = P.per[sl];
       if (!p && Object.keys(P.per).length < PER_VRAAG) p = P.per[sl] = { kop: v.kop, goed: String(v.o[v.g]).slice(0, 80), g: 0, f: 0 };
       if (p){ if (goed) p.g++; else p.f++; }
-      const uit = { t: "uitslag", k: v.k, goed, g: v.open ? undefined : v.g, juist: String(v.o[v.g]), u: v.u, soort: v.soort, terug: v.terug || undefined };
+      const uit = { t: "uitslag", k: v.k, goed, g: v.open || (v.topo && v.topo.soort === "wijs") ? undefined : v.g, juist: String(v.o[v.g]), u: v.u, soort: v.soort, terug: v.terug || undefined };
       let verder = true;
       if (v.soort === "kwal" && P.fase2 === "kwal"){
         const kw = px.kw;
@@ -424,7 +429,7 @@ export function prixMethoden(H){
           px.slijt = Math.max(0, px.slijt - FOUT_SLIJT);
           if (this.prixModus().wijd) px.traag = nu1 + this.prixModus().wijd;
           if (v.terug) px.fouten.push(px.fouten.shift());
-          else if (px.fouten.length < FOUTEN_MAX) px.fouten.push({ v: v.v, goed: String(v.o[v.g]), fout: v.o.filter((o, j) => j !== v.g).slice(0, 3), u: v.u, kop: v.kop });
+          else if (px.fouten.length < FOUTEN_MAX) px.fouten.push({ v: v.v, goed: String(v.o[v.g]), fout: v.o.filter((o, j) => j !== v.g).slice(0, 3), u: v.u, kop: v.kop, topo: v.topo, sl: v.sl });
         }
         if (px.klaar) verder = false;
       }

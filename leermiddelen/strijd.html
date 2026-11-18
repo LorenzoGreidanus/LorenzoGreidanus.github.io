@@ -388,7 +388,8 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
       <div class="stap"><b>Spel</b><div class="spelkeuze" id="spellen"></div></div>
       <div class="stap"><b>Vak</b><div class="chips" id="vakken"></div></div>
       <div class="stap hide" id="lijstStap"><b id="lijstKop">Welke woordenlijst?</b><div id="lijstKiezer"></div><p class="tip" style="margin-top:6px">De spelers krijgen de lijst als vak in hun spel: meerkeuze, heen en terug. Een lijst maak je bij <a href="maken.html?nieuw=lijst">Eigen materiaal</a>.</p></div>
-      <div class="stap"><b>Niveau</b><div class="chips" id="niveaus"></div></div>
+      <div class="stap hide" id="topoStap"><b>Welke kaart?</b><div class="chips" id="topoKaarten"></div><p class="tip" style="margin-top:6px">Twee soorten vragen door elkaar: een plek licht op en de leerling kiest de naam, of de leerling krijgt een naam en klikt de plek aan op de kaart.</p></div>
+      <div class="stap"><b id="niveauKop">Niveau</b><div class="chips" id="niveaus"></div></div>
       <div class="stap hide" id="raceStap"><b>Soort race</b><div class="chips" id="raceSoort"></div><p class="tip" id="raceSoortUit" style="margin-top:6px"></p></div>
       <div class="stap hide" id="dijkStap"><b>Hoe lang?</b><div class="chips" id="dijkDuur"></div><p class="tip" style="margin-top:6px">Het doel is twaalf zandzakken per leerling. Het water stijgt met de tijd, en sneller bij fouten.</p></div>
       <div class="stap hide" id="prixStap"><b>Speelwijze</b><div class="chips" id="prixModus"></div><p class="tip" id="prixModusUit" style="margin-top:6px"></p>
@@ -541,6 +542,7 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
     { id:'reken', naam:'Rekenen' }, { id:'ned', naam:'Nederlands' }, { id:'eng', naam:'Engels' },
     { id:'ges', naam:'Geschiedenis' }, { id:'aard', naam:'Aardrijkskunde' },
     { id:'bio', naam:'Biologie' }, { id:'wis', naam:'Wiskunde' }, { id:'burg', naam:'Mens en maatschappij' }, { id:'eco', naam:'Economie' },
+    { id:'topo', naam:'Topografie' },
     { id:'eigen', naam:'Een woordenlijst van mij' }
   ];
   var LIJSTCODE = (function(){ try { var m = /[?&]lijst=([A-Za-z0-9]{6})/.exec(location.search); return m ? m[1].toUpperCase() : ''; } catch (e){ return ''; } })();
@@ -548,6 +550,12 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
   var NIVEAUS = [
     { id:'bb', naam:'vmbo-bb' }, { id:'kgt', naam:'vmbo-kgt en tl' }, { id:'havo', naam:'havo' }, { id:'vwo', naam:'vwo' }
   ];
+  /* topografie: alleen in Grand Prix en Dijkbouwers; welke kaart, en hoeveel plekken */
+  var TOPOKAARTEN = [{ id:'nlp', naam:'Nederland, provincies' }, { id:'nlh', naam:'Nederland, hoofdsteden' }, { id:'eu', naam:'Europa, landen' }, { id:'euh', naam:'Europa, hoofdsteden' },
+    { id:'af', naam:'Afrika, landen' }, { id:'afh', naam:'Afrika, hoofdsteden' }, { id:'wl', naam:'Wereld, landen' }, { id:'wlh', naam:'Wereld, hoofdsteden' }];
+  var TOPONIV = [{ id:'bb', naam:'Basis' }, { id:'kgt', naam:'Uitgebreid' }, { id:'havo', naam:'Alles' }];
+  function topoSpel(id){ return id === 'prix' || id === 'dijk'; }
+  function setTekst(h){ return h.vak === 'topo' ? naamVan(TOPOKAARTEN, h.deel || h.lijstNaam || 'eu') + ' · ' + naamVan(TOPONIV, h.niveau === 'vwo' ? 'havo' : h.niveau) : (h.vak === 'eigen' && h.lijstNaam ? h.lijstNaam : naamVan(VAKKEN, h.vak)) + ' · ' + naamVan(NIVEAUS, h.niveau); }
   function naamVan(lijst, id){ var x = lijst.filter(function(y){ return y.id === id; })[0]; return x ? x.naam : id; }
   /* Poortrace: tot de finish, of Oneindig (tot ieders tank leeg is; wie het verst rijdt wint) */
   var SOORTEN = [
@@ -588,7 +596,7 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
   }
 
   /* ====================== start ====================== */
-  var spel = 'toren', vak = 'ges', niveau = 'kgt', raceSoort = 'finish', dijkDuur = '8', kiezerSoort = '', prixModus = 'gewoon', prixBaan = 'duinen', prixRondes = '8', prixRm = 'nee';
+  var spel = 'toren', vak = 'ges', niveau = 'kgt', raceSoort = 'finish', dijkDuur = '8', kiezerSoort = '', topoKaart = 'af', prixModus = 'gewoon', prixBaan = 'duinen', prixRondes = '8', prixRm = 'nee';
   function tekenChips(id, lijst, nu, zet){
     $(id).innerHTML = lijst.map(function(x){
       return '<button type="button" data-id="' + schoonHtml(x.id) + '"' + (x.id === nu ? ' class="on"' : '') + '>' + schoonHtml(x.naam) + '</button>';
@@ -600,8 +608,15 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
       return '<button type="button" data-id="' + s.id + '"' + (s.id === spel ? ' class="on"' : '') + '><i style="background:' + s.kleur + '"><svg viewBox="0 0 24 24">' + s.ico + '</svg></i><span><b>' + s.naam + '</b><span>' + s.uit + '</span></span></button>';
     }).join('');
     Array.prototype.forEach.call($('spellen').querySelectorAll('button'), function(b){ b.addEventListener('click', function(){ spel = b.getAttribute('data-id'); tekenKeuze(); }); });
-    tekenChips('vakken', VAKKEN, vak, function(id){ vak = id; tekenKeuze(); });
-    tekenChips('niveaus', NIVEAUS, niveau, function(id){ niveau = id; tekenKeuze(); });
+    /* topografie kan alleen in Grand Prix en Dijkbouwers */
+    if (vak === 'topo' && !topoSpel(spel)) vak = 'aard';
+    tekenChips('vakken', VAKKEN.filter(function(x){ return x.id !== 'topo' || topoSpel(spel); }), vak, function(id){ vak = id; tekenKeuze(); });
+    var topo = vak === 'topo';
+    if (topo && niveau === 'vwo') niveau = 'havo';
+    tekenChips('niveaus', topo ? TOPONIV : NIVEAUS, niveau, function(id){ niveau = id; tekenKeuze(); });
+    $('niveauKop').textContent = topo ? 'Hoeveel' : 'Niveau';
+    $('topoStap').classList.toggle('hide', !topo);
+    if (topo) tekenChips('topoKaarten', TOPOKAARTEN, topoKaart, function(id){ topoKaart = id; tekenKeuze(); });
     $('raceStap').classList.toggle('hide', spel !== 'poortrace');
     tekenChips('raceSoort', SOORTEN, raceSoort, function(id){ raceSoort = id; tekenKeuze(); });
     $('raceSoortUit').textContent = naamVan(SOORTEN.map(function(x){ return { id:x.id, naam:x.uit }; }), raceSoort);
@@ -644,6 +659,7 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
     if (q.get('rm') === '1') prixRm = 'ja';
     if (SPELLEN.some(function(x){ return x.id === sp; })) spel = sp;
     if (!LIJSTCODE && VAKKEN.some(function(x){ return x.id === vk && x.id !== 'eigen'; })) vak = vk;
+    if (TOPOKAARTEN.some(function(x){ return x.id === q.get('kaart'); })){ topoKaart = q.get('kaart'); if (topoSpel(sp)) vak = 'topo'; }
     if (nv === 'hv') nv = 'havo';
     if (NIVEAUS.some(function(x){ return x.id === nv; })) niveau = nv;
   })();
@@ -655,12 +671,12 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
     $('openBtn').disabled = true; $('openBtn').setAttribute('aria-busy', 'true');
     /* bij een woordenlijst gaat de code mee als "deel": de spelers laden hem dan zelf */
     fetch('/api/kamer', { method:'POST', headers:{ 'content-type':'application/json' },
-      body: JSON.stringify({ spel:'strijd', game:spel, vak:vak, niveau:niveau, deel: vak === 'eigen' ? lijstKiezer.code() : '', modus: spel === 'poortrace' && raceSoort === 'oneindig' ? 'oneindig' : '', duur: spel === 'dijk' ? +dijkDuur : undefined, baan: spel === 'prix' ? prixBaan : undefined, rondes: spel === 'prix' ? +prixRondes : undefined, rm: spel === 'prix' && prixRm === 'ja' && (vak === 'reken' || vak === 'wis') ? true : undefined }) })
+      body: JSON.stringify({ spel:'strijd', game:spel, vak:vak, niveau:niveau, deel: vak === 'eigen' ? lijstKiezer.code() : vak === 'topo' ? topoKaart : '', modus: spel === 'poortrace' && raceSoort === 'oneindig' ? 'oneindig' : '', duur: spel === 'dijk' ? +dijkDuur : undefined, baan: spel === 'prix' ? prixBaan : undefined, rondes: spel === 'prix' ? +prixRondes : undefined, rm: spel === 'prix' && prixRm === 'ja' && (vak === 'reken' || vak === 'wis') ? true : undefined }) })
     .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
     .then(function(x){
       $('openBtn').disabled = false; $('openBtn').removeAttribute('aria-busy');
       if (!x.ok){ $('openFout').textContent = x.j.fout || 'Het lukte niet om een kamer te openen.'; return; }
-      var host = { code:x.j.code, sleutel:x.j.sleutel, game:spel, vak:vak, niveau:niveau, lijstNaam: vak === 'eigen' && lijstM ? lijstM.naam : '', modus: spel === 'poortrace' && raceSoort === 'oneindig' ? 'oneindig' : '', duur: spel === 'dijk' ? dijkDuur : '', baan: spel === 'prix' ? prixBaan : '', rondes: spel === 'prix' ? prixRondes : '' };
+      var host = { code:x.j.code, sleutel:x.j.sleutel, game:spel, vak:vak, niveau:niveau, deel: vak === 'topo' ? topoKaart : '', lijstNaam: vak === 'eigen' && lijstM ? lijstM.naam : '', modus: spel === 'poortrace' && raceSoort === 'oneindig' ? 'oneindig' : '', duur: spel === 'dijk' ? dijkDuur : '', baan: spel === 'prix' ? prixBaan : '', rondes: spel === 'prix' ? prixRondes : '' };
       try { localStorage.setItem('lg-strijd-host', JSON.stringify(host)); } catch (e){}
       verhuis(host.code);
       wordHost(host);
@@ -739,7 +755,7 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
     if (id === 'h-prix') prixBord.aan();
     if (id === 'h-race') raceBord.aan(); else raceBord.uit();
   }
-  function opzetTekst(h){ return naamVan(SPELLEN, h.game) + (isOneindig(h) ? ' Oneindig' : '') + (isPrix(h) && window.PRIX && h.baan ? ' · ' + PRIX.baan(h.baan).naam : '') + ' · ' + (h.vak === 'eigen' && h.lijstNaam ? h.lijstNaam : naamVan(VAKKEN, h.vak)) + ' · ' + naamVan(NIVEAUS, h.niveau); }
+  function opzetTekst(h){ return naamVan(SPELLEN, h.game) + (isOneindig(h) ? ' Oneindig' : '') + (isPrix(h) && window.PRIX && h.baan ? ' · ' + PRIX.baan(h.baan).naam : '') + ' · ' + setTekst(h); }
   function wordHost(h){
     host = h;
     toon('s-host'); hostScherm('h-lobby');
@@ -1088,7 +1104,7 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
     function scene(){ try { return ifr && ifr.contentWindow && ifr.contentWindow.DIJKBORD; } catch (e){ return null; } }
     function geef(){
       var b = scene(); if (!b || !laatste) return;
-      b.zet({ code: host.code, set: (host.vak === 'eigen' && host.lijstNaam ? host.lijstNaam : naamVan(VAKKEN, host.vak)) + ' · ' + naamVan(NIVEAUS, host.niveau),
+      b.zet({ code: host.code, set: setTekst(host),
               fase: laatste.fase, nu: laatste.dijk ? laatste.dijk.nu : Date.now(), spelers: laatste.spelers || [], dijk: laatste.dijk || null });
     }
     return {
@@ -1109,7 +1125,7 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
     function scene(){ try { return ifr && ifr.contentWindow && ifr.contentWindow.PRIXBORD; } catch (e){ return null; } }
     function geef(){
       var b = scene(); if (!b) return;
-      if (laatste) b.zet(Object.assign({}, laatste, { code: host.code, set: (host.vak === 'eigen' && host.lijstNaam ? host.lijstNaam : naamVan(VAKKEN, host.vak)) + ' · ' + naamVan(NIVEAUS, host.niveau) }));
+      if (laatste) b.zet(Object.assign({}, laatste, { code: host.code, set: setTekst(host) }));
       while (wachtrij.length) b.bericht(wachtrij.shift());
       /* de knop Start de race: alleen zolang de kwalificatie loopt */
       $('hRaceP').classList.toggle('hide', !laatste || !laatste.prix || laatste.prix.fase2 !== 'kwal');
@@ -1204,7 +1220,7 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
   $('hNogeens').addEventListener('click', function(){
     if (verhuisVan && verhuisVan !== verb) verhuisVan.sluit();
     verhuisVan = verb; verb = null; bord.uit();
-    spel = host.game; vak = host.vak; niveau = host.niveau; raceSoort = isOneindig(host) ? 'oneindig' : 'finish'; if (host.duur) dijkDuur = String(host.duur); if (host.baan && window.PRIX){ prixBaan = host.baan; prixModus = PRIX.baan(host.baan).modus; } if (host.rondes) prixRondes = String(host.rondes); tekenKeuze();
+    spel = host.game; vak = host.vak; niveau = host.niveau; raceSoort = isOneindig(host) ? 'oneindig' : 'finish'; if (host.duur) dijkDuur = String(host.duur); if (host.baan && window.PRIX){ prixBaan = host.baan; prixModus = PRIX.baan(host.baan).modus; } if (host.rondes) prixRondes = String(host.rondes); if (host.vak === 'topo' && host.deel) topoKaart = host.deel; tekenKeuze();
     toon('s-start'); $('openBtn').click();
   });
 

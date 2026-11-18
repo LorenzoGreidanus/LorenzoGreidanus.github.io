@@ -27,7 +27,7 @@ import COSMETICA from "../leermiddelen/cosmetica.js";
 import TORENMOTOR from "../leermiddelen/toren-motor.js";
 /* de regels van Poortrace: welke vraag, welke antwoorden op de banen, hoe snel, hoeveel punten */
 import POORTREGELS from "../leermiddelen/poortrace-regels.js";
-import { laadVragen } from "./stadvragen.js";
+import { laadVragen, laadTopo } from "./stadvragen.js";
 import { PRIX_BANEN, PRIX_RONDES, prixMethoden } from "./prix.js";
 const TORENSTAP = 60, TOREN_STAND_OM = 2;   /* Torenverdediging: een tik van zestig milliseconden, de stand om de andere tik */
 const TOREN_WACHT_KEUZE = 1500;             /* zolang wacht de kamer op de keuze van de tweede speler */
@@ -1560,6 +1560,12 @@ export class Kamer extends DurableObject {
   raceBereid(){
     if (this.raceBankP) return this.raceBankP;
     const st = this.stand, R = POORTREGELS, r = RANGEN[st.niveau] || 2;
+    /* topografie (Grand Prix en Dijkbouwers): de kaart staat in deel; bb is de basis, kgt ook de minder bekende, havo en vwo de hele kaart */
+    if (st.vak === "topo" && (this.prix || this.dijk)){
+      this.raceBankP = laadTopo(this.env, this.origin, String(st.deel || "eu").replace(/[^a-z]/g, "").slice(0, 6), Math.min(3, r)).catch(e => { console.error("topovragen", e && e.message); return []; })
+        .then(lijst => ({ vak: "topo", r: 2, bron: lijst, nivo: lijst.map(() => 2), mag: ["topo"], jaren: [], tvNamen: [], delen: lijst.delen || {} }));
+      return this.raceBankP;
+    }
     const laad = st.vak === "eigen" ? this.raceLijst(st.deel) : laadVragen(this.env, this.origin, st.vak);
     this.raceBankP = laad.catch(e => { console.error("racevragen", e && e.message); return []; }).then(async lijst => {
       let vak = st.vak;
@@ -1624,7 +1630,7 @@ export class Kamer extends DurableObject {
       const x = pot.pop();
       q = x.s === "j" ? POORTREGELS.jaarVraag(b.jaren, x.i, b.r, b.tvNamen) : b.bron[x.i];
       if (!dijkGeschikt(q)){ q = null; continue; }
-      if (rit.gehad.indexOf(q.v) >= 0 && pot.length > 3){ q = null; continue; }
+      if (rit.gehad.indexOf(q.sl || q.v) >= 0 && pot.length > 3){ q = null; continue; }
       break;
     }
     if (!q) q = noodSom(b.r);
@@ -1638,14 +1644,16 @@ export class Kamer extends DurableObject {
     const opties = POORTREGELS.schud([goed].concat(fout.slice(0, 3)));
     const naam = q.t === "jaartallen" ? "jaartallen" : b.vak === "eigen" ? (b.delen[q.t] || "eigen vragen") : (q.k || b.delen[q.t] || q.t || "vraag");
     rit.vraag = { k: sp.ronde | 0, v: String(q.v).slice(0, 320), o: opties, g: opties.indexOf(goed), kop: String(naam).replace(/^tijdvak \d+ /, "tijdvak ").slice(0, 60),
-                  vlag: /^[a-z-]{2,8}$/.test(q.vlag || "") ? q.vlag : undefined, sinds, u: String(q.u || "").slice(0, 400) };
-    rit.gehad.push(q.v);
+                  vlag: /^[a-z-]{2,8}$/.test(q.vlag || "") ? q.vlag : undefined, sinds, u: String(q.u || "").slice(0, 400), topo: q.topo || undefined, sl: q.sl || undefined };
+    rit.gehad.push(q.sl || q.v);
     if (rit.gehad.length > 30) rit.gehad.shift();
   }
   dijkZendVraag(sid){
     const sp = this.stand.spelers[sid], v = sp && sp.rit && sp.rit.vraag;
     if (!v) return;
-    this.naarSpeler(sid, { t: "vraag", k: v.k, v: v.v, o: v.o, kop: v.kop, vlag: v.vlag });
+    /* aanwijzen op de kaart: de namen gaan niet mee, de leerling klikt de plek aan */
+    const wijs = v.topo && v.topo.soort === "wijs";
+    this.naarSpeler(sid, { t: "vraag", k: v.k, v: v.v, o: wijs ? undefined : v.o, kop: v.kop, vlag: v.vlag, topo: v.topo });
   }
   /* Een antwoord. Alleen op de vraag die hij nu heeft, en niet sneller dan
      DIJK_DENK na die vraag (na een fout DIJK_LEES later): dan wacht de kamer
@@ -1660,8 +1668,10 @@ export class Kamer extends DurableObject {
     const k = Number(m.k), v = rit.vraag;
     if (rit.laatste && k === rit.laatste.k && (!v || v.k !== k)){ this.naarSpeler(sid, rit.laatste); return; }
     if (!v || k !== v.k || this.dijkWacht[sid]) return;
-    const keuze = Number(m.b);
-    if (!(keuze >= 0 && keuze < v.o.length) || keuze !== Math.floor(keuze)) return;
+    /* aanwijzen: de naam van de plek waar de leerling op klikte */
+    let keuze = Number(m.b);
+    if (v.topo && v.topo.soort === "wijs"){ if (typeof m.naam !== "string" || !m.naam.trim()) return; keuze = String(m.naam).trim().slice(0, 80) === v.o[v.g] ? v.g : -1; }
+    else if (!(keuze >= 0 && keuze < v.o.length) || keuze !== Math.floor(keuze)) return;
     const nu = Date.now(), vroeg = v.sinds + DIJK_DENK + (v.k && rit.uit[v.k - 1] === false ? DIJK_LEES : 0) - nu;
     if (vroeg > 0){
       this.dijkWacht[sid] = setTimeout(() => {
@@ -1678,11 +1688,11 @@ export class Kamer extends DurableObject {
       if (!d.dicht && d.zakken >= d.doel) d.dicht = nu;
     } else { rit.reeks = 0; d.fouten++; }
     /* per vraag: hoe vaak goed en fout, voor de docent na afloop */
-    const sl = v.v.slice(0, 140);
+    const sl = (v.sl || v.v).slice(0, 140);
     let p = d.per[sl];
     if (!p && Object.keys(d.per).length < DIJK_PER_VRAAG) p = d.per[sl] = { kop: v.kop, goed: String(v.o[v.g]).slice(0, 80), g: 0, f: 0 };
     if (p){ if (goed) p.g++; else p.f++; }
-    rit.laatste = { t: "uitslag", k: v.k, goed, g: v.g, u: v.u, gelegd: sp.gehaald, reeks: rit.reeks, beste: rit.beste, zakken: d.zakken, doel: d.doel };
+    rit.laatste = { t: "uitslag", k: v.k, goed, g: v.g, juist: String(v.o[v.g]), u: v.u, gelegd: sp.gehaald, reeks: rit.reeks, beste: rit.beste, zakken: d.zakken, doel: d.doel };
     rit.vraag = null;
     this.dijkVraag(sid, b, nu);
     await this.bewaar();
