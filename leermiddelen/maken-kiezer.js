@@ -491,7 +491,7 @@ window.KIEZER = (function(){
   function laadBoek(){
     if (window.OPDRACHTENBOEK) return Promise.resolve();
     if (bLaden) return bLaden;
-    return (bLaden = laadScript('opdrachtenboek.js?v=1').then(function(){ if (!window.OPDRACHTENBOEK){ bLaden = null; throw new Error('geen boek'); } }));
+    return (bLaden = laadScript('opdrachtenboek.js?v=2').then(function(){ if (!window.OPDRACHTENBOEK){ bLaden = null; throw new Error('geen boek'); } }));
   }
   function boekStijl(){
     if ($('kzBoekStijl')) return;
@@ -748,7 +748,7 @@ window.KIEZER = (function(){
     return a + (/[.?!]$/.test(a) ? ' ' : '. ') + (/^[a-zà-ÿ]{3,}[\s:,]/.test(b) ? b.charAt(0).toUpperCase() + b.slice(1) : b);
   }
   /* cijferend rekenen uit de leerroute: dat wordt een invulschema onder elkaar (schema.js) */
-  var SCHEMADOEL = { 'cijf-cijferplus':1, 'cijf-cijfermin':1, 'cijf-cijfer1':1, 'cijf-cijfer2':1 };
+  var SCHEMADOEL = { 'cijf-cijferplus':1, 'cijf-cijfermin':1, 'cijf-cijfer1':1, 'cijf-cijfer2':1, 'komma-onderplus':1, 'komma-ondermin':1 };
   function alsSchema(x, op){
     var som = SCHEMA.leesSom(op.vraag);
     if (!som || som.getal !== undefined) return null;

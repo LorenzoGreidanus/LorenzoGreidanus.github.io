@@ -77,11 +77,40 @@ export function prixGelijk(a, b){
   return !!kaal(a) && kaal(a) === kaal(b);
 }
 
+/* Is dit een som om uit het hoofd te doen? Bij rekenen en wiskunde rijdt de klas zonder
+   rekenmachine, tenzij de docent hem aanzet. Een schatting uit de vraag zelf:
+   - sommen onder elkaar en in het schema vallen af;
+   - tafels, schatten en omrekenen van maten (de komma schuift) zijn altijd hoofdrekenen;
+   - verder mag er geen getal met drie of meer cijfers die ertoe doen in staan (468 of 7,25;
+     250 en 1500 wel), en geen keer- of deelsom van twee getallen met elk twee zulke cijfers
+     (21 × 36). Keer of gedeeld door 10, 100 of 1000 mag altijd. */
+const HOOFD_ALTIJD = { tafels: 1, schatten: 1, metriek: 1 }, HOOFD_NOOIT = { dhte: 1 };
+function gewicht(t){ const c = String(t).replace(/[^0-9]/g, "").replace(/^0+/, "").replace(/0+$/, ""); return Math.max(1, c.length); }
+export function hoofdreken(q){
+  if (!q || !q.v) return false;
+  if (HOOFD_NOOIT[q.t]) return false;
+  const v = String(q.v);
+  if (/onder elkaar|in het schema|staartdeling/i.test(v)) return false;
+  if (HOOFD_ALTIJD[q.t] || /^rond |afronden|welk cijfer/i.test(v)) return true;
+  /* een tijd (12:45) en een schaal (1 : 100) zijn geen deelsom */
+  const kaal = v.replace(/\b\d{1,2}:\d{2}\b/g, " tijd ").replace(/\b1 ?(?::|op) ?10+\b/g, " schaal ");
+  const getallen = (kaal.match(/\d+(?:[.,]\d+)?/g) || []).filter(g => !/^10+$/.test(g));
+  const zwaar = getallen.filter(g => gewicht(g) >= 3).length, middel = getallen.filter(g => gewicht(g) >= 2).length;
+  const tien = /(?:×|x|\*|:|÷|gedeeld door|keer) ?10+(?!\d)/i.test(kaal);
+  if (tien) return zwaar <= 1 && getallen.length <= 1;
+  if (zwaar) return false;
+  if (/\d ?[×:÷] ?\d| keer | gedeeld door /.test(kaal) && middel >= 2) return false;
+  return true;
+}
+
 export function prixMethoden(H){
   const { dijkGeschikt, dijkStapel, noodSom, R } = H;
   return {
     prixBaan(){ return PRIX_BANEN[this.stand.baan] || PRIX_BANEN.duinen; },
     prixModus(){ return MODI[this.prixBaan().modus] || MODI.gewoon; },
+    /* alleen hoofdrekenvragen: bij rekenen en wiskunde, tenzij de rekenmachine aan staat */
+    prixHoofd(b){ return !!b && (b.vak === "reken" || b.vak === "wis") && !this.stand.rm; },
+    prixRm(){ return !!this.stand.rm && (this.stand.vak === "reken" || this.stand.vak === "wis"); },
     /* het startschot van de docent: de kwalificatie begint */
     async prixBegin(){
       const st = this.stand, nu = Date.now();
@@ -131,14 +160,16 @@ export function prixMethoden(H){
         q = { v: f.v, o: [f.goed].concat(f.fout), g: 0, u: f.u, k: f.kop, t: "" }; terug = true;
       }
       this.prixPot = this.prixPot || {};
+      /* rekenen en wiskunde zonder rekenmachine: alleen sommen om uit het hoofd te doen */
+      const hoofd = this.prixHoofd(b);
       const sleutel = sid + "|" + band;
       let pot = this.prixPot[sleutel];
-      for (let poging = 0; poging < 40 && !q; poging++){
+      for (let poging = 0; poging < 80 && !q; poging++){
         if (!pot || !pot.length) pot = this.prixPot[sleutel] = dijkStapel(Object.assign({}, b, { r: Math.max(1, Math.min(4, b.r + BAND[band].nivo)) }));
         if (!pot.length) break;
         const x = pot.pop();
         q = x.s === "j" ? R.jaarVraag(b.jaren, x.i, b.r, b.tvNamen) : b.bron[x.i];
-        if (!dijkGeschikt(q)){ q = null; continue; }
+        if (!dijkGeschikt(q) || (hoofd && !hoofdreken(q))){ q = null; continue; }
         if (rit.gehad.indexOf(q.v) >= 0 && pot.length > 3) q = null;
       }
       if (!q) q = noodSom(b.r);
@@ -204,7 +235,7 @@ export function prixMethoden(H){
     prixStand(){
       const st = this.stand, P = st.prix;
       if (!this.prix || !P) return undefined;
-      return { baan: P.baan, rondes: P.rondes, fase2: P.fase2, nu: Date.now(), raceStart: P.raceStart || 0, kwalStart: P.kwalStart, kv: !!P.kv, pit: P.pit || undefined };
+      return { baan: P.baan, rondes: P.rondes, fase2: P.fase2, nu: Date.now(), raceStart: P.raceStart || 0, kwalStart: P.kwalStart, kv: !!P.kv, pit: P.pit || undefined, rm: this.prixRm() || undefined };
     },
     /* de race begint: de startopstelling uit de kwalificatie, dan aftellen */
     async prixRaceStart(){
@@ -265,7 +296,7 @@ export function prixMethoden(H){
       if (!this.stand || this.stand.prix !== P || P.kv || P.kvGehad) return;
       let q = null;
       const pot = dijkStapel(b);
-      for (let i = 0; i < 30 && pot.length && !q; i++){ const x = pot.pop(); const c = x.s === "j" ? R.jaarVraag(b.jaren, x.i, b.r, b.tvNamen) : b.bron[x.i]; if (dijkGeschikt(c) && c.o.filter(Boolean).length >= 3) q = c; }
+      for (let i = 0; i < 80 && pot.length && !q; i++){ const x = pot.pop(); const c = x.s === "j" ? R.jaarVraag(b.jaren, x.i, b.r, b.tvNamen) : b.bron[x.i]; if (dijkGeschikt(c) && c.o.filter(Boolean).length >= 3 && (!this.prixHoofd(b) || hoofdreken(c))) q = c; }
       if (!q) q = noodSom(b.r);
       const goed = String(q.o[q.g]).trim(), ander = R.schud(q.o.filter((o, j) => j !== q.g && String(o == null ? "" : o).trim()).map(o => String(o).trim()).filter((t, i, l) => t.toLowerCase() !== goed.toLowerCase() && l.indexOf(t) === i)).slice(0, 3);
       const opties = R.schud([goed].concat(ander));

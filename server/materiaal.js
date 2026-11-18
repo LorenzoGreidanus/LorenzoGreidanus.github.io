@@ -158,7 +158,9 @@ function schemaJuist(it){
     const l = (r.c || []).filter(c => c && typeof c === "object").map(c => c.a[0] || "");
     if (!l.length) return "";
     if (r.k) return l.some(Boolean) ? "onthouden: " + l.filter(Boolean).join(", ") : "";
-    return cijf ? l.join("") : l.join(", ");
+    /* een kommagetal: de komma staat als vast vakje tussen de cijfers */
+    if (cijf) return (r.c || []).map(c => c && typeof c === "object" ? (c.a[0] || "") : c === "," ? "," : "").join("");
+    return l.join(", ");
   }).filter(Boolean).join(" · ");
 }
 function gatenVan(tekst){ return (String(tekst || "").match(/\[([^\]]+)\]/g) || []).map(x => x.slice(1, -1).trim()); }

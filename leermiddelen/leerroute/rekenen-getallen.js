@@ -125,6 +125,10 @@
   function regelsBeeld(regels){ return '<div class="lr-tekst">' + regels.map(function(r, i){ return '<p>' + (i ? '= ' : '') + R0.schoon(r) + '</p>'; }).join('') + '</div>'; }
 
   var PLAATS = ['eenheden', 'tientallen', 'honderdtallen', 'duizendtallen', 'tienduizendtallen', 'honderdduizendtallen', 'miljoenen'];
+  /* de kolommen van een getal met twee cijfers achter de komma, van rechts naar links */
+  var KPLAATS = ['honderdsten', 'tienden', 'eenheden', 'tientallen', 'honderdtallen', 'duizendtallen'];
+  /* hoeveel tekens van rechts een cijfer staat als de komma ook een plek inneemt (12,50: de 2 staat op plek 3) */
+  function kPos(d){ return d + (d >= 2 ? 1 : 0); }
 
   LEERROUTE.voeg('rekenen', [
 
@@ -622,6 +626,58 @@
                 st('Geef ' + (geld ? '€ ' + x : S(x)) + ' ook twee cijfers achter de komma:', S2(x), geld ? 'Een heel bedrag krijgt ,00 erachter.' : 'Zet er een 0 achter.'),
                 st('Reken uit zonder komma: ' + X100 + opT + Y100 + ' =', r100, plus ? 'Cijferend optellen, van rechts naar links.' : 'Cijferend aftrekken, of aanvullen van ' + Y100 + ' tot ' + X100 + '.'),
                 st('Zet de komma terug: twee cijfers van achteren.', S2(r), 'Tel twee cijfers van rechts in ' + r100 + ' en zet daar de komma.', { fout:F([[r100, 'Vergeet de komma niet.']]) }) ] };
+          } },
+        { id:'komma-onderplus', naam:'Kommagetallen optellen onder elkaar', kort:"Komma's onder elkaar, aanvullen met een nul, en dan van rechts naar links per kolom optellen",
+          uit:"<p>Kommagetallen tel je <b>onder elkaar</b> op, net als hele getallen. Eén ding is anders: de <b>komma's staan recht onder elkaar</b>. Dan staan de tienden onder de tienden en de honderdsten onder de honderdsten.</p><p>Heeft een getal minder cijfers achter de komma? <b>Vul aan met een nul</b>: 12,5 wordt 12,50.</p><p>Begin <b>rechts</b>, bij de honderdsten. Is de uitkomst in een kolom 10 of meer? Schrijf het laatste cijfer op en onthoud de 1 voor de kolom ernaast. De komma in het antwoord komt recht onder de andere komma's.</p><p>Voorbeeld: 12,5 + 3,75. Schrijf 12,50 en 3,75 onder elkaar. 0 + 5 = 5. 5 + 7 = 12: schrijf 2, onthoud 1. 2 + 3 + 1 = 6. 1 + 0 = 1. Antwoord 16,25.</p>",
+          wanneer:'je bedragen of maten optelt die niet evenveel cijfers achter de komma hebben.',
+          maak:function(R){
+            var a, b, ov, len, i;
+            do {
+              a = R.heel(11, 899) * 10; b = R.heel(101, 9899); len = String(Math.max(a, b)).length; ov = 0;
+              for (i = 0; i < len - 1; i++) if (dR(a, i) + dR(b, i) + (i && dR(a, i - 1) + dR(b, i - 1) >= 10 ? 1 : 0) >= 10) ov++;
+            } while (a % 100 === 0 || b % 10 === 0 || ov < 1 || a + b >= 100000);
+            var stappen = [st("Zet de komma's onder elkaar en vul aan met een nul. " + S(a / 100) + ' wordt', S2(a / 100), 'Zet een 0 achter ' + S(a / 100) + ': dan hebben beide getallen twee cijfers achter de komma.')], onth = [], c = 0;
+            for (i = 0; i < len; i++){
+              var x = dR(a, i), y = dR(b, i), s = x + y + c, laatste = i === len - 1;
+              stappen.push(st((i === 0 ? 'Begin rechts. ' : '') + 'De ' + KPLAATS[i] + ': ' + x + ' + ' + y + (c ? ' + 1 (onthouden)' : '') + ' =', s, c ? 'Tel ' + x + ' + ' + y + ' en vergeet de 1 die je onthouden hebt niet.' : 'Tel alleen de cijfers van de ' + KPLAATS[i] + ': ' + x + ' en ' + y + '.',
+                { waarom:!laatste && s >= 10 ? 'Schrijf ' + (s % 10) + ' op en onthoud 1.' : 'Schrijf ' + s + ' op.', fout:c ? F([[s - 1, 'Je vergat de 1 die je onthouden had.']], s) : {} }));
+              c = s >= 10 ? 1 : 0; onth.push(c);
+            }
+            var som = a + b, res = S2(som / 100);
+            stappen.push(st("Het antwoord, met de komma recht onder de andere komma's:", res, 'Lees de cijfers onder de streep van links naar rechts. De komma staat voor de laatste twee cijfers.', { fout:F([[som, 'Vergeet de komma niet: twee cijfers van achteren.']]) }));
+            return { vraag:S(a / 100) + ' + ' + S(b / 100), context:"Reken onder elkaar uit. Zet de komma's recht onder elkaar.",
+              beeld:function(k){
+                var l = [['', k >= 1 ? S2(a / 100) : S(a / 100) + ' '], ['+', S2(b / 100)]], o = {}, m = k - 1;
+                for (var j = 0; j < Math.min(m, len); j++) if (onth[j] && j < len - 1) o[kPos(j + 1)] = 1;
+                if (m > 0) l.push(['', m >= len ? res : res.slice(-kPos(m))]);
+                return onder(l, [1], o);
+              },
+              stappen:stappen };
+          } },
+        { id:'komma-ondermin', naam:'Kommagetallen aftrekken onder elkaar', kort:"Komma's onder elkaar, aanvullen met een nul, en dan van rechts naar links aftrekken met lenen",
+          uit:"<p>Kommagetallen trek je <b>onder elkaar</b> af, net als hele getallen. De <b>komma's staan recht onder elkaar</b>.</p><p>Heeft het bovenste getal minder cijfers achter de komma? <b>Vul aan met een nul</b>: 20,5 wordt 20,50. Die nul heb je nodig, anders is er niets om van af te trekken.</p><p>Begin <b>rechts</b>. Is het bovenste cijfer te klein? Leen dan 1 van de kolom links ervan: daar staat 1 minder, en jij krijgt er 10 bij. Lenen gaat gewoon over de komma heen.</p><p>Voorbeeld: 20,5 − 7,25. Schrijf 20,50 en 7,25 onder elkaar. 0 − 5 kan niet: leen, 10 − 5 = 5. Bij de tienden staat nu 4: 4 − 2 = 2. 0 − 7 kan niet: leen, 10 − 7 = 3. Bij de tientallen staat nu 1: 1 − 0 = 1. Antwoord 13,25.</p>",
+          wanneer:'je wilt weten hoeveel er over is of hoeveel het scheelt, bij bedragen en maten.',
+          maak:function(R){
+            var a, b, len, i;
+            do { a = R.heel(201, 899) * 10; b = R.heel(101, a - 101); } while (a % 100 === 0 || b % 10 === 0 || a - b < 100);
+            len = String(a).length;
+            var stappen = [st("Zet de komma's onder elkaar en vul aan met een nul. " + S(a / 100) + ' wordt', S2(a / 100), 'Zet een 0 achter ' + S(a / 100) + ': dan hebben beide getallen twee cijfers achter de komma.')], leen = 0, nieuw = {};
+            for (i = 0; i < len; i++){
+              var cur = dR(a, i) - leen, y = dR(b, i), tekst = (i === 0 ? 'Begin rechts. ' : '') + 'De ' + KPLAATS[i] + ': ' + (leen ? 'er staat nu ' + cur + ', want je leende er 1 van. ' : ''), ant, f = {};
+              if (cur < y){ tekst += cur + ' ' + MIN + ' ' + y + ' kan niet. Leen 1 van de ' + KPLAATS[i + 1] + ': ' + (cur + 10) + ' ' + MIN + ' ' + y + ' ='; ant = cur + 10 - y; leen = 1; nieuw[i + 1] = dR(a, i + 1) - 1; f = F([[y - cur, 'Je deed ' + y + ' ' + MIN + ' ' + cur + '. Onder elkaar trek je altijd het onderste cijfer van het bovenste af. Leen eerst.']], ant); }
+              else { tekst += cur + ' ' + MIN + ' ' + y + ' ='; ant = cur - y; leen = 0; if (cur !== dR(a, i)) f = F([[dR(a, i) - y, 'Je leende hier al 1 van. Er staat nu ' + cur + '.']], ant); }
+              stappen.push(st(tekst, ant, cur < y ? 'Na het lenen heb je ' + (cur + 10) + '. Haal er ' + y + ' af.' : 'Haal ' + y + ' van ' + cur + ' af.', { fout:f }));
+            }
+            var uitk = a - b, res = S2(uitk / 100), vol = String(uitk); while (vol.length < len) vol = '0' + vol; vol = vol.slice(0, -2) + ',' + vol.slice(-2);
+            stappen.push(st("Het antwoord, met de komma recht onder de andere komma's:", res, 'Lees de cijfers onder de streep van links naar rechts. De komma staat voor de laatste twee cijfers.', { fout:F([[uitk, 'Vergeet de komma niet: twee cijfers van achteren.']]) }));
+            return { vraag:S(a / 100) + ' ' + MIN + ' ' + S(b / 100), context:"Reken onder elkaar uit. Zet de komma's recht onder elkaar.",
+              beeld:function(k){
+                var l = [['', k >= 1 ? S2(a / 100) : S(a / 100) + ' '], [MIN, S2(b / 100)]], o = {}, m = k - 1;
+                Object.keys(nieuw).forEach(function(j){ if (+j <= m) o[kPos(+j)] = nieuw[j]; });
+                if (m > 0) l.push(['', m >= len ? res : vol.slice(-kPos(m))]);
+                return onder(l, [1], o);
+              },
+              stappen:stappen };
           } },
         { id:'komma-keer10', naam:'Keer 10, 100 en 1000', kort:'Bij keer schuift de komma naar rechts: zoveel plaatsen als er nullen zijn',
           uit:'<p>Bij <b>keer 10</b> wordt het getal 10 keer zo groot. Elk cijfer schuift één plaats op, of anders gezegd: de <b>komma schuift één plaats naar rechts</b>.</p><p>Bij keer 100 schuift de komma 2 plaatsen, bij keer 1000 schuift hij 3 plaatsen. Zijn er geen cijfers meer? Vul aan met nullen.</p><p>Voorbeeld: 3,75 × 100 = 375 en 0,4 × 1000 = 400.</p>',

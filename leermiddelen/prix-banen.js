@@ -85,7 +85,7 @@
      opt: { mij (het kenmerk van de eigen auto), namen ('alle', 'top' of 'geen'), gezicht(naam, av) } */
   function veld(svg, opt){
     opt = opt || {};
-    var b = null, pad = null, pitPad = null, len = 0, pitLen = 0, laag = null, autos = {}, st = null, loop = null, schaal = opt.schaal || 0.3;
+    var b = null, pad = null, pitPad = null, len = 0, pitLen = 0, laag = null, autos = {}, st = null, loop = null, schaal = opt.schaal || 0.27;
     function el(naam, attrs){ var e = document.createElementNS(NS, naam); for (var k in attrs) e.setAttribute(k, attrs[k]); return e; }
     function zetBaan(id){
       b = baan(id);
@@ -135,32 +135,71 @@
       Object.keys(autos).forEach(function(k){ if (!gezien[k]){ laag.removeChild(autos[k].g); delete autos[k]; } });
       if (!loop) loop = requestAnimationFrame(teken);
     }
+    /* Twee rijstroken. Een auto blijft in zijn strook tot hij een ander te dicht nadert: dan
+       wijkt hij uit naar de andere strook en rijdt erlangs. Is die ook bezet, dan blijft hij er
+       net achter hangen. Zo rijden auto's nooit door elkaar heen, ook niet bij de start en in
+       de kwalificatie, waar veel auto's op dezelfde plek horen. */
+    var STROOK = 4.3, RUIMTE = 16;
+    function verschil(s1, s2){ var v = (s1 - s2) % len; if (v > len / 2) v -= len; if (v < -len / 2) v += len; return v; }
     function teken(){
       loop = requestAnimationFrame(teken);
       if (!st || !b) return;
-      var nu = performance.now(), P = st.prix;
+      var nu = performance.now(), P = st.prix, opBaan = [];
       Object.keys(autos).forEach(function(k){
-        var a = autos[k], px = a.s.px, doel, p;
+        var a = autos[k], px = a.s.px, doel;
+        a.p = null;
         if (P.fase2 === 'kwal'){
           /* de kwalificatie: elke bocht een stukje verder de baan rond */
           doel = Math.min(1, px.kwI / 8) * 0.985 + 0.012;
           a.d = a.d == null ? doel : a.d + (doel - a.d) * 0.08;
-          p = plek(a.d, ((px.nr % 3) - 1) * 3);
+          opBaan.push(a);
         } else if (px.pit >= 0){
-          p = pitPlek(0.25 + 0.5 * ((px.nr % 6) / 5)); a.d = null;
+          a.p = pitPlek(0.25 + 0.5 * ((px.nr % 6) / 5)); a.d = null; a.zij = null;
         } else if (px.klaar){
-          p = pitPlek(0.1 + 0.8 * (((a.rang - 1) % 10) / 9)); a.d = null;
+          a.p = pitPlek(0.1 + 0.8 * (((a.rang - 1) % 10) / 9)); a.d = null; a.zij = null;
+          a.g.style.display = a.rang > 10 ? 'none' : '';
         } else {
           doel = Math.min(P.rondes, a.d0 + (px.v || 0) * (nu - a.t0) / 1000);
           /* een sprong (een nieuwe stand die net anders is) vloeit weg in plaats van te verspringen */
           a.d = a.d == null || Math.abs(doel - a.d) > 0.4 ? doel : a.d + (doel - a.d) * 0.2;
-          p = plek(a.d, ((px.nr % 3) - 1) * 3);
+          opBaan.push(a);
         }
+      });
+      /* van voor naar achter: elke auto zoekt een vrije plek in een strook */
+      opBaan.sort(function(x, y){ return y.d - x.d || x.s.px.nr - y.s.px.nr; });
+      var gezet = [];
+      opBaan.forEach(function(a){
+        var s = (((a.d % 1) + 1) % 1) * len;
+        if (a.strook == null) a.strook = a.s.px.nr % 2 ? 1 : -1;
+        function vrij(strook, waar){ for (var i = 0; i < gezet.length; i++) if (gezet[i].strook === strook && Math.abs(verschil(gezet[i].s, waar)) < RUIMTE) return gezet[i]; return null; }
+        var blok = vrij(a.strook, s);
+        if (blok){
+          if (!vrij(-a.strook, s)) a.strook = -a.strook;            /* uitwijken: de andere strook is vrij */
+          else {
+            /* beide stroken bezet: aansluiten achter de auto die het minst ver terug staat */
+            var beste = null;
+            [a.strook, -a.strook].forEach(function(str){
+              var w = s, x, n = 0;
+              while ((x = vrij(str, w)) && n++ < 40) w = x.s - RUIMTE;
+              if (beste === null || verschil(w, beste.w) > 0) beste = { w: w, strook: str };
+            });
+            a.strook = beste.strook; s = beste.w;
+          }
+        }
+        gezet.push({ s: s, strook: a.strook });
+        var doelZij = a.strook * STROOK;
+        a.zij = a.zij == null ? doelZij : a.zij + (doelZij - a.zij) * 0.09;
+        a.p = plek(s / len, a.zij);
+        /* tijdens het wisselen van strook stuurt de auto een beetje mee */
+        a.p.hoek += Math.max(-16, Math.min(16, (doelZij - a.zij) * 3.4));
+      });
+      Object.keys(autos).forEach(function(k){
+        var a = autos[k], p = a.p; if (!p) return;
         if (a.x != null){ p.x = a.x + (p.x - a.x) * 0.35; p.y = a.y + (p.y - a.y) * 0.35; }
         a.x = p.x; a.y = p.y;
         a.g.setAttribute('transform', 'translate(' + p.x.toFixed(2) + ' ' + p.y.toFixed(2) + ')');
         a.lijf.setAttribute('transform', 'rotate(' + p.hoek.toFixed(1) + ')');
-        if (a.kop) a.kop.setAttribute('transform', 'rotate(' + (-p.hoek / schaal * schaal).toFixed(1) + ' -3 0)');
+        if (a.kop) a.kop.setAttribute('transform', 'rotate(' + (-p.hoek).toFixed(1) + ' -3 0)');
       });
     }
     function waar(sid){ var a = autos[sid]; return a && a.d != null ? a.d : null; }

@@ -69,7 +69,7 @@ window.OPDRACHTENBOEK = (function(){
         ] },
         { naam:"Kommagetallen", paragrafen:[
           { id:"komma-plaats", naam:"Kommagetallen begrijpen en vergelijken", niveau:"1F", doelen:["komma-plaats", "komma-lijn", "komma-vergelijk"] },
-          { id:"komma-plusmin", naam:"Optellen, aftrekken, keer en gedeeld door 10, 100 en 1000", niveau:"1F", doelen:["komma-plusmin", "komma-keer10", "komma-deel10"] },
+          { id:"komma-plusmin", naam:"Optellen, aftrekken, keer en gedeeld door 10, 100 en 1000", niveau:"1F", doelen:["komma-plusmin", "komma-onderplus", "komma-ondermin", "komma-keer10", "komma-deel10"] },
           { id:"komma-afronden", naam:"Kommagetallen afronden", niveau:"1F/3F", doelen:["komma-afronden", "macht-decimalen", "macht-zinvol"] },
           { id:"komma-keerheel", naam:"Vermenigvuldigen en delen met kommagetallen", niveau:"2F", doelen:["komma-keerheel", "komma-keerkomma", "komma-keerhalf", "komma-deelheel", "komma-deelkomma", "komma-kies"] }
         ] },

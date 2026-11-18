@@ -25,7 +25,7 @@
     if (window.OPDRACHTENBOEK) return Promise.resolve();
     if (laden) return laden;
     laden = new Promise(function(klaar, mis){
-      var s = document.createElement('script'); s.src = 'opdrachtenboek.js?v=1';
+      var s = document.createElement('script'); s.src = 'opdrachtenboek.js?v=2';
       s.onload = function(){ stijlBoek(); klaar(); };
       s.onerror = function(){ laden = null; mis(new Error('geen boek')); };
       document.head.appendChild(s);

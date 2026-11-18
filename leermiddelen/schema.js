@@ -29,7 +29,7 @@
 window.SCHEMA = (function(){
   'use strict';
   var SOORTEN = [
-    { id:'dhte', naam:'DHTE-schema', kort:'getal, optellen, aftrekken', hoe:'Vul in elk vakje één cijfer in. Begin bij de eenheden.' },
+    { id:'dhte', naam:'DHTE-schema', kort:'getal, optellen, aftrekken, ook met een komma', hoe:'Vul in elk vakje één cijfer in. Begin rechts.' },
     { id:'onder', naam:'Onder elkaar', kort:'+ − × met tussenrijen', hoe:'Vul in elk vakje één cijfer in. Begin rechts.' },
     { id:'vt', naam:'Verhoudingstabel', kort:'vakjes leeg laten', hoe:'Vul de lege vakjes van de tabel in.' },
     { id:'lijn', naam:'Getallenlijn', kort:'aflezen bij de pijlen', hoe:'Welk getal staat bij elke pijl?' },
@@ -62,8 +62,37 @@ window.SCHEMA = (function(){
     var m = /^(\d{1,6})([+\-×:])(\d{1,6})$/.exec(s);
     if (m) return { a:+m[1], op:m[2], b:+m[3] };
     if (/^\d{1,6}$/.test(s)) return { getal:+s };
+    /* kommagetallen: 3,45 + 12,8 of het getal 27,05. Achter de komma hoogstens drie cijfers.
+       a en b zijn dan de getallen zonder komma (345 en 1280), dec het aantal cijfers achter de komma. */
+    var k = /^(\d{1,5})(?:,(\d{1,3}))?([+\-])(\d{1,5})(?:,(\d{1,3}))?$/.exec(s);
+    if (k && (k[2] || k[5])){
+      var dec = Math.max((k[2] || '').length, (k[5] || '').length), vul = function(h, d){ return +(h + (d || '') + '000'.slice(0, dec - (d || '').length)); };
+      return { a:vul(k[1], k[2]), op:k[3], b:vul(k[4], k[5]), dec:dec };
+    }
+    var g = /^(\d{1,5}),(\d{1,3})$/.exec(s);
+    if (g) return { getal:+(g[1] + g[2]), dec:g[2].length };
     return null;
   }
+  /* een getal zonder komma weer met de komma erin: 345 met twee decimalen is 3,45 */
+  function metKomma(n, dec){
+    var t = String(n);
+    if (!dec) return t;
+    while (t.length <= dec) t = '0' + t;
+    return t.slice(0, -dec) + ',' + t.slice(-dec);
+  }
+  /* de cijfers van een kommagetal, met minstens een cijfer voor de komma (0,45 is 045) */
+  function cijferTekst(n, dec){ var t = String(n); while (dec && t.length <= dec) t = '0' + t; return t; }
+  /* in elke rij en in de kop een vakje met de komma, tussen de eenheden en de tienden */
+  function kommaErin(b, n, dec){
+    if (!dec) return b;
+    var waar = 1 + n - dec;
+    if (b.kop.length) b.kop.splice(waar, 0, ',');
+    b.rijen.forEach(function(r){ r.c.splice(waar, 0, r.k ? '' : ','); });
+    b.dec = dec;
+    return b;
+  }
+  var NAKOMMA = ['t', 'h', 'd'];
+  function kopVan(n, dec){ return [''].concat(KOLOM.slice(0, n - dec).reverse(), NAKOMMA.slice(0, dec)); }
   /* een rij cijfers rechts uitgelijnd in n kolommen; in: invulvakjes */
   function rijVan(getalTekst, n, voor, invul){
     var c = cijfers(getalTekst), uit = [voor || ''];
@@ -85,34 +114,36 @@ window.SCHEMA = (function(){
   }
   function bouwSom(soort, bron, opt){
     var s = leesSom(bron);
-    if (!s) return { fout: soort === 'dhte' ? 'typ een som als 347 + 285, of een getal als 3528.' : 'typ een som als 347 + 285, 632 − 285 of 46 × 23.' };
+    if (!s) return { fout: soort === 'dhte' ? 'typ een som als 347 + 285 of 3,45 + 12,8, of een getal als 3528 of 27,05.' : 'typ een som als 347 + 285, 632 − 285 of 46 × 23.' };
     if (s.getal !== undefined){
       if (soort !== 'dhte') return { fout: 'typ een som, zoals 46 × 23.' };
-      var g = String(s.getal), ng = Math.max(2, g.length);
+      var gd = s.dec || 0, g = cijferTekst(s.getal, gd), ng = Math.max(2, g.length);
       if (ng > 6) return { fout: 'het getal heeft hoogstens zes cijfers.' };
-      return { kop:[''].concat(KOLOM.slice(0, ng).reverse()), rijen:[{ c:rijVan(g, ng, '', true) }], vraag:'Zet het getal ' + g + ' in het schema.' };
+      return kommaErin({ kop:kopVan(ng, gd), rijen:[{ c:rijVan(g, ng, '', true) }], vraag:'Zet het getal ' + metKomma(s.getal, gd) + ' in het schema.' }, ng, gd);
     }
     if (s.op === ':') return { fout: 'een deling kan nog niet in een schema; maak er een open vraag van.' };
     if (s.op === '-' && s.b > s.a) return { fout: 'het eerste getal moet groter zijn dan het tweede.' };
     if (soort === 'dhte' && s.op === '×') return { fout: 'keersommen gaan bij Onder elkaar.' };
+    if (s.dec && s.op !== '+' && s.op !== '-') return { fout: 'met een komma kan alleen optellen en aftrekken.' };
     var teken = { '+':'+', '-':'−', '×':'×' }[s.op];
     var r = s.op === '+' ? s.a + s.b : s.op === '-' ? s.a - s.b : s.a * s.b;
     var tussen = [];
     if (s.op === '×' && String(s.b).length > 1 && opt.tussen !== false)
       cijfers(s.b).reverse().forEach(function(d, i){ tussen.push(String(s.a * +d * Math.pow(10, i))); });
-    var n = Math.max(2, String(s.a).length, String(s.b).length, String(r).length);
+    var dec = s.dec || 0, tA = cijferTekst(s.a, dec), tB = cijferTekst(s.b, dec), tR = cijferTekst(r, dec);
+    var n = Math.max(2, tA.length, tB.length, tR.length);
     tussen.forEach(function(t){ n = Math.max(n, t.length); });
     if (n > (soort === 'dhte' ? 6 : 8)) return { fout: 'de getallen zijn te groot voor een schema.' };
     var rijen = [];
     if (s.op === '+' && opt.onth) rijen.push({ c:onthoudRij(s.a, s.b, n), k:1 });
-    rijen.push({ c:rijVan(String(s.a), n, '', false) });
-    rijen.push({ c:rijVan(String(s.b), n, teken, false) });
+    rijen.push({ c:rijVan(tA, n, '', false) });
+    rijen.push({ c:rijVan(tB, n, teken, false) });
     /* de tussenrijen, met het plusteken bij de laatste: die tel je op */
     tussen.forEach(function(t, i){ rijen.push({ c:rijVan(t, n, i === tussen.length - 1 ? '+' : '', true), l:i === 0 ? 1 : 0 }); });
-    rijen.push({ c:rijVan(String(r), n, '', true), l:1 });
+    rijen.push({ c:rijVan(tR, n, '', true), l:1 });
     var naam = { '+':'optellen', '-':'aftrekken', '×':'vermenigvuldigen' }[s.op];
-    return { kop:soort === 'dhte' ? [''].concat(KOLOM.slice(0, n).reverse()) : [], rijen:rijen,
-      vraag:(soort === 'dhte' ? 'Reken uit in het schema: ' : 'Reken onder elkaar uit: ') + s.a + ' ' + teken + ' ' + s.b, naam:naam };
+    return kommaErin({ kop:soort === 'dhte' ? kopVan(n, dec) : [], rijen:rijen,
+      vraag:(soort === 'dhte' ? 'Reken uit in het schema: ' : 'Reken onder elkaar uit: ') + metKomma(s.a, dec) + ' ' + teken + ' ' + metKomma(s.b, dec) + (dec ? '. Zet de komma\'s recht onder elkaar.' : ''), naam:naam }, n, dec);
   }
   /* een tabel: een rij per regel, vakjes gescheiden door |, invullen tussen [haken], meer goede antwoorden met / */
   function leesTabel(tekst){
@@ -192,6 +223,8 @@ window.SCHEMA = (function(){
     '.sc-cijf td{width:2.4em;height:2.5em;font-size:1.25rem;font-weight:600}' +
     '.sc-dhte td{border-left:1px solid var(--rand2,#c9cedc)}.sc-dhte td:first-child,.sc-dhte th:first-child{border-left:0}' +
     '.sc-cijf td:first-child{width:1.8em;font-weight:400;color:var(--muted,#4a5270)}' +
+    /* de komma: een smal vakje zonder lijnen, de komma laag zoals je hem schrijft */
+    '.sc-cijf td.sc-komma,.sc-cijf th.sc-komma{width:.9em;border-left:0;vertical-align:bottom;padding-bottom:.25em;font-weight:700}.sc-dhte td.sc-komma+td,.sc-dhte th.sc-komma+th{border-left:0}' +
     '.sc tr.l td{border-top:2.5px solid var(--ink,#14224C)}.sc tr.l td:first-child{border-top-color:transparent}' +
     '.sc-cijf tr.k td{height:1.9em;font-size:.95rem}' +
     '.sc input{font:inherit;font-weight:600;text-align:center;color:var(--ink,#14224C);background:var(--kaart,#fff);border:2px solid var(--rand2,#9aa3bd);border-radius:10px;box-sizing:border-box;min-height:44px}' +
@@ -255,13 +288,15 @@ window.SCHEMA = (function(){
         return '<label><span>' + String.fromCharCode(65 + k) + ' =</span>' + celHtml(cel, k, o, it, {}) + '</label>'; }).join('') + '</div></div>';
     }
     var klas = soort === 'dhte' ? 'sc-cijf sc-dhte' : soort === 'onder' ? 'sc-cijf sc-onder' : soort === 'kruis' ? 'sc-tab sc-kruis' : 'sc-tab';
-    var kop = (it.kop || []).length && soort !== 'kruis' ? '<thead><tr>' + it.kop.map(function(k){ return '<th>' + esc(k) + '</th>'; }).join('') + '</tr></thead>' : '';
+    /* de kolom van de komma (DHTE en onder elkaar met kommagetallen): smal en zonder lijnen */
+    var kk = -1; if (soort === 'dhte' || soort === 'onder') (it.rijen || []).forEach(function(r){ if (kk < 0 && !r.k) kk = (r.c || []).indexOf(','); });
+    var kop = (it.kop || []).length && soort !== 'kruis' ? '<thead><tr>' + it.kop.map(function(k, ki){ return '<th' + (ki === kk ? ' class="sc-komma"' : '') + '>' + esc(k) + '</th>'; }).join('') + '</tr></thead>' : '';
     var rijen = soort === 'kruis' ? [{ c:it.kop || [] }].concat(it.rijen || []) : (it.rijen || []);
     var body = rijen.map(function(r, ri){
       return '<tr class="' + (r.l ? 'l ' : '') + (r.k ? 'k' : '') + '">' + (r.c || []).map(function(c, ci){
         var vast0 = (soort === 'vt' || soort === 'tabel') && ci === 0 && !isIn(c) && c !== '';
         var cel = isIn(c) ? celHtml(c, i++, o, it, r) : esc(c);
-        return '<td class="' + (isIn(c) ? 'in' : '') + (vast0 ? ' vast0' : '') + '">' + cel + '</td>';
+        return '<td class="' + (isIn(c) ? 'in' : '') + (vast0 ? ' vast0' : '') + (ci === kk ? ' sc-komma' : '') + '">' + cel + '</td>';
       }).join('') + '</tr>';
     }).join('');
     return '<div class="sc-wrap"><table class="sc ' + klas + '">' + kop + '<tbody>' + body + '</tbody></table></div>';
@@ -306,16 +341,19 @@ window.SCHEMA = (function(){
       var l = (r.c || []).filter(isIn).map(function(c){ return c.a ? c.a[0] : ''; });
       if (!l.length) return '';
       if (r.k) return l.some(Boolean) ? 'onthouden: ' + l.filter(Boolean).join(', ') : '';
-      return cijf ? l.join('') : l.join(', ');
+      /* een kommagetal: de komma staat als vast vakje tussen de cijfers */
+      if (cijf) return (r.c || []).map(function(c){ return isIn(c) ? (c.a ? c.a[0] : '') : c === ',' ? ',' : ''; }).join('');
+      return l.join(', ');
     }).filter(Boolean).join(' · ');
   }
   function antwoordTekst(it, a){
     a = a || []; var i = 0, cijf = it.soort === 'dhte' || it.soort === 'onder';
     return (it.rijen || []).map(function(r){
-      var l = (r.c || []).filter(isIn).map(function(){ var w = a[i++]; return w == null || w === '' ? (cijf ? '_' : '…') : String(w); });
+      var l = [], metKomma = [];
+      (r.c || []).forEach(function(c){ if (isIn(c)){ var w = a[i++], t = w == null || w === '' ? (cijf ? '_' : '…') : String(w); l.push(t); metKomma.push(t); } else if (c === ',') metKomma.push(','); });
       if (!l.length) return '';
       if (r.k) return l.every(function(x){ return x === '_'; }) ? '' : 'onthouden: ' + l.join(' ');
-      return cijf ? l.join('') : l.join(', ');
+      return cijf ? metKomma.join('') : l.join(', ');
     }).filter(Boolean).join(' · ');
   }
   /* de uitleg bij een som in het DHTE-schema of onder elkaar, uit de rijen zelf */
@@ -323,6 +361,8 @@ window.SCHEMA = (function(){
     if (it.soort !== 'dhte' && it.soort !== 'onder') return '';
     var s = leesSom(it.bron); if (!s || s.getal !== undefined) return '';
     var naam = it.soort === 'dhte' ? ['eenheden', 'tientallen', 'honderdtallen', 'duizendtallen', 'tienduizendtallen', 'honderdduizendtallen'] : null;
+    /* met een komma: rechts beginnen bij de honderdsten of de tienden */
+    if (naam && s.dec) naam = ['duizendsten', 'honderdsten', 'tienden'].slice(3 - s.dec).concat(naam);
     var kol = function(k){ return naam && naam[k] ? 'Bij de ' + naam[k] : k === 0 ? 'Rechts' : 'In kolom ' + (k + 1) + ' van rechts'; };
     var A = cijfers(s.a).reverse(), B = cijfers(s.b).reverse(), stappen = [];
     if (s.op === '+'){

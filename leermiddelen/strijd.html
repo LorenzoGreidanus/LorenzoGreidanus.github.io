@@ -393,6 +393,7 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
       <div class="stap hide" id="dijkStap"><b>Hoe lang?</b><div class="chips" id="dijkDuur"></div><p class="tip" style="margin-top:6px">Het doel is twaalf zandzakken per leerling. Het water stijgt met de tijd, en sneller bij fouten.</p></div>
       <div class="stap hide" id="prixStap"><b>Speelwijze</b><div class="chips" id="prixModus"></div><p class="tip" id="prixModusUit" style="margin-top:6px"></p>
         <b>Circuit</b><div class="prixbanen" id="prixBanen"></div>
+        <b id="prixRmKop">Rekenen</b><div class="chips" id="prixRm"></div><p class="tip" id="prixRmUit" style="margin-top:6px"></p>
         <b>Rondes</b><div class="chips" id="prixRondes"></div><p class="tip" style="margin-top:6px">Eerst een kwalificatie van acht vragen, dan de race. Halverwege komt er een klasvraag op het bord.</p></div>
       <div class="stap">
         <button class="knop crab groot" id="openBtn" type="button">Kamer openen</button>
@@ -587,7 +588,7 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
   }
 
   /* ====================== start ====================== */
-  var spel = 'toren', vak = 'ges', niveau = 'kgt', raceSoort = 'finish', dijkDuur = '8', kiezerSoort = '', prixModus = 'gewoon', prixBaan = 'duinen', prixRondes = '8';
+  var spel = 'toren', vak = 'ges', niveau = 'kgt', raceSoort = 'finish', dijkDuur = '8', kiezerSoort = '', prixModus = 'gewoon', prixBaan = 'duinen', prixRondes = '8', prixRm = 'nee';
   function tekenChips(id, lijst, nu, zet){
     $(id).innerHTML = lijst.map(function(x){
       return '<button type="button" data-id="' + schoonHtml(x.id) + '"' + (x.id === nu ? ' class="on"' : '') + '>' + schoonHtml(x.naam) + '</button>';
@@ -616,6 +617,11 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
       }).join('');
       Array.prototype.forEach.call($('prixBanen').querySelectorAll('button'), function(k){ k.addEventListener('click', function(){ prixBaan = k.getAttribute('data-id'); tekenKeuze(); var z = $('prixBanen').querySelector('[data-id="' + prixBaan + '"]'); if (z) z.focus(); }); });
       tekenChips('prixRondes', PRIXRONDES, prixRondes, function(id){ prixRondes = id; tekenKeuze(); });
+      /* rekenen en wiskunde: uit het hoofd, of alle sommen met een rekenmachine op het scherm */
+      var rekenvak = vak === 'reken' || vak === 'wis';
+      ['prixRmKop', 'prixRm', 'prixRmUit'].forEach(function(id){ $(id).classList.toggle('hide', !rekenvak); });
+      tekenChips('prixRm', [{ id:'nee', naam:'Hoofdrekenen' }, { id:'ja', naam:'Met rekenmachine' }], prixRm, function(id){ prixRm = id; tekenKeuze(); });
+      $('prixRmUit').textContent = prixRm === 'ja' ? 'Alle sommen doen mee, ook grote. Leerlingen hebben een rekenmachine op hun scherm.' : 'Alleen sommen die je uit het hoofd kunt. Grote sommen en sommen onder elkaar doen niet mee.';
     }
     $('lijstStap').classList.toggle('hide', vak !== 'eigen');
     /* Dijkbouwers neemt ook een oefening van Eigen materiaal; de andere spellen alleen een woordenlijst */
@@ -635,6 +641,7 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
     if (q.get('modus') === 'oneindig') raceSoort = 'oneindig';
     if (window.PRIX && q.get('baan') && PRIX.baan(q.get('baan')).id === q.get('baan')){ prixBaan = q.get('baan'); prixModus = PRIX.baan(prixBaan).modus; }
     if (PRIXRONDES.some(function(x){ return x.id === q.get('rondes'); })) prixRondes = q.get('rondes');
+    if (q.get('rm') === '1') prixRm = 'ja';
     if (SPELLEN.some(function(x){ return x.id === sp; })) spel = sp;
     if (!LIJSTCODE && VAKKEN.some(function(x){ return x.id === vk && x.id !== 'eigen'; })) vak = vk;
     if (nv === 'hv') nv = 'havo';
@@ -648,7 +655,7 @@ footer{padding:24px 0 30px;font-size:.83rem;color:var(--muted);text-align:center
     $('openBtn').disabled = true; $('openBtn').setAttribute('aria-busy', 'true');
     /* bij een woordenlijst gaat de code mee als "deel": de spelers laden hem dan zelf */
     fetch('/api/kamer', { method:'POST', headers:{ 'content-type':'application/json' },
-      body: JSON.stringify({ spel:'strijd', game:spel, vak:vak, niveau:niveau, deel: vak === 'eigen' ? lijstKiezer.code() : '', modus: spel === 'poortrace' && raceSoort === 'oneindig' ? 'oneindig' : '', duur: spel === 'dijk' ? +dijkDuur : undefined, baan: spel === 'prix' ? prixBaan : undefined, rondes: spel === 'prix' ? +prixRondes : undefined }) })
+      body: JSON.stringify({ spel:'strijd', game:spel, vak:vak, niveau:niveau, deel: vak === 'eigen' ? lijstKiezer.code() : '', modus: spel === 'poortrace' && raceSoort === 'oneindig' ? 'oneindig' : '', duur: spel === 'dijk' ? +dijkDuur : undefined, baan: spel === 'prix' ? prixBaan : undefined, rondes: spel === 'prix' ? +prixRondes : undefined, rm: spel === 'prix' && prixRm === 'ja' && (vak === 'reken' || vak === 'wis') ? true : undefined }) })
     .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
     .then(function(x){
       $('openBtn').disabled = false; $('openBtn').removeAttribute('aria-busy');

@@ -742,7 +742,7 @@ export class Kamer extends DurableObject {
       /* Dijkbouwers: hoeveel minuten de klas heeft */
       if (game === "dijk") this.stand.duur = Math.max(3, Math.min(20, Math.round(Number(opzet.duur) || DIJK_DUUR)));
       /* Grand Prix: op welke baan en hoeveel rondes */
-      if (game === "prix"){ this.stand.baan = PRIX_BANEN[opzet.baan] ? String(opzet.baan) : "duinen"; this.stand.rondes = PRIX_RONDES.indexOf(Number(opzet.rondes)) >= 0 ? Number(opzet.rondes) : 8; }
+      if (game === "prix"){ this.stand.baan = PRIX_BANEN[opzet.baan] ? String(opzet.baan) : "duinen"; this.stand.rondes = PRIX_RONDES.indexOf(Number(opzet.rondes)) >= 0 ? Number(opzet.rondes) : 8; this.stand.rm = opzet.rm === true; }
     } else {
       const vragen = Array.isArray(opzet.vragen) ? opzet.vragen.slice(0, MAX_VRAGEN).map(q => q && typeof q === "object" ? ({
         v: schoon(q.v, 300),
