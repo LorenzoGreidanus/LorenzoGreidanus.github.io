@@ -112,6 +112,10 @@ ONDERDELEN.burg.push({id:'partijen', naam:'politieke partijen'}, {id:'bestuursla
 ONDERDELEN.aard.push({id:'bevolking', naam:'bevolking en bevolkingspiramides'}, {id:'klimaten', naam:'klimaten'}, {id:'kaartlezen', naam:'kaartlezen: tekens, richting en schaal'});
 ONDERDELEN.bio.push({id:'voedselweb', naam:'voedselketens en voedselwebben'});
 ONDERDELEN.eco.push({id:'vraag en aanbod', naam:'vraag en aanbod'});
+/* erbij in november 2026: de mens (biologie), bescherming en verzekeren (economie), de piramide (wiskunde) */
+ONDERDELEN.bio.push({id:'levensfasen', naam:'de mens: levensfasen en ontwikkeling'});
+ONDERDELEN.eco.push({id:'bescherming', naam:'de overheid geeft bescherming'}, {id:'verzekeren', naam:'verzekeren en zekerheid'});
+ONDERDELEN.wis.push({id:'piramide', naam:'de piramide'});
 
 /* Een woordenlijst van de docent (maken.html): met ?lijst=CODE in het adres
    staat hij als vak "Eigen lijst" tussen de andere, en BANK.zorg('eigen')

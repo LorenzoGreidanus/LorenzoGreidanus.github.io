@@ -29,7 +29,7 @@
 window.SCHEMA = (function(){
   'use strict';
   var SOORTEN = [
-    { id:'dhte', naam:'DHTE-schema', kort:'getal, optellen, aftrekken, ook met een komma', hoe:'Vul in elk vakje één cijfer in. Begin rechts.' },
+    { id:'dhte', naam:'DHTE-schema', kort:'getal, optellen, aftrekken en keer, ook met een komma', hoe:'Vul in elk vakje één cijfer in. Begin rechts.' },
     { id:'onder', naam:'Onder elkaar', kort:'+ − × met tussenrijen', hoe:'Vul in elk vakje één cijfer in. Begin rechts.' },
     { id:'vt', naam:'Verhoudingstabel', kort:'vakjes leeg laten', hoe:'Vul de lege vakjes van de tabel in.' },
     { id:'lijn', naam:'Getallenlijn', kort:'aflezen bij de pijlen', hoe:'Welk getal staat bij elke pijl?' },
@@ -114,7 +114,7 @@ window.SCHEMA = (function(){
   }
   function bouwSom(soort, bron, opt){
     var s = leesSom(bron);
-    if (!s) return { fout: soort === 'dhte' ? 'typ een som als 347 + 285 of 3,45 + 12,8, of een getal als 3528 of 27,05.' : 'typ een som als 347 + 285, 632 − 285 of 46 × 23.' };
+    if (!s) return { fout: soort === 'dhte' ? 'typ een som als 347 + 285, 46 × 23 of 3,45 + 12,8, of een getal als 3528 of 27,05.' : 'typ een som als 347 + 285, 632 − 285 of 46 × 23.' };
     if (s.getal !== undefined){
       if (soort !== 'dhte') return { fout: 'typ een som, zoals 46 × 23.' };
       var gd = s.dec || 0, g = cijferTekst(s.getal, gd), ng = Math.max(2, g.length);
@@ -123,7 +123,6 @@ window.SCHEMA = (function(){
     }
     if (s.op === ':') return { fout: 'een deling kan nog niet in een schema; maak er een open vraag van.' };
     if (s.op === '-' && s.b > s.a) return { fout: 'het eerste getal moet groter zijn dan het tweede.' };
-    if (soort === 'dhte' && s.op === '×') return { fout: 'keersommen gaan bij Onder elkaar.' };
     if (s.dec && s.op !== '+' && s.op !== '-') return { fout: 'met een komma kan alleen optellen en aftrekken.' };
     var teken = { '+':'+', '-':'−', '×':'×' }[s.op];
     var r = s.op === '+' ? s.a + s.b : s.op === '-' ? s.a - s.b : s.a * s.b;

@@ -76,7 +76,7 @@ var UIT = [
 ];
 var GAT = [
   [1, 'De trein had een uur ___, dus we misten de aansluiting.', 'vertraging', 'voorsprong', 'pauze', 'haast', 'Als je een aansluiting mist, was de trein te laat: vertraging.'],
-  [1, 'Ik ben ___ op spinnen: ik ren gillend weg.', 'bang', 'dol', 'trots', 'jaloers', 'Gillend wegrennen doe je als je bang bent.'],
+  [1, 'Ik ben ___ voor spinnen: ik ren gillend weg.', 'bang', 'dol', 'trots', 'jaloers', 'Gillend wegrennen doe je als je bang bent.'],
   [1, 'De winkel is op zondag ___, dus je kunt dan niets kopen.', 'gesloten', 'druk', 'open', 'goedkoop', 'Niets kunnen kopen: de winkel is gesloten.'],
   [1, 'Zet je telefoon op ___ tijdens de les, anders hoort iedereen hem.', 'stil', 'vol', 'wit', 'zwaar', 'Anders hoort iedereen hem: je zet hem op stil.'],
   [1, 'De weg was ___ door het ijs, dus veel fietsers vielen.', 'glad', 'breed', 'leeg', 'nieuw', 'Fietsers vallen op ijs omdat het glad is.'],

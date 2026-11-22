@@ -98,7 +98,8 @@ window.TYPEN = (function(){
      een eenheid ook het kale getal ("€ 20": 20). */
   function goedeVormen(t, vak){
     var heel = norm(t, vak), uit = [heel];
-    heel.split(/\s*[,\/]\s*|\s+of\s+/).forEach(function(d){ if (d && uit.indexOf(d) < 0) uit.push(d); });
+    /* niet midden in een getal knippen: 0,5 en 1/6 blijven heel */
+    heel.split(/\s*[,\/](?!\d)\s*|\s+of\s+/).forEach(function(d){ if (d && uit.indexOf(d) < 0) uit.push(d); });
     uit.slice().forEach(function(d){
       var z = d.replace(/^(in|door|op|naar|met|bij|van|aan|uit|onder|boven) (de |het |een )?/, '');
       if (z && z !== d && uit.indexOf(z) < 0) uit.push(z);
