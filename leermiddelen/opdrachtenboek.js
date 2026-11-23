@@ -944,6 +944,7 @@ window.OPDRACHTENBOEK = (function(){
           { id:"wob-m-ruimte-naam", naam:"Ruimtefiguren herkennen en benoemen", niveau:"onderbouw", doelen:["wob-m-ruimte-naam", "wob-m-ruimte-ribben"] },
           { id:"wob-m-ruimte-uitslag", naam:"Uitslagen van de kubus", niveau:"onderbouw", doelen:["wob-m-ruimte-uitslag"] },
           { id:"wob-m-ruimte-aanzicht", naam:"Aanzichten van blokkenbouwsels", niveau:"onderbouw", doelen:["wob-m-ruimte-aanzicht"] },
+          { id:"wob-m-fig-kubus", naam:"De ruimtefiguren een voor een: kenmerken, oppervlakte en inhoud", niveau:"onderbouw", doelen:["wob-m-fig-kubus", "wob-m-fig-balk", "wob-m-fig-prisma", "wob-m-fig-cilinder", "wob-m-fig-piramide", "wob-m-fig-kegel", "wob-m-fig-bol"] },
           { id:"wvm-m-werktek", naam:"Aanzichten en werktekeningen", niveau:"vmbo", doelen:["wvm-m-werktek", "wvm-m-aanzicht-maat"] }
         ] },
         { naam:"Inhoud van ruimtefiguren", paragrafen:[

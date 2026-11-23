@@ -315,32 +315,36 @@ var SPELBLAD = (function(){
     h += '<tr class="uitk"><td class="op"></td>' + kols.map(function(k){ return '<td>' + (vol ? ant[k] : '') + '</td>'; }).join('') + '</tr>';
     return h + '</table>';
   }
+  var SCHEMANAAM = { te:'T E', hte:'H T E', dhte:'D H T E' };
   var dhte = D && {
     naam:'DHTE-schema: optellen en aftrekken', vak:'reken',
     eigenNiveau:true,
     aantallen:[6, 9, 12, 15, 20], standaard:9, aantalNaam:'Aantal sommen',
     delenKop:'Getallen en sommen',
-    delenTip:'Kies je meer soorten sommen, dan wisselen ze elkaar af. In de gestippelde vakjes zet de leerling wat hij onthoudt of leent.',
+    delenTip:'Kies je meer schema’s of meer soorten sommen, dan wisselen ze elkaar af. In de gestippelde vakjes zet de leerling wat hij onthoudt of leent.',
     delen:function(aan){
-      var nv = D.NIVEAUS.filter(function(x){ return aan.indexOf(x.id) >= 0; })[0] || D.NIVEAUS[1];
+      var nvs = D.NIVEAUS.filter(function(x){ return aan.indexOf(x.id) >= 0; });
+      if (!nvs.length) nvs = [D.NIVEAUS[1]];
       var ods = D.ONDERDELEN.filter(function(o){ return aan.indexOf(o.id) >= 0; }).map(function(o){ return o.id; });
       if (!ods.length) ods = ['optellen', 'aftrekken'];
-      return kop('Getallen') + D.NIVEAUS.map(function(x){ return keus('niv', x.id, x.naam, x === nv); }).join('') +
+      return kop('Welk schema') + D.NIVEAUS.map(function(x){ return vink('niv', x.id, SCHEMANAAM[x.id] + ' (' + x.naam.toLowerCase() + ')', nvs.indexOf(x) >= 0); }).join('') +
         kop('Sommen') + D.ONDERDELEN.map(function(o){ return vink('od', o.id, o.naam + (o.id === 'invullen' ? ': een getal in het schema zetten' : o.id === 'optellen' ? ' met onthouden' : ' met lenen'), ods.indexOf(o.id) >= 0); }).join('');
     },
-    lees:function(el){ return { niv:waarden(el, 'niv')[0] || 'hte', ods:waarden(el, 'od') }; },
+    lees:function(el){ var nivs = waarden(el, 'niv'); if (!nivs.length) nivs = ['hte']; return { niv:nivs[0], nivs:nivs, ods:waarden(el, 'od') }; },
     maak:function(o, n){
       if (!o.ods.length) return { fout:'Vink minstens een soort som aan.' };
-      var nv = D.NIVEAUS.filter(function(x){ return x.id === o.niv; })[0] || D.NIVEAUS[1], k = nv.kolommen;
+      var nvs = D.NIVEAUS.filter(function(x){ return (o.nivs || [o.niv]).indexOf(x.id) >= 0; });
+      if (!nvs.length) nvs = [D.NIVEAUS[1]];
       var uit = [], gezien = {};
       for (var p = 0; uit.length < n && p < n * 40; p++){
-        var od = o.ods[p % o.ods.length], q;
-        if (od === 'invullen'){ var g = D.getalVan(k); q = { od:od, getal:g, stappen:D.stappenInvullen(g, k) }; }
+        /* de soort som wisselt per opgave, het schema per rondje soorten: zo komt elke soort in elk schema */
+        var od = o.ods[p % o.ods.length], k = nvs[Math.floor(p / o.ods.length) % nvs.length].kolommen, q;
+        if (od === 'invullen'){ var g = D.getalVan(k); q = { od:od, k:k, getal:g, stappen:D.stappenInvullen(g, k) }; }
         else {
           var s = od === 'optellen' ? D.somOptellen(k) : D.somAftrekken(k);
           var st = od === 'optellen' ? D.stappenOptellen(s.a, s.b, k) : D.stappenAftrekken(s.a, s.b, k);
           if (!st) continue;
-          q = { od:od, a:s.a, b:s.b, stappen:st };
+          q = { od:od, k:k, a:s.a, b:s.b, stappen:st };
         }
         var sl = od + (q.getal || q.a + '|' + q.b);
         if (gezien[sl]) continue;
@@ -354,14 +358,15 @@ var SPELBLAD = (function(){
       var vragen = w.items.map(function(q){
         return '<li><span class="odkop">' + schoon(naam(q.od)) + '</span>' +
           (q.od === 'invullen' ? '<span class="vr">Zet ' + q.getal + ' in het schema.</span>' : '<span class="vr">' + q.a + (q.od === 'optellen' ? ' + ' : ' − ') + q.b + '</span>') +
-          schema(q, k, false) + '</li>';
+          schema(q, q.k || k, false) + '</li>';
       }).join('');
       var antwoorden = w.items.map(function(q){
         var uitkomst = q.od === 'invullen' ? q.getal : q.od === 'optellen' ? q.a + q.b : q.a - q.b;
-        return '<li><span class="goed">' + (q.od === 'invullen' ? q.getal : q.a + (q.od === 'optellen' ? ' + ' : ' − ') + q.b + ' = ' + uitkomst) + '</span>' + schema(q, k, true) + '</li>';
+        return '<li><span class="goed">' + (q.od === 'invullen' ? q.getal : q.a + (q.od === 'optellen' ? ' + ' : ' − ') + q.b + ' = ' + uitkomst) + '</span>' + schema(q, q.k || k, true) + '</li>';
       }).join('');
       var ods = w.keuze.ods.map(naam).join(', ').toLowerCase();
-      return { titel:'Werkblad DHTE-schema', sub:nv.naam + ' · ' + ods + ' · ' + w.items.length + ' sommen', klasse:'sommen', vragen:vragen, antwoorden:antwoorden };
+      var gebruikt = D.NIVEAUS.filter(function(x){ return w.items.some(function(q){ return (q.k || k) === x.kolommen; }); }).map(function(x){ return SCHEMANAAM[x.id]; }).join(', ');
+      return { titel:'Werkblad DHTE-schema', sub:(gebruikt || nv.naam) + ' · ' + ods + ' · ' + w.items.length + ' sommen', klasse:'sommen', vragen:vragen, antwoorden:antwoorden };
     }
   };
 

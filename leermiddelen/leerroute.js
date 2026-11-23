@@ -107,7 +107,7 @@ window.LEERROUTE = (function(){
     rekenen:['rekenen-basis', 'rekenen-tafels', 'rekenen-getallen', 'rekenen-verhoudingen', 'rekenen-meten', 'rekenen-meetkunde', 'rekenen-algebra', 'rekenen-data'],
     nederlands:['nederlands-spelling', 'nederlands-werkwoorden', 'nederlands-grammatica', 'nederlands-lezen', 'nederlands-schrijven', 'nederlands-bronnen', 'nederlands-taal', 'nederlands-literatuur'],
     engels:['engels-grammatica', 'engels-woorden', 'engels-lezen', 'engels-schrijven'],
-    wiskunde:['wiskunde-ob-algebra', 'wiskunde-algebra', 'wiskunde-ob-verbanden', 'wiskunde-verbanden', 'wiskunde-ob-meetkunde', 'wiskunde-meetkunde', 'wiskunde-ob-statistiek', 'wiskunde-statistiek',
+    wiskunde:['wiskunde-ob-algebra', 'wiskunde-algebra', 'wiskunde-ob-verbanden', 'wiskunde-verbanden', 'wiskunde-ob-meetkunde', 'wiskunde-ob-ruimtefiguren', 'wiskunde-meetkunde', 'wiskunde-ob-statistiek', 'wiskunde-statistiek',
       'wiskunde-vmbo-algebra', 'wiskunde-vmbo-meetkunde', 'wiskunde-havo-a', 'wiskunde-havo-b', 'wiskunde-vwo-a', 'wiskunde-vwo-b'],
     aardrijkskunde:['aardrijkskunde-kaart', 'aardrijkskunde-wereld'],
     biologie:['biologie-onderzoek', 'biologie-leven'],
