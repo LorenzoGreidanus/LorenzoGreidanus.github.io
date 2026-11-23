@@ -233,7 +233,7 @@ function dicteePast(r, o){
   return !!r.dt && r.dt === o.dt && r.t >= o.sinds;
 }
 /* ---------- de tafeltoets ----------
-   Een vast aantal sommen uit de tafels die de docent kiest (1 tot en met 10, met of
+   Een vast aantal sommen uit de tafels die de docent kiest (1 tot en met 15, met of
    zonder de deelsommen erbij); de tijd loopt mee maar er is geen limiet. Net als het
    dictee van de week kan hij elke week vanzelf terugkomen: dan loopt hij van maandag
    0:00 tot zondag 23:59 en draagt elke uitslag de week waarin hij gemaakt is (wk).
@@ -242,7 +242,7 @@ function dicteePast(r, o){
 const TAFEL_AANTAL = { 20: 1, 30: 1, 40: 1, 50: 1, 60: 1, 80: 1, 100: 1 };
 function tafelLijst(x){
   const uit = [];
-  (Array.isArray(x) ? x : String(x || "").split(",")).forEach(t => { const n = Math.floor(Number(t)); if (n >= 1 && n <= 10 && uit.indexOf(n) < 0) uit.push(n); });
+  (Array.isArray(x) ? x : String(x || "").split(",")).forEach(t => { const n = Math.floor(Number(t)); if (n >= 1 && n <= 15 && uit.indexOf(n) < 0) uit.push(n); });
   return uit.length ? uit.sort((a, b) => a - b) : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 }
 function tafelVelden(inz){
