@@ -27,6 +27,9 @@ export { Pmt } from "./pmt.js";
 export { Zombiekamer, Veld } from "./stad.js";
 /* De personages van De stad: een object per speler, alleen voor de potjes (geen route) */
 export { Stadheld } from "./stad.js";
+/* Teambaas, de racemanager: een object per team en een voor de liga (server/teambaas.js) */
+export { Teambaas } from "./teambaas.js";
+import { behandel as teambaasBehandel } from "./teambaas.js";
 import { behandel as accountBehandel, ingelogd as accountIngelogd, mogelijk as accountMogelijk, isEigenaar, naamVan as accountNaam, kenmerkVan as accountKenmerk, eigenaarVan as accountEigenaar, zorgVoorCode as accountZorgVoorCode, verhuisCode as accountVerhuisCode } from "./account.js";
 import { behandel as pmtBehandel } from "./pmt.js";
 const KLASSEMENTEN = { toren: true, zwaard: true, dag: true, mijnwerker: true, poortrace: true, kaarttoren: true, torendag: true };   /* dag en torendag: per datum een lijst, dag-2026-09-19 */
@@ -349,6 +352,16 @@ async function verdeel(req, env, ctx){
       return json({ fout: "onbekend" }, 404);
     }
 
+    /* Teambaas: het raceteam van wie is ingelogd. Het team hoort bij het account; het kenmerk komt
+       uit het sessiekoekje, nooit uit het verzoek. Alleen lokaal, zonder inlog met Microsoft, mag een
+       test een naam meegeven (?test=), zodat er zonder account te testen is. */
+    if (p === "/api/teambaas" || p.startsWith("/api/teambaas/")){
+      if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
+      if (!await magDoor(env, req, "teambaas", 1500, 60)) return json({ fout: "even wachten" }, 429);
+      let id = await accountKenmerk(req, env);
+      if (!id && lokaal && !accountMogelijk(env) && /^[a-z0-9]{1,20}$/.test(url.searchParams.get("test") || "")) id = "test:" + url.searchParams.get("test");
+      return teambaasBehandel(req, env, url, { id, lokaal, magDoor: (wat, per, s) => magDoor(env, req, wat, per, s) });
+    }
     /* inloggen met Microsoft, optioneel, gekoppeld aan een speelcode (account.js) */
     if (p === "/api/account" || p.startsWith("/api/account/")){
       return accountBehandel(req, env, url, { eigenSite: () => eigenSite(req, url), magDoor: (wat, per, s) => magDoor(env, req, wat, per, s) });
