@@ -35,10 +35,27 @@ const LANG = [
   /* ziektes als scheldwoord, en de afkortingen ervan */
   "kkr", "kankr", "tyfus", "tering", "kolere", "klerelijer", "pleuris", "pokke",
   /* engels */
-  "fuck", "fucker", "bitch", "cunt", "kutkind", "kutjood"
+  "fuck", "fucker", "bitch", "cunt", "kutkind", "kutjood",
+  "shit", "whore", "slutty", "bastard", "asshole", "pussy", "boobs", "porno", "porn", "nudes",
+  "dickhead", "cocksucker", "jackass", "dumbass", "wanker", "twat", "nazis", "killyourself", "kysnow",
+  /* nederlands: schelden, seks en het lichaam */
+  "klootzak", "kloothommel", "kutkop", "kuthoer", "kutje", "kutzooi", "kutlul", "teringhoer", "teringzooi",
+  "kankerhoer", "kankerzooi", "kankerlul", "kenker", "kankah", "tyfushoer", "hoerenzoon", "hoerenkind", "hoerenjong",
+  "neuk", "neuken", "geneukt", "pijpbeurt", "afzuigen", "aftrekken", "rukker", "rukken",
+  "piemel", "penis", "vagina", "tieten", "tietjes", "lulletje", "lulhannes", "flapdrol", "debiel", "downie",
+  "verkrachter", "verkrachten", "seksist", "zelfmoord", "doodgaan",
+  /* haat en geweld */
+  "zigeuner", "geitenneuker", "kameelneuker", "makaak", "vergassen", "gaskamer", "auschwitz", "holocaust",
+  "kkkk", "alqaida", "alqaeda", "taliban", "jodenster", "rotjood", "rotturk", "rotmarokkaan", "rotneger",
+  /* schelden uit het Turks, Marokkaans-Arabisch en Berbers dat op school gebruikt wordt */
+  "kahba", "qahba", "kahbe", "sharmoota", "sharmuta", "charmoeta", "sjarmoeta", "zemmel", "nayek", "naiek",
+  "orospu", "siktir", "yarrak", "aminakoyim", "aminakoyam", "ananisikim", "pezevenk"
 ];
 /* korte of gevoelige termen: alleen als de hele naam eruit bestaat */
-const HEEL = [ "spic", "paki", "coon", "coons", "kkk", "jood", "joden", "jew", "jews", "kike", "nsb", "wog", "gyp", "sieg", "heil", "kut", "hoer", "slet", "fag", "lul", "kk", "gvd", "tyf" ];
+const HEEL = [ "spic", "paki", "coon", "coons", "kkk", "jood", "joden", "jew", "jews", "kike", "nsb", "wog", "gyp", "sieg", "heil", "kut", "hoer", "slet", "fag", "lul", "kk", "gvd", "tyf",
+  /* kort, of ook een gewoon woord in een langer woord (analyse, Janus, Dickens, piknik, verzamelen) */
+  "sex", "seks", "sexy", "slut", "dick", "cock", "tits", "boob", "anal", "anus", "pik", "tiet", "kont", "eikel",
+  "kys", "amk", "yarak", "zamel", "pijpen", "tatta", "makak", "mongol", "autist", "isis", "ss", "fck", "fk", "wtf", "stfu" ];
 /* De klankvorm vangt de truc waar de gewone vorm langs loopt: er een letter
    bij zetten die je toch niet hoort. "Niegggaaa" is geen "nigga" zolang je
    letter voor letter vergelijkt, maar wel zodra je klinkers die achter elkaar
@@ -64,7 +81,8 @@ const TOEGESTAAN = [
   "knikker", "knikkers", "knikkeren", "knikkerkoning", "knikkerkampioen",
   "gokker", "gokkers", "gokken", "gokkast", "goochelaar",
   "nigeria", "nigeriaan", "nigeriaans", "nigeriaanse",
-  "catering", "katering", "watering", "mastering", "pokemon"
+  "catering", "katering", "watering", "mastering", "pokemon",
+  "shiitake", "shitake", "scunthorpe", "peniscola"
 ];
 
 /* codes met cijfers, gecontroleerd op de versie waarin cijfers cijfers blijven */

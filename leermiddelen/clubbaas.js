@@ -43,7 +43,7 @@
   function gezicht(naam, maat, pos){ return '<span class="cb-gz" style="--ring:' + (C.POSKLEUR[pos] || '#83A5F2') + '">' + (window.AVATAR ? AVATAR.svg(naam, maat) : '') + '</span>'; }
   function fitKleur(f){ return f >= 80 ? '#83A5F2' : f >= 60 ? '#EA9836' : '#F26749'; }
   function fitBalk(f){ return '<span class="cb-fit" title="fit ' + f + '%"><i style="width:' + f + '%;background:' + fitKleur(f) + '"></i></span>'; }
-  function logo(c, maat, label){ return C.logoSvg(c.logo, c.k1, c.k2, maat, label ? esc(label) : ''); }
+  function logo(c, maat, label){ return C.logoSvg(c.logo, c.k1, c.k2, maat, label ? esc(label) : '', c.vorm, c.letters); }
   function speler(id){ return club.spelers.filter(function(s){ return s.id === id; })[0] || null; }
   function selectieFit(){ var b = club.basis.map(speler).filter(Boolean); return b.length ? Math.round(b.reduce(function(a, s){ return a + s.fit; }, 0) / b.length) : 100; }
 
@@ -132,7 +132,7 @@
         '<div class="cb-kaart"><div class="cb-rij"><h3>Je selectie</h3><span class="cb-klein">' + t.spelers.length + ' spelers · blauwe rand: in de basis</span></div><div class="cb-selectie">' + sel + '</div></div>' +
         '<div class="cb-kaart"><div class="cb-rij"><h3>Training</h3><span class="cb-klein">geldt voor het hele elftal</span></div><div class="cb-train">' + training + '</div></div></section>' +
       '<section class="cb-kol" aria-label="Stadion en complex">' +
-        '<div class="cb-kaart"><div class="cb-rij"><h3>Stadion</h3><span class="cb-klein">niveau ' + t.stadion + '</span></div><div class="cb-stadion">' + stadionSvg(t.stadion) + '</div>' +
+        '<div class="cb-kaart"><div class="cb-rij"><h3>' + (t.stadionNaam ? esc(t.stadionNaam) : 'Stadion') + '</h3><span class="cb-klein">niveau ' + t.stadion + '</span></div><div class="cb-stadion">' + stadionSvg(t.stadion) + '</div>' +
           '<b>' + munt(R.plaatsen(t.stadion)) + ' plaatsen</b><span class="cb-klein">Meer fans geven je elftal thuis een duwtje, en elke thuiswedstrijd levert ' + (20 * t.stadion) + ' munten extra op.' + (t.stadion < R.stadionMax ? ' Niveau ' + (t.stadion + 1) + ': ' + R.tribune(t.stadion + 1) + '.' : '') + '</span>' + upgradeKnop('stadion', t.stadion) + '</div>' +
         '<div class="cb-kaart"><div class="cb-rij"><h3>Trainingscomplex</h3><span class="cb-klein">niveau ' + t.complex + '</span></div><div class="cb-jobs">' + jobs + '</div>' +
           '<p class="cb-klein">Niveau ' + Math.min(R.complexMax, t.complex + 1) + ' tilt de training tot niveau ' + R.maxTraining(Math.min(R.complexMax, t.complex + 1)) + (R.trainingen(t.complex + 1) > velden ? ' en geeft een trainingsveld erbij' : '') + '.</p>' + upgradeKnop('complex', t.complex) + '</div>' +
@@ -302,7 +302,7 @@
     var w = wed, sim = w.sim, ploeg = [w.thuis, w.uit];
     /* de ring van een ploeg: zijn eerste kleur, tenzij die wegvalt op het blauwe veld of op de kleur van de thuisploeg */
     function zichtbaar(k){ return ['#204ECF', '#14224C', '#1A1C24'].every(function(x){ return verschilKleur(k, x) >= 150; }); }
-    function ringVan(c, niet){ var kies = [c.k1, c.k2, '#FBF6F1', '#EA9836'].filter(function(k){ return k && zichtbaar(k) && (!niet || verschilKleur(k, niet) >= 120); }); return kies[0] || '#FBF6F1'; }
+    function ringVan(c, niet){ var kies = (niet ? [c.uitK1, c.uitK2] : []).concat([c.k1, c.k2, '#FBF6F1', '#EA9836']).filter(function(k){ return k && zichtbaar(k) && (!niet || verschilKleur(k, niet) >= 120); }); return kies[0] || '#FBF6F1'; }
     var r0 = ringVan(w.thuis), ring = [r0, ringVan(w.uit, r0)];
     var andere = liga && liga.laatste && liga.laatste.dag === w.dag ? liga.laatste.wedstrijden : [];
     var eerder = (club.nieuws || []).filter(function(x){ return x.s === 'wedstrijd'; });
@@ -376,7 +376,7 @@
       if (klaar.length === st.regels) return;
       st.regels = klaar.length;
       var score = function(){ var g = sim.momenten.filter(function(x){ return x.s === 'goal'; }), s2 = [0, 0]; klaar.forEach(function(s){ if (s.mom && s.mom.s === 'goal') s2 = s.mom.stand; }); return s2; };
-      var lijst = ['<li><b>1\'</b><span>Aftrap in het stadion van ' + esc(ploeg[0].naam) + '.</span></li>'].concat(klaar.map(function(s){
+      var lijst = ['<li><b>1\'</b><span>Aftrap in ' + (ploeg[0].stadionNaam ? esc(ploeg[0].stadionNaam) : 'het stadion van ' + esc(ploeg[0].naam)) + '.</span></li>'].concat(klaar.map(function(s){
         if (s.soort === 'rust') return '<li><b>45\'</b><span>Rust.</span></li>';
         if (s.soort === 'eind') { var sc = sim.score; return '<li class="goal"><b>90\'</b><span>Einde: ' + esc(ploeg[0].naam) + ' ' + sc[0] + ', ' + esc(ploeg[1].naam) + ' ' + sc[1] + '.</span></li>'; }
         return '<li' + (s.mom.s === 'goal' ? ' class="goal"' : '') + '><b>' + s.m + '\'</b><span>' + esc(regel(s.mom)) + '</span></li>';
@@ -458,7 +458,7 @@
     var l = liga || {}, st = l.clubs || [];
     var tabel = '<table class="cb-tabel"><thead><tr><th>Plek</th><th>Club</th><th class="r" title="gespeeld">Gs</th><th class="r" title="gewonnen">W</th><th class="r" title="gelijk">G</th><th class="r" title="verloren">V</th><th class="r" title="doelpunten voor en tegen">Doelsaldo</th><th class="r">Punten</th></tr></thead><tbody>' + st.map(function(x, i){
       var zone = i < R.promotie && l.div > 1 ? ' op' : i >= st.length - R.promotie && l.div < l.divisies ? ' neer' : '';
-      return '<tr class="' + (x.jij ? 'mijn' : '') + zone + '"><td>' + (i + 1) + '</td><td>' + C.logoSvg(x.logo, x.k1, x.k2, 18) + esc(x.naam) + (x.bot ? ' <small class="cb-klein">(vult aan)</small>' : '') + '</td><td class="r">' + (x.w + x.g + x.v) + '</td><td class="r">' + x.w + '</td><td class="r">' + x.g + '</td><td class="r">' + x.v + '</td><td class="r">' + x.dv + '-' + x.dt + '</td><td class="r"><b>' + x.p + '</b></td></tr>';
+      return '<tr class="' + (x.jij ? 'mijn' : '') + zone + '"><td>' + (i + 1) + '</td><td>' + C.logoSvg(x.logo, x.k1, x.k2, 18, '', x.vorm, x.letters) + esc(x.naam) + (x.bot ? ' <small class="cb-klein">(vult aan)</small>' : '') + '</td><td class="r">' + (x.w + x.g + x.v) + '</td><td class="r">' + x.w + '</td><td class="r">' + x.g + '</td><td class="r">' + x.v + '</td><td class="r">' + x.dv + '-' + x.dt + '</td><td class="r"><b>' + x.p + '</b></td></tr>';
     }).join('') + '</tbody></table>';
     var laatste = l.laatste ? '<ul class="cb-uitslagen">' + l.laatste.wedstrijden.map(function(a){ return '<li><button type="button" data-kijk="' + esc(l.laatste.dag) + '|' + l.laatste.div + '|' + a.m + '"><span>' + esc(a.t) + '</span><b>' + a.s[0] + ' - ' + a.s[1] + '</b><span>' + esc(a.u) + '</span></button></li>'; }).join('') + '</ul><p class="cb-klein">Klik een wedstrijd om hem terug te kijken.</p>' : '<p class="cb-klein">Na de eerste speelronde zie je hier de uitslagen.</p>';
     var prog = [l.tegen, l.daarna].filter(Boolean).map(function(t, i){ return '<li>Ronde ' + t.ronde + ', ' + (i ? tijdTekst(C.daarna(nu())) : tijdTekst(l.volgende)) + ': ' + (t.thuis ? 'thuis tegen ' : 'uit bij ') + esc(t.naam) + '</li>'; }).join('');
@@ -503,27 +503,67 @@
     });
   });
 
-  /* ---------- club en tenue ---------- */
+  /* ---------- club en tenue ----------
+     Drie tenues (thuis, uit, keeper) met kleuren per onderdeel en een patroon; het logo met
+     vorm en symbool of letters; de naam van het stadion. Kleuren zijn gratis, extra patronen en
+     logovormen koop je een keer. */
   var tenue = null;
+  var KITS = [['thuis', 'Thuis'], ['uit', 'Uit'], ['keeper', 'Keeper']];
+  var ONDERDELEN = [['k1', 'Hoofdkleur'], ['k2', 'Tweede kleur'], ['mouw', 'Mouwen'], ['kraag', 'Kraag'], ['broek', 'Broek'], ['sok', 'Sokken']];
+  function heeft(x){ return (club.bezit || []).indexOf(x) >= 0; }
+  function tenueKosten(x){
+    var nodig = [];
+    KITS.forEach(function(k){ var p = x.tenues[k[0]].patroon; if (C.patroonPrijs(p) && !heeft('p:' + p) && nodig.indexOf('p:' + p) < 0) nodig.push('p:' + p); });
+    if (C.vormPrijs(x.vorm) && !heeft('v:' + x.vorm)) nodig.push('v:' + x.vorm);
+    return nodig.reduce(function(s, n){ return s + (n[0] === 'p' ? C.patroonPrijs(n.slice(2)) : C.vormPrijs(n.slice(2))); }, 0);
+  }
+  function prijsLabel(prijs, sleutel){ return !prijs ? 'gratis' : heeft(sleutel) ? 'gekocht' : munt(prijs); }
   function tekenClub(){
-    if (!tenue) tenue = { k1: club.k1, k2: club.k2, patroon: club.patroon, logo: club.logo };
-    var x = tenue;
-    function stalen(kop, sl){ return '<div class="cb-veld"><span style="font-weight:600;color:#FBF6F1;font-size:.88rem">' + kop + '</span><div class="cb-stalen">' + C.KLEUREN.map(function(k){ return '<button type="button" class="cb-staal' + (x[sl] === k[0] ? ' aan' : '') + '" style="background:' + k[0] + '" data-tn="' + sl + '" data-w="' + k[0] + '" aria-pressed="' + (x[sl] === k[0]) + '" aria-label="' + kop + ': ' + k[1] + '" title="' + k[1] + '"></button>'; }).join('') + '</div></div>'; }
-    $('cb-club').innerHTML = '<div class="cb-clubscherm"><section class="cb-kaart"><h2>' + esc(club.naam) + '</h2>' +
-      '<div class="cb-tenue">' + C.shirtSvg(x.k1, x.k2, x.patroon, 170, 9, 'Het shirt van je club') + C.logoSvg(x.logo, x.k1, x.k2, 120, 'Het logo van je club') + '</div>' +
-      '<p class="cb-klein">Zo zien de andere clubs jullie in de stand en in de wedstrijd. In het veld dragen je spelers een ring in je eerste kleur.</p></section>' +
-      '<aside class="cb-kol"><div class="cb-kaart">' + stalen('Eerste kleur', 'k1') + stalen('Tweede kleur', 'k2') +
-      '<div class="cb-veld"><span style="font-weight:600;color:#FBF6F1;font-size:.88rem">Patroon</span><div class="cb-seg">' + C.PATRONEN.map(function(p){ return '<button type="button" data-tn="patroon" data-w="' + p[0] + '" aria-pressed="' + (p[0] === x.patroon) + '">' + p[1] + '</button>'; }).join('') + '</div></div>' +
-      '<div class="cb-veld"><span style="font-weight:600;color:#FBF6F1;font-size:.88rem">Logo</span><div class="cb-logos">' + Object.keys(C.LOGOS).map(function(l){ return '<button type="button" data-tn="logo" data-w="' + l + '" aria-pressed="' + (l === x.logo) + '" aria-label="' + C.LOGOS[l].naam + '" title="' + C.LOGOS[l].naam + '">' + C.logoSvg(l, x.k1, x.k2, 32) + '</button>'; }).join('') + '</div></div>' +
-      '<p class="cb-fout" id="cbTenueFout" hidden></p><div class="cb-rij"><span class="cb-klein">Kleuren en logo zijn gratis.</span><button type="button" class="cb-knop cb-blauw" id="cbTenueBewaar">Opslaan</button></div></div></aside></div>';
+    if (!tenue) tenue = { tenues: JSON.parse(JSON.stringify(club.tenues)), logo: club.logo, vorm: club.vorm, letters: club.letters || '', stadionNaam: club.stadionNaam || '', kit: 'thuis', symbool: club.letters ? 'letters' : 'symbool' };
+    var x = tenue, kit = x.tenues[x.kit], kosten = tenueKosten(x), k1 = x.tenues.thuis.k1, k2 = x.tenues.thuis.k2;
+    var kits = KITS.map(function(k){ return '<button type="button" class="cb-kit" data-kit="' + k[0] + '" aria-pressed="' + (k[0] === x.kit) + '">' + C.tenueSvg(x.tenues[k[0]], 96, { heel: true, nr: k[0] === 'keeper' ? 1 : 9 }) + '<b>' + k[1] + '</b></button>'; }).join('');
+    var kleuren = ONDERDELEN.map(function(o){
+      return '<div class="cb-kleurrij"><span>' + o[1] + '</span><div class="cb-stalen klein">' + C.KLEUREN.map(function(k){ return '<button type="button" class="cb-staal' + (kit[o[0]] === k[0] ? ' aan' : '') + '" style="background:' + k[0] + '" data-tk2="' + o[0] + '" data-w="' + k[0] + '" aria-pressed="' + (kit[o[0]] === k[0]) + '" aria-label="' + o[1] + ': ' + k[1] + '" title="' + k[1] + '"></button>'; }).join('') + '</div></div>';
+    }).join('');
+    var patronen = C.PATRONEN.map(function(p){ return '<button type="button" class="cb-pat" data-tk2="patroon" data-w="' + p[0] + '" aria-pressed="' + (kit.patroon === p[0]) + '">' + C.tenueSvg(Object.assign({}, kit, { patroon: p[0] }), 40) + '<b>' + p[1] + '</b><small>' + prijsLabel(p[2], 'p:' + p[0]) + '</small></button>'; }).join('');
+    var vormen = C.LOGOVORMEN.map(function(v){ return '<button type="button" class="cb-pat" data-lg="vorm" data-w="' + v[0] + '" aria-pressed="' + (x.vorm === v[0]) + '">' + C.logoSvg(x.logo, k1, k2, 30, '', v[0], x.symbool === 'letters' ? x.letters : '') + '<b>' + v[1] + '</b><small>' + prijsLabel(v[2], 'v:' + v[0]) + '</small></button>'; }).join('');
+    var symbolen = Object.keys(C.LOGOS).map(function(l){ return '<button type="button" data-lg="logo" data-w="' + l + '" aria-pressed="' + (x.symbool === 'symbool' && l === x.logo) + '" aria-label="' + C.LOGOS[l].naam + '" title="' + C.LOGOS[l].naam + '">' + C.logoSvg(l, k1, k2, 30, '', x.vorm) + '</button>'; }).join('') +
+      '<button type="button" data-lg="letters" data-w="1" aria-pressed="' + (x.symbool === 'letters') + '" aria-label="Letters" title="Letters"><b style="color:#FBF6F1;font-size:.8rem">ABC</b></button>';
+    $('cb-club').innerHTML = '<div class="cb-clubscherm"><section class="cb-kol"><div class="cb-kaart"><div class="cb-rij"><h2>' + esc(club.naam) + '</h2>' +
+        C.logoSvg(x.logo, k1, k2, 58, 'Het logo van je club', x.vorm, x.symbool === 'letters' ? x.letters : '') + '</div>' +
+        '<div class="cb-kits" role="group" aria-label="Welk tenue">' + kits + '</div>' +
+        '<p class="cb-klein">Kies hierboven welk tenue je aanpast. Je speelt thuis in je thuistenue; uit draag je je uittenue als het te veel lijkt op dat van de tegenstander.</p></div>' +
+        '<div class="cb-kaart"><h3>Logo</h3><div class="cb-veld"><span>Vorm</span><div class="cb-patronen vijf">' + vormen + '</div></div>' +
+        '<div class="cb-veld"><span>Symbool of letters</span><div class="cb-logos">' + symbolen + '</div></div>' +
+        (x.symbool === 'letters' ? '<label class="cb-veld"><span>Letters (hoogstens drie)</span><input id="cbLetters" maxlength="3" autocomplete="off" value="' + esc(x.letters) + '" placeholder="bijvoorbeeld FCV"></label>' : '') +
+        '<label class="cb-veld"><span>Naam van je stadion</span><input id="cbStadionNaam" maxlength="28" autocomplete="off" value="' + esc(x.stadionNaam) + '" placeholder="bijvoorbeeld Het Valkennest"></label></div></section>' +
+      '<aside class="cb-kol"><div class="cb-kaart"><h3>' + KITS.filter(function(k){ return k[0] === x.kit; })[0][1] + 'tenue</h3>' + kleuren + '</div>' +
+        '<div class="cb-kaart"><h3>Patroon</h3><div class="cb-patronen">' + patronen + '</div></div>' +
+        '<div class="cb-kaart"><p class="cb-fout" id="cbTenueFout" hidden></p><div class="cb-rij"><span class="cb-klein">Kleuren, symbolen en letters zijn gratis. Wat je koopt, houd je.</span>' +
+        '<button type="button" class="cb-knop cb-blauw" id="cbTenueBewaar"' + (kosten > club.munten ? ' disabled title="Niet genoeg munten"' : '') + '>' + (kosten ? 'Kopen en opslaan · ' + munt(kosten) : 'Opslaan') + '</button></div></div></aside></div>';
+    var li = $('cbLetters'); if (li) li.addEventListener('input', function(){ tenue.letters = C.lettersOk(this.value); var pos = this.selectionStart; tekenClub(); var n = $('cbLetters'); n.focus(); n.setSelectionRange(pos, pos); });
+    $('cbStadionNaam').addEventListener('input', function(){ tenue.stadionNaam = this.value; });
   }
   $('cb-club').addEventListener('click', function(e){
-    var b = e.target.closest('[data-tn]');
-    if (b){ tenue[b.getAttribute('data-tn')] = b.getAttribute('data-w'); var sel = '[data-tn="' + b.getAttribute('data-tn') + '"][data-w="' + b.getAttribute('data-w') + '"]'; tekenClub(); var n = $('cb-club').querySelector(sel); if (n) n.focus({ preventScroll: true }); return; }
+    var kb = e.target.closest('[data-kit]'), tk = e.target.closest('[data-tk2]'), lg = e.target.closest('[data-lg]'), sel = '';
+    if (kb){ tenue.kit = kb.getAttribute('data-kit'); sel = '[data-kit="' + tenue.kit + '"]'; }
+    else if (tk){ tenue.tenues[tenue.kit][tk.getAttribute('data-tk2')] = tk.getAttribute('data-w'); sel = '[data-tk2="' + tk.getAttribute('data-tk2') + '"][data-w="' + tk.getAttribute('data-w') + '"]'; }
+    else if (lg){
+      var w = lg.getAttribute('data-lg');
+      if (w === 'vorm') tenue.vorm = lg.getAttribute('data-w');
+      else if (w === 'logo'){ tenue.logo = lg.getAttribute('data-w'); tenue.symbool = 'symbool'; }
+      else { tenue.symbool = 'letters'; if (!tenue.letters) tenue.letters = C.lettersOk(club.naam.split(' ').map(function(d){ return d[0]; }).join('')); }
+      sel = '[data-lg="' + w + '"][data-w="' + lg.getAttribute('data-w') + '"]';
+    }
+    if (sel){ var naam = $('cbStadionNaam') ? $('cbStadionNaam').value : tenue.stadionNaam; tenue.stadionNaam = naam; tekenClub(); var n = $('cb-club').querySelector(sel); if (n) n.focus({ preventScroll: true }); return; }
     if (e.target.closest('#cbTenueBewaar')){
-      var f = $('cbTenueFout');
-      if (tenue.k1 === tenue.k2){ f.textContent = 'Kies twee verschillende kleuren.'; f.hidden = false; return; }
-      api('/kleding', tenue).then(function(j){ if (j.club){ club = j.club; tenue = null; tekenBalk(); tekenClub(); melding('Opgeslagen.'); } else melding(j.fout || 'Opslaan lukte niet.'); });
+      var f = $('cbTenueFout'), th = tenue.tenues.thuis;
+      if (th.k1 === th.k2){ f.textContent = 'Kies voor je thuisshirt twee verschillende kleuren.'; f.hidden = false; return; }
+      var knop = $('cbTenueBewaar'); knop.disabled = true;
+      api('/kleding', { tenues: tenue.tenues, logo: tenue.logo, vorm: tenue.vorm, letters: tenue.symbool === 'letters' ? tenue.letters : '', stadionNaam: $('cbStadionNaam').value }).then(function(j){
+        if (j.club){ club = j.club; var kit = tenue.kit; tenue = null; tekenBalk(); tekenClub(); tenue.kit = kit; tekenClub(); melding(j.kosten ? 'Gekocht en opgeslagen.' : 'Opgeslagen.'); }
+        else { f.textContent = j.fout || 'Opslaan lukte niet.'; f.hidden = false; knop.disabled = false; }
+      });
     }
   });
 

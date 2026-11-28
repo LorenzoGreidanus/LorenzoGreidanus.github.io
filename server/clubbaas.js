@@ -22,7 +22,7 @@
      GET  /api/clubbaas/vraag?vak=&niv=    een vraag (de server kent het antwoord)
      POST /api/clubbaas/antwoord           { token, keuze, job }
      POST /api/clubbaas/opstelling         { formatie, basis, tactiek }
-     POST /api/clubbaas/kleding            { k1, k2, patroon, logo }
+     POST /api/clubbaas/kleding            { tenues: { thuis, uit, keeper }, logo, vorm, letters, stadionNaam }
      GET  /api/clubbaas/markt              de transfermarkt
      POST /api/clubbaas/koop               { id }
      POST /api/clubbaas/verkoop            { id }
@@ -146,7 +146,8 @@ function nieuweClub(id, naam, k1, k2, logo){
   return { id, naam, k1, k2, patroon: "strepen", logo: C.logoOk(logo), munten: R.startMunten, complex: 1, stadion: 1,
     tr: { snelheid: 1, schieten: 1, passen: 1, verdedigen: 1, keepen: 1 }, spelers, formatie: "4-3-3", basis: C.besteElf(spelers, "4-3-3", Date.now()),
     tactiek: C.tactiek({}), jobs: [], hist: "", dag: { d: "", m: 0 }, vraag: null, div: 0, laatste: "", gemaakt: Date.now(), nieuws: [],
-    gekocht: [], seizoen: 1, bod: null, zeges: 0 };
+    gekocht: [], seizoen: 1, bod: null, zeges: 0, namen: C.NAMEN_VERSIE,
+    tenues: C.tenues({ k1, k2, patroon: "strepen" }), vorm: "schild", letters: "", stadionNaam: "", bezit: [] };
 }
 /* klopt de opstelling nog (na een verkoop bijvoorbeeld)? Anders de beste elf. */
 function zorgElf(tm){
@@ -166,6 +167,10 @@ function zetNiveau(tm, wat, n){
 function prijs(wat, naar){ return wat === "complex" ? R.complex(naar) : wat === "stadion" ? R.stadion(naar) : R.training(naar); }
 const isBouw = wat => wat === "complex" || wat === "stadion";
 /* wat in de wedstrijd telt, voor de liga */
+function uiterlijk(tm){
+  const tn = C.tenues(tm);
+  return { vorm: C.vormOk(tm.vorm), letters: C.lettersOk(tm.letters), uitK1: tn.uit.k1, uitK2: tn.uit.k2, stadionNaam: tm.stadionNaam || "" };
+}
 function snap(tm){
   zorgElf(tm);
   const per = {}; tm.spelers.forEach(s => { per[s.id] = s; });
@@ -173,7 +178,7 @@ function snap(tm){
   const bank = tm.spelers.filter(s => tm.basis.indexOf(s.id) < 0).sort((a, b) => b.kw - a.kw).slice(0, 6);
   const kort = s => ({ id: s.id, naam: s.naam, pos: s.pos, kw: s.kw, fit: s.fit, fitT: s.fitT });
   return { id: tm.id, naam: tm.naam, k1: tm.k1, k2: tm.k2, patroon: tm.patroon, logo: tm.logo, stadion: tm.stadion, tr: tm.tr, formatie: tm.formatie, tactiek: tm.tactiek,
-    elf: elf.map(kort), bank: bank.map(kort), kw: elf.reduce((a, s) => a + s.kw, 0) / 11,
+    ...uiterlijk(tm), elf: elf.map(kort), bank: bank.map(kort), kw: elf.reduce((a, s) => a + s.kw, 0) / 11,
     trGem: Object.keys(tm.tr).reduce((a, k) => a + tm.tr[k], 0) / 5 };
 }
 /* de transfermarkt van een club in een seizoen: altijd dezelfde lijst, minus wat al gekocht is */
@@ -228,6 +233,13 @@ export class Clubbaas extends DurableObject {
     if (p === "/lees"){
       if (!tm) return json({ nieuw: true });
       let veranderd = this.afronden();
+      /* clubs van voor de echte spelersnamen krijgen nieuwe namen (de spelers zelf blijven) */
+      if (tm.namen !== C.NAMEN_VERSIE){
+        tm.spelers.forEach(s => { s.naam = C.naamVoor(tm.id + ":" + s.id, s.pos, s.kw); });
+        C.uniekeNamen(tm.spelers, tm.id + ":hernoem");
+        if (tm.bod){ const s = tm.spelers.filter(x => x.id === tm.bod.id)[0]; if (s) tm.bod.naam = s.naam; }
+        tm.namen = C.NAMEN_VERSIE; veranderd = true;
+      }
       if (tm.div){
         try {
           const u = await this.naarLiga("uitslag", { id: tm.id, sinds: tm.laatste });
@@ -330,12 +342,25 @@ export class Clubbaas extends DurableObject {
       return json({ club: this.publiek() });
     }
     if (p === "/kleding"){
-      if (C.kleurOk(o.k1)) tm.k1 = o.k1;
-      if (C.kleurOk(o.k2) && o.k2 !== tm.k1) tm.k2 = o.k2;
-      if (C.PATRONEN.some(x => x[0] === o.patroon)) tm.patroon = o.patroon;
+      const oud = C.tenues(tm), tn = o.tenues || {}, nieuw = { thuis: C.tenue(tn.thuis, oud.thuis), uit: C.tenue(tn.uit, oud.uit), keeper: C.tenue(tn.keeper, oud.keeper) };
+      if (nieuw.thuis.k1 === nieuw.thuis.k2) return json({ fout: "kies voor je thuisshirt twee verschillende kleuren" }, 400);
+      const vorm = o.vorm ? C.vormOk(o.vorm) : C.vormOk(tm.vorm), letters = o.letters === undefined ? C.lettersOk(tm.letters) : C.lettersOk(o.letters);
+      if (letters && vies(letters)) return json({ fout: "kies andere letters" }, 400);
+      let stadionNaam = o.stadionNaam === undefined ? (tm.stadionNaam || "") : String(o.stadionNaam || "").replace(/[\u0000-\u001f\u007f<>"'`]/g, "").replace(/\s+/g, " ").trim().slice(0, 28);
+      if (stadionNaam && (stadionNaam.length < 3 || vies(stadionNaam))) return json({ fout: "kies een andere naam voor je stadion" }, 400);
+      /* extra patronen en logovormen koop je een keer; daarna mag je ze altijd gebruiken */
+      tm.bezit = tm.bezit || [];
+      const nodig = [];
+      ["thuis", "uit", "keeper"].forEach(k => { const p2 = nieuw[k].patroon; if (C.patroonPrijs(p2) && tm.bezit.indexOf("p:" + p2) < 0 && nodig.indexOf("p:" + p2) < 0) nodig.push("p:" + p2); });
+      if (C.vormPrijs(vorm) && tm.bezit.indexOf("v:" + vorm) < 0) nodig.push("v:" + vorm);
+      const kosten = nodig.reduce((s, x) => s + (x[0] === "p" ? C.patroonPrijs(x.slice(2)) : C.vormPrijs(x.slice(2))), 0);
+      if (tm.munten < kosten) return json({ fout: "niet genoeg munten" }, 409);
+      tm.munten -= kosten; tm.bezit = tm.bezit.concat(nodig);
+      tm.tenues = nieuw; tm.k1 = nieuw.thuis.k1; tm.k2 = nieuw.thuis.k2; tm.patroon = nieuw.thuis.patroon;
       if (o.logo) tm.logo = C.logoOk(o.logo);
+      tm.vorm = vorm; tm.letters = letters; tm.stadionNaam = stadionNaam;
       await this.bewaarClub(true);
-      return json({ club: this.publiek() });
+      return json({ club: this.publiek(), kosten });
     }
     if (p === "/markt") return json({ spelers: markt(tm) });
     if (p === "/koop" || p === "/verkoop" || p === "/bod"){
@@ -373,7 +398,7 @@ export class Clubbaas extends DurableObject {
     const tm = this.tm, nu = Date.now();
     zorgElf(tm);
     const goed = (tm.hist.match(/1/g) || []).length;
-    return { naam: tm.naam, k1: tm.k1, k2: tm.k2, patroon: tm.patroon, logo: tm.logo, munten: tm.munten, complex: tm.complex, stadion: tm.stadion, tr: tm.tr,
+    return { naam: tm.naam, k1: tm.k1, k2: tm.k2, patroon: tm.patroon, logo: tm.logo, tenues: C.tenues(tm), bezit: tm.bezit || [], ...uiterlijk(tm), munten: tm.munten, complex: tm.complex, stadion: tm.stadion, tr: tm.tr,
       spelers: tm.spelers.map(s => ({ id: s.id, naam: s.naam, pos: s.pos, kw: s.kw, fit: C.fitNu(s, nu), waarde: C.waarde(s.kw) })),
       formatie: tm.formatie, basis: tm.basis, tactiek: tm.tactiek, jobs: tm.jobs, div: tm.div, seizoen: tm.seizoen, bod: tm.bod, zeges: tm.zeges,
       dag: tm.dag.d === C.dagVan(nu) ? tm.dag.m : 0, antwoorden: tm.hist.length, goed, nieuws: tm.nieuws.slice(0, 6), nu };
@@ -405,7 +430,7 @@ export class Clubbaas extends DurableObject {
       const lv = Math.max(1, Math.min(10, Math.round(trGem + (rr() - 0.5) * 2)));
       const k1 = kleuren[(div * 5 + i * 3) % kleuren.length];
       /* opeenvolgende namen uit de lijst, zodat geen twee computerclubs hetzelfde heten */
-      uit.push({ id, bot: true, naam: namen[(div * 7 + this.lg.seizoen * 5 + i) % namen.length], k1, k2: k1 === "#FBF6F1" ? "#204ECF" : "#FBF6F1", patroon: C.PATRONEN[i % 4][0], logo: logos[(div + i) % logos.length],
+      uit.push({ id, bot: true, naam: namen[(div * 7 + this.lg.seizoen * 5 + i) % namen.length], k1, k2: k1 === "#FBF6F1" ? "#204ECF" : "#FBF6F1", patroon: C.PATRONEN[i % 4][0], logo: logos[(div + i) % logos.length], vorm: C.LOGOVORMEN[(div + i * 2) % C.LOGOVORMEN.length][0],
         stadion: 1 + Math.floor(rr() * 3), tr: { snelheid: lv, schieten: lv, passen: lv, verdedigen: lv, keepen: lv }, formatie,
         tactiek: { stijl: ["verdedigend", "gebalanceerd", "aanvallend"][Math.floor(rr() * 3)], druk: "midden", via: ["midden", "vleugels", "lang"][Math.floor(rr() * 3)] },
         elf: basis.map(x => per[x]), bank: spelers.filter(s => basis.indexOf(s.id) < 0) });
@@ -442,14 +467,14 @@ export class Clubbaas extends DurableObject {
         const deel = await this.deelnemers(div), mijn = deel.findIndex(x => x.id === o.id);
         deel.forEach((x, i) => {
           const s = (x.bot ? (d.botSt || {})[x.id] : d.st[x.id]) || this.stand0();
-          uit.clubs.push(Object.assign({ jij: i === mijn, naam: x.naam, k1: x.k1, k2: x.k2, logo: x.logo, bot: !!x.bot }, s));
+          uit.clubs.push(Object.assign({ jij: i === mijn, naam: x.naam, k1: x.k1, k2: x.k2, logo: x.logo, vorm: x.vorm, letters: x.letters, bot: !!x.bot }, s));
         });
         uit.clubs.sort((a, b) => b.p - a.p || (b.dv - b.dt) - (a.dv - a.dt) || b.dv - a.dv);
         /* de volgende twee tegenstanders */
         const sch = C.schema(R.perDivisie), tegen = r => {
           if (r >= R.rondes || mijn < 0) return null;
           const paar = sch[r].filter(x => x.indexOf(mijn) >= 0)[0], t = deel[paar[0] === mijn ? paar[1] : paar[0]];
-          return { naam: t.naam, k1: t.k1, k2: t.k2, logo: t.logo, thuis: paar[0] === mijn, ronde: r + 1 };
+          return { naam: t.naam, k1: t.k1, k2: t.k2, logo: t.logo, vorm: t.vorm, letters: t.letters, thuis: paar[0] === mijn, ronde: r + 1 };
         };
         uit.tegen = tegen(lg.ronde); uit.daarna = tegen(lg.ronde + 1);
         const laatst = lg.dagen[lg.dagen.length - 1];
@@ -461,8 +486,9 @@ export class Clubbaas extends DurableObject {
       const id = String(o.id || ""), lijst = [];
       let mijnDiv = 0;
       for (const k of Object.keys(lg.divs)) if (lg.divs[k].clubs.indexOf(id) >= 0) mijnDiv = +k;
-      for (const w of lg.dagen){
-        if (o.sinds && w <= o.sinds) continue;
+      /* alles na de laatst opgehaalde speeldag, op volgorde in de lijst (niet als tekst vergelijken: t10 komt voor t9) */
+      const vanaf = o.sinds ? lg.dagen.indexOf(o.sinds) + 1 : 0;
+      for (const w of lg.dagen.slice(vanaf)){
         const res = await this.ctx.storage.get("res:" + w);
         if (res && res[id]) lijst.push(Object.assign({ dag: w }, res[id]));
       }
@@ -497,7 +523,7 @@ export class Clubbaas extends DurableObject {
       for (let mi = 0; mi < paren.length; mi++){
         const [a, b] = paren[mi], A = deel[a], B = deel[b];
         const sim = speelWedstrijd(A, B, C.hash(dag + ":" + div + ":" + mi), R.thuisVoordeel(A.stadion || 1));
-        const kop = c => ({ naam: c.naam, k1: c.k1, k2: c.k2, patroon: c.patroon, logo: c.logo, bot: !!c.bot, stadion: c.stadion || 1 });
+        const kop = c => ({ naam: c.naam, k1: c.k1, k2: c.k2, patroon: c.patroon, logo: c.logo, vorm: c.vorm, letters: c.letters, uitK1: c.uitK1, uitK2: c.uitK2, stadionNaam: c.stadionNaam || "", bot: !!c.bot, stadion: c.stadion || 1 });
         await this.ctx.storage.put("wed:" + dag + ":" + div + ":" + mi, { dag, div, ronde: lg.ronde + 1, gespeeld: nu, thuis: kop(A), uit: kop(B), ids: [A.id, B.id], sim });
         overzicht.push({ m: mi, t: A.naam, u: B.naam, tk: A.k1, uk: B.k1, s: sim.score });
         [A, B].forEach((c, z) => {
@@ -556,7 +582,7 @@ export async function behandel(req, env, url, hulp){
   }
   if (p === "/antwoord" && req.method === "POST") return post("/antwoord", { token: o.token, keuze: o.keuze, job: o.job });
   if (p === "/opstelling" && req.method === "POST") return post("/opstelling", { formatie: o.formatie, basis: o.basis, tactiek: o.tactiek });
-  if (p === "/kleding" && req.method === "POST") return post("/kleding", { k1: o.k1, k2: o.k2, patroon: o.patroon, logo: o.logo });
+  if (p === "/kleding" && req.method === "POST") return post("/kleding", { tenues: o.tenues, logo: o.logo, vorm: o.vorm, letters: o.letters, stadionNaam: o.stadionNaam });
   if (p === "/markt" && req.method === "GET") return club.fetch("https://club/markt");
   if (p === "/koop" && req.method === "POST") return post("/koop", { id: o.id });
   if (p === "/verkoop" && req.method === "POST") return post("/verkoop", { id: o.id });
