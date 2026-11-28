@@ -500,6 +500,38 @@ async function verdeel(req, env, ctx){
       return json({ fout: "geen vrije code gevonden, probeer nog eens" }, 503);
     }
 
+    /* De Tijdlijnmaker in de klas (server/tijdlijn.js):
+         POST /api/klas/CODE/tijdlijn/inlever   de leerling levert zijn tijdlijn in
+         GET  /api/klas/CODE/tijdlijn/lijst     de docent (x-sleutel): wie leverde wat in
+         GET  /api/klas/CODE/tijdlijn/een?sid=  de docent (x-sleutel): een tijdlijn
+         POST /api/klas/CODE/tijdlijn/startzet  de docent: een starttijdlijn voor een opdracht
+         GET  /api/klas/CODE/tijdlijn/start?id= de leerling: die starttijdlijn */
+    const tlk = p.match(/^\/api\/klas\/([A-Za-z]{4})\/tijdlijn\/(inlever|lijst|een|startzet|start)\/?$/);
+    if (tlk){
+      const stub = env.KAMERS.get(env.KAMERS.idFromName(tlk[1].toUpperCase())), wat = tlk[2];
+      if (wat === "lijst" || wat === "een" || wat === "start"){
+        if (!await magDoor(env, req, "tl-lees", 300, 600, true)) return json({ fout: "even wachten" }, 429);
+        if (wat === "start") return stub.fetch("https://kamer/tl-start?id=" + encodeURIComponent(url.searchParams.get("id") || ""));
+        const sl = req.headers.get("x-sleutel") || "";
+        return stub.fetch("https://kamer/tl-" + wat + "?sleutel=" + encodeURIComponent(sl) + "&sid=" + encodeURIComponent(url.searchParams.get("sid") || ""));
+      }
+      if (req.method !== "POST") return json({ fout: "onbekend" }, 404);
+      if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
+      if (!await magDoor(env, req, "tl-" + wat, wat === "inlever" ? 60 : 20, 600)) return json({ fout: "even wachten" }, 429);
+      let inz; try { inz = await leesJson(req); } catch (e){ return json({ fout: "je tijdlijn is te groot of kapot" }, 400); }
+      if (wat === "inlever"){
+        /* net als bij meld: de accountnaam uit het sessiekoekje, niet uit het bericht */
+        const ms = await accountNaam(req, env), id = ms ? await accountKenmerk(req, env) : "";
+        let acc = "";
+        if (id){
+          const h = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(id + "|klas|" + tlk[1].toUpperCase()));
+          acc = Array.from(new Uint8Array(h)).slice(0, 12).map(b => b.toString(16).padStart(2, "0")).join("");
+        }
+        inz = Object.assign({}, inz || {}, { ms, acc });
+      }
+      return stub.fetch("https://kamer/tl-" + wat, { method: "POST", body: JSON.stringify(inz || {}) });
+    }
+
     /* het klasoverzicht: leerlingen melden hun uitslag, de docent haalt ze op met de sleutel */
     const kl = p.match(/^\/api\/klas\/([A-Za-z]{4})(\/meld|\/melden|\/opheffen|\/opdracht|\/mijn|\/instelling|\/periodes|\/naam|\/echt|\/hoi|\/leerlingweg|\/samen|\/besproken|\/rooster)?\/?$/);
     if (kl){

@@ -29,6 +29,7 @@ import TORENMOTOR from "../leermiddelen/toren-motor.js";
 import POORTREGELS from "../leermiddelen/poortrace-regels.js";
 import { laadVragen, laadTopo } from "./stadvragen.js";
 import { PRIX_BANEN, PRIX_RONDES, prixMethoden } from "./prix.js";
+import { tlInlever, tlLijst, tlEen, tlStartZet, tlStart } from "./tijdlijn.js";
 const TORENSTAP = 60, TOREN_STAND_OM = 2;   /* Torenverdediging: een tik van zestig milliseconden, de stand om de andere tik */
 const TOREN_WACHT_KEUZE = 1500;             /* zolang wacht de kamer op de keuze van de tweede speler */
 const RANGEN = { bb: 1, kgt: 2, havo: 3, vwo: 4 };
@@ -419,7 +420,7 @@ function goedVan(r){
   return Math.min(r.ronde | 0, 250);
 }
 /* spellen zonder kamer die wel bij een klas melden */
-const KLAS_SPELLEN = { tafeltoets: "Tafeltoets", leerroute: "Leerroute", race: "Vragenrace", metriek: "Het metriek stelsel", eigen: "Eigen oefening", klasquiz: "Klasquiz", dag: "Dagelijkse uitdaging", fouten: "Oefen je fouten", rekenen: "Rekenrace", balans: "De balans", werkwoorden: "Werkwoordrace", irregular: "Irregular verbs", vlaggen: "Vlaggen", landenvormen: "Landenvormen", topografie: "Topografie", lichaam: "Het lichaam", tijdvakken: "Tijdvakken sorteren", bronnenlab: "Bronnenlab", jagers: "Blijven of doorlopen", feodalisme: "Feodalisme", leenmannen: "Verdeel je rijk", stad: "Arena", handel: "De handelsroute", vergadering: "De vergadering", zinsbouw: "Zinsbouw", tekstdetective: "De tekstdetective", uitverkoop: "De uitverkoop", breukenbakker: "De breukenbakker",
+const KLAS_SPELLEN = { tijdlijn: "Tijdlijnmaker", tafeltoets: "Tafeltoets", leerroute: "Leerroute", race: "Vragenrace", metriek: "Het metriek stelsel", eigen: "Eigen oefening", klasquiz: "Klasquiz", dag: "Dagelijkse uitdaging", fouten: "Oefen je fouten", rekenen: "Rekenrace", balans: "De balans", werkwoorden: "Werkwoordrace", irregular: "Irregular verbs", vlaggen: "Vlaggen", landenvormen: "Landenvormen", topografie: "Topografie", lichaam: "Het lichaam", tijdvakken: "Tijdvakken sorteren", bronnenlab: "Bronnenlab", jagers: "Blijven of doorlopen", feodalisme: "Feodalisme", leenmannen: "Verdeel je rijk", stad: "Arena", handel: "De handelsroute", vergadering: "De vergadering", zinsbouw: "Zinsbouw", tekstdetective: "De tekstdetective", uitverkoop: "De uitverkoop", breukenbakker: "De breukenbakker",
   /* Deze meldden hun uitslag wel, maar stonden hier niet, dus de klas kreeg ze
      nooit te zien: de melding werd geweigerd met "onbekend spel". */
   dhte: "Het DHTE-schema", vlakken: "Vlakken herkennen", organisme: "Bouw het organisme",
@@ -705,6 +706,12 @@ export class Kamer extends DurableObject {
       if (url.pathname === "/besproken" && req.method === "POST") return await this.besproken(await req.json());
       if (url.pathname === "/rooster" && req.method === "POST") return await this.dicteeRooster(await req.json());
       if (url.pathname === "/mijn") return this.mijn(url.searchParams.get("sid"));
+      /* de Tijdlijnmaker: inleveren, bekijken en een starttijdlijn (server/tijdlijn.js) */
+      if (url.pathname === "/tl-inlever" && req.method === "POST") return await tlInlever.call(this, await req.json());
+      if (url.pathname === "/tl-lijst") return await tlLijst.call(this, url.searchParams.get("sleutel"));
+      if (url.pathname === "/tl-een") return await tlEen.call(this, url.searchParams.get("sleutel"), url.searchParams.get("sid"));
+      if (url.pathname === "/tl-startzet" && req.method === "POST") return await tlStartZet.call(this, await req.json());
+      if (url.pathname === "/tl-start") return await tlStart.call(this, url.searchParams.get("id"));
       if (req.headers.get("Upgrade") === "websocket") return this.verbind(url);
       return json({ fout: "onbekend" }, 404);
     } catch (e){

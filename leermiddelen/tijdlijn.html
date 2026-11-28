@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icoon-192.png">
+<script>
+(function(){try{var t=localStorage.getItem('thema');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();
+</script>
+<title>Tijdlijnmaker · meneer Greidanus</title>
+<meta name="description" content="Maak een tijdlijn op schaal: gebeurtenissen en perioden, met uitleg en afbeeldingen. Lever hem in bij je klas of download hem als PDF.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="nl_NL">
+<meta property="og:site_name" content="meneer Greidanus">
+<meta property="og:title" content="Tijdlijnmaker">
+<meta property="og:description" content="Maak een tijdlijn op schaal: gebeurtenissen en perioden, met uitleg en afbeeldingen. Lever hem in bij je klas of download hem als PDF.">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="stylesheet" href="../fonts.css?v=2">
+<link rel="icon" href="/icoon-donker-192.png" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M46.9 11.3 C70.6 7.8 87.4 19.5 89.9 41.6 C92.7 65.4 81.9 87.2 58.9 89.8 C35.1 92.5 13.2 84.9 12.1 61 C10.9 37.1 24 14.7 46.9 11.3Z' fill='%23204ECF'/><g transform='translate(50 51) scale(2.2) translate(-12 -12)' fill='none' stroke='%23FBF6F1' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'><path d='M4.5 12.5l5 5 10-11'/></g></svg>">
+<link rel="stylesheet" href="eigen.css">
+<script src="/vangnet.js" defer></script>
+<script src="/leermiddelen/merk.js" defer></script>
+<style>
+/* ---------- Tijdlijnmaker ---------- */
+.tl-wrap{width:min(100% - 28px,1340px);margin-inline:auto}
+header.tl-wrap{display:flex;align-items:center;justify-content:space-between;padding:14px 0}
+.cat-oorlog{--c:#F26749;--ct:#14224C;--cz:#FCDED6}
+.cat-politiek{--c:#204ECF;--ct:#FBF6F1;--cz:#DCE5FB}
+.cat-economie{--c:#EA9836;--ct:#14224C;--cz:#FBE8D0}
+.cat-techniek{--c:#83A5F2;--ct:#14224C;--cz:#E3EBFC}
+.cat-mensen{--c:#14224C;--ct:#FBF6F1;--cz:#E4E6EE}
+.cat-anders{--c:#B9A99A;--ct:#14224C;--cz:#F1ECE6}
+:root[data-theme="dark"] .cat-mensen{--c:#E4E6EE;--ct:#14224C}
+:root[data-theme="dark"] [class*="cat-"]{--cz:rgba(255,255,255,.08)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .cat-mensen{--c:#E4E6EE;--ct:#14224C}:root:not([data-theme="light"]) [class*="cat-"]{--cz:rgba(255,255,255,.08)}}
+.tl-sch[hidden],.tl-knop[hidden],.tl-wrap [hidden]{display:none!important}
+.tl-knop{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:0 18px;border-radius:999px;border:1.5px solid var(--ink);background:var(--kaart);color:var(--ink);font:600 .95rem Poppins,sans-serif;cursor:pointer;white-space:nowrap;text-decoration:none}
+.tl-knop:hover{background:var(--kaart2)}
+.tl-knop.vol{background:var(--ink);color:var(--room);border-color:var(--ink)}
+.tl-knop.vol:hover{filter:brightness(1.15);background:var(--ink)}
+.tl-knop.koraal{background:#F26749;border-color:#F26749;color:#14224C}
+.tl-knop.koraal:hover{background:#ef5a3a}
+.tl-knop.zacht{border-color:var(--rand2)}
+.tl-knop.klein{min-height:40px;padding:0 14px;font-size:.88rem}
+.tl-knop svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.tl-knop:disabled{opacity:.45;cursor:default}
+.tl-rond{width:44px;height:44px;border-radius:50%;padding:0;font-size:1.2rem}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--focusring);outline-offset:2px}
+.tl-veld{display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:.92rem;min-width:0}
+.tl-veld small{font-weight:400;color:var(--muted);font-size:.82rem}
+.tl-in{min-height:46px;border-radius:12px;border:1.5px solid var(--rand2);background:var(--kaart);color:var(--ink);padding:0 12px;font:400 1rem Poppins,sans-serif;width:100%;box-sizing:border-box}
+textarea.tl-in{padding:10px 12px;line-height:1.5;resize:vertical;min-height:84px}
+.tl-in:focus{border-color:var(--ocean)}
+.sronly{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* start */
+.tl-held{display:grid;gap:8px;max-width:760px;margin:18px 0 26px}
+.tl-held h1{font-size:clamp(2rem,4.5vw,2.9rem);line-height:1.1;margin:0}
+.tl-held p{margin:0;font-size:1.06rem;line-height:1.55;color:var(--muted)}
+.tl-routes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.tl-route{display:flex;flex-direction:column;gap:8px;padding:20px;border-radius:20px;background:var(--kaart);border:1.5px solid var(--rand);color:var(--ink);text-decoration:none;text-align:left;font:inherit;cursor:pointer;min-height:150px;box-sizing:border-box;transition:transform .15s var(--ease),box-shadow .15s var(--ease)}
+.tl-route:hover{transform:translateY(-2px);box-shadow:var(--schaduw)}
+.tl-route b{font-size:1.1rem}
+.tl-route span{font-size:.92rem;color:var(--muted);line-height:1.45}
+.tl-route svg{width:32px;height:32px;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tl-route.hoofd{background:#F26749;border-color:#F26749;color:#14224C}
+.tl-route.hoofd span{color:#14224C}
+.tl-opdrbalk{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:16px 20px;border-radius:18px;background:#FCDED6;color:#14224C;margin:0 0 22px}
+.tl-opdrbalk .hand{color:#B23A22}
+.tl-opdrbalk b{font-size:1.08rem}
+.tl-opdrbalk .tl-knop{margin-left:auto;background:#14224C;color:#FBF6F1;border-color:#14224C}
+.tl-blok{margin-top:30px;display:grid;gap:12px}
+.tl-blok h2{font-size:1.15rem;margin:0}
+.tl-blok>p{margin:0;color:var(--muted);font-size:.94rem}
+.tl-vakken{display:flex;flex-wrap:wrap;gap:8px}
+.tl-vakken button{min-height:44px;padding:0 16px;border-radius:999px;border:none;background:#FCDED6;color:#14224C;font:500 .9rem Poppins,sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+.tl-vakken button:nth-child(3n+2){background:#E3EBFC}.tl-vakken button:nth-child(3n){background:#FBE8D0}
+.tl-vakken b{font-weight:600}.tl-vakken small{opacity:.75}
+.tl-mijn{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.tl-mijnkaart{position:relative;display:flex;flex-direction:column;gap:6px;padding:16px 18px;border-radius:18px;background:var(--kaart);border:1.5px solid var(--rand);text-align:left;font:inherit;color:var(--ink);cursor:pointer}
+.tl-mijnkaart:hover{border-color:var(--rand2);box-shadow:var(--schaduw)}
+.tl-mijnkaart b{font-size:1rem;padding-right:40px}
+.tl-mijnkaart span{font-size:.84rem;color:var(--muted)}
+.tl-mijnkaart .tl-mini{height:34px;position:relative;margin-bottom:4px}
+.tl-mini i{position:absolute;top:16px;left:0;right:0;height:3px;border-radius:2px;background:var(--ink)}
+.tl-mini em{position:absolute;top:10px;width:14px;height:14px;border-radius:50%;margin-left:-7px;background:var(--c);box-shadow:0 0 0 2px var(--kaart)}
+.tl-weg{position:absolute;top:8px;right:8px;width:40px;height:40px;border-radius:50%;border:none;background:transparent;color:var(--muted);cursor:pointer;display:grid;place-items:center}
+.tl-weg:hover{background:var(--kaart2);color:var(--fout)}
+.tl-weg svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tl-leeg{color:var(--muted);font-size:.94rem;margin:0}
+
+/* de werkplek */
+.tl-balk{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 0 14px;border-bottom:1.5px solid var(--rand)}
+.tl-balk .tl-terug{font-weight:600;color:var(--ink);text-decoration:none;display:inline-flex;align-items:center;gap:6px;min-height:44px;padding-right:6px;background:none;border:none;font:600 .95rem Poppins,sans-serif;cursor:pointer}
+.tl-groep{display:flex;padding:4px;border-radius:999px;background:var(--kaart2)}
+.tl-groep button{min-height:38px;padding:0 16px;border-radius:999px;border:none;background:transparent;color:var(--ink);font:500 .9rem Poppins,sans-serif;cursor:pointer}
+.tl-groep button[aria-pressed="true"]{background:var(--kaart);box-shadow:0 1px 4px rgba(20,34,76,.18);font-weight:600}
+.tl-vul{flex:1}
+.tl-status{font-size:.84rem;color:var(--muted)}
+.tl-schakel{display:inline-flex;align-items:center;gap:10px;font-size:.92rem;font-weight:500;cursor:pointer;min-height:44px}
+.tl-schakel input{position:absolute;opacity:0;width:1px;height:1px}
+.tl-schakel i{position:relative;width:44px;height:26px;border-radius:999px;background:var(--rand2);transition:background .15s}
+.tl-schakel i::after{content:"";position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .15s var(--ease);box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.tl-schakel input:checked+i{background:var(--ocean)}
+.tl-schakel input:checked+i::after{transform:translateX(18px)}
+.tl-schakel input:focus-visible+i{outline:3px solid var(--focusring);outline-offset:2px}
+.tl-werk{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px;padding-top:16px;align-items:start}
+.tl-hoofdvak{display:grid;gap:14px;min-width:0}
+.tl-paneel{background:var(--kaart);border:1.5px solid var(--rand);border-radius:20px;min-width:0}
+.tl-lijnkop{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 22px 6px;flex-wrap:wrap}
+.tl-titelin{font:600 1.35rem Poppins,sans-serif;color:var(--ink);border:1.5px solid transparent;border-radius:10px;padding:2px 8px;margin:-3px -9px;background:transparent;width:100%;max-width:560px;box-sizing:border-box}
+.tl-titelin:hover{border-color:var(--rand2)}
+.tl-naamin{font:400 .9rem Poppins,sans-serif;color:var(--muted);border:1.5px solid transparent;border-radius:8px;padding:2px 8px;margin:0 -9px;background:transparent;width:280px;max-width:100%}
+.tl-naamin:hover{border-color:var(--rand2)}
+.tl-legenda{display:flex;flex-wrap:wrap;gap:6px;padding:4px 22px 0;margin:0;list-style:none}
+.tl-legenda li{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 12px 0 8px;border-radius:999px;background:var(--kaart2);font-size:.82rem;font-weight:500}
+.tl-legenda i{width:14px;height:14px;border-radius:50%;background:var(--c)}
+.tl-zoom{display:flex;gap:6px;align-items:center}
+.tl-zoom span{font-size:.8rem;color:var(--muted);margin-right:4px}
+.tl-scroll{position:relative;overflow-x:auto;overflow-y:hidden;padding:10px 0 12px;cursor:grab;scrollbar-width:thin}
+.tl-scroll.sleept{cursor:grabbing;user-select:none}
+.tl-vlak{position:relative;margin:0 auto}
+.tl-band{position:absolute;top:0;height:24px;border-radius:6px;background:#FCDED6;color:#14224C;font-size:.74rem;font-weight:500;line-height:24px;padding-left:10px;white-space:nowrap;overflow:hidden;box-sizing:border-box}
+.tl-band.even{background:#F7C9BD}
+:root[data-theme="dark"] .tl-band{background:#3a2a3a;color:#FCDED6}:root[data-theme="dark"] .tl-band.even{background:#46303f}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .tl-band{background:#3a2a3a;color:#FCDED6}:root:not([data-theme="light"]) .tl-band.even{background:#46303f}}
+.tl-raster{position:absolute;top:30px;width:1px;background:var(--rand)}
+.tl-jaar{position:absolute;transform:translateX(-50%);font-size:.78rem;font-weight:500;color:var(--muted);white-space:nowrap}
+.tl-as{position:absolute;left:0;height:4px;border-radius:2px;background:var(--ink)}
+.tl-echt{position:absolute;width:2px;height:12px;background:var(--ink)}
+.tl-stam{position:absolute;width:2px;background:var(--c)}
+.tl-stip{position:absolute;width:28px;height:28px;margin-left:-14px;border-radius:50%;background:var(--c);color:var(--ct);display:grid;place-items:center;font-size:.8rem;font-weight:600;box-shadow:0 0 0 3px var(--kaart);cursor:pointer;z-index:2}
+.tl-kaart{position:absolute;box-sizing:border-box;border-radius:12px;background:var(--kaart);border:2px solid var(--c);padding:5px 10px;text-align:left;color:var(--ink);font:inherit;cursor:pointer;overflow:hidden;z-index:1;transition:box-shadow .12s,transform .12s}
+.tl-kaart:hover{box-shadow:0 8px 18px -10px rgba(20,34,76,.55);transform:translateY(-1px)}
+.tl-kaart b{display:block;font-size:.8rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-kaart span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:.8rem;line-height:1.25}
+.tl-kaart .tl-foto-ic{position:absolute;right:5px;top:5px;width:16px;height:16px;color:var(--muted)}
+.tl-kaart.met-foto b{padding-right:16px}
+.tl-kaart.gekozen,.tl-per.gekozen{box-shadow:0 0 0 3px var(--ink);z-index:3}
+.tl-stip.gekozen{box-shadow:0 0 0 3px var(--kaart),0 0 0 6px var(--ink)}
+.tl-kaart.zonder-uitleg::after{content:"";position:absolute;right:6px;bottom:6px;width:8px;height:8px;border-radius:50%;background:#EA9836}
+.tl-per{position:absolute;box-sizing:border-box;border-radius:6px;background:var(--c);color:var(--ct);font-size:.78rem;font-weight:600;padding:0 8px;white-space:nowrap;overflow:hidden;border:none;cursor:pointer;text-align:left;font-family:inherit}
+.tl-per:hover{filter:brightness(1.07)}
+.tl-pernaam{position:absolute;font-size:.78rem;font-weight:600;white-space:nowrap;color:var(--ink);background:none;border:none;padding:0;cursor:pointer;font-family:inherit}
+.tl-leegvlak{display:grid;place-items:center;text-align:center;gap:10px;padding:46px 20px;color:var(--muted)}
+.tl-leegvlak b{color:var(--ink);font-size:1.1rem}
+.tl-onder{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px}
+.tl-onder .tl-paneel{padding:14px 18px}
+.tl-onder h2{font-size:.95rem;margin:0 0 8px}
+.tl-strook{position:relative;display:flex;height:32px;border-radius:8px;overflow:hidden}
+.tl-strook span{display:grid;place-items:center;font-size:.72rem;font-weight:600;color:#14224C;background:#FCDED6;min-width:0}
+.tl-strook span:nth-child(even){background:#F7C9BD}
+.tl-strook span.nu{background:#EA9836}
+.tl-strook i{position:absolute;top:-3px;bottom:-3px;border:3px solid var(--ink);border-radius:6px;box-sizing:border-box;min-width:10px;background:rgba(255,255,255,.3)}
+.tl-strooktekst{margin:8px 0 0;font-size:.82rem;color:var(--muted)}
+.tl-check{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.tl-check li{display:flex;align-items:center;gap:9px;font-size:.88rem}
+.tl-check i{width:22px;height:22px;flex:none;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:.75rem;font-weight:700;background:#EA9836;color:#14224C}
+.tl-check li.ok i{background:var(--ocean);color:#fff}
+.tl-zij{padding:18px;position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto;box-sizing:border-box}
+.tl-zij h2{font-size:1.05rem;margin:0 0 4px}
+.tl-zij>p{margin:0 0 12px;font-size:.84rem;color:var(--muted)}
+.tl-volg{list-style:none;margin:0;padding:0;display:grid;gap:3px}
+.tl-volg button{width:100%;display:flex;align-items:center;gap:10px;min-height:48px;padding:5px 8px;border-radius:12px;border:none;background:transparent;text-align:left;cursor:pointer;color:var(--ink);font:inherit}
+.tl-volg button:hover{background:var(--kaart2)}
+.tl-volg button.gekozen{background:var(--kies)}
+.tl-volg .nr{width:24px;height:24px;flex:none;border-radius:50%;background:var(--c);color:var(--ct);display:grid;place-items:center;font-size:.72rem;font-weight:600}
+.tl-volg .nr.per{border-radius:5px;height:14px}
+.tl-volg .tx{display:flex;flex-direction:column;min-width:0;flex:1}
+.tl-volg .tx b{font-size:.86rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tl-volg .tx small{font-size:.76rem;color:var(--muted)}
+.tl-volg .tx small.mist{color:#B5671A;font-weight:600}
+:root[data-theme="dark"] .tl-volg .tx small.mist{color:#EA9836}
+.tl-volg img{width:40px;height:30px;object-fit:cover;border-radius:6px;flex:none}
+.tl-lijstweergave{padding:8px 22px 22px;display:grid;gap:10px}
+.tl-lijstitem{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:start;padding:14px;border-radius:16px;background:var(--kaart2);text-align:left;border:2px solid transparent;cursor:pointer;color:var(--ink);font:inherit}
+.tl-lijstitem:hover{border-color:var(--rand2)}
+.tl-lijstitem .nr{width:30px;height:30px;border-radius:50%;background:var(--c);color:var(--ct);display:grid;place-items:center;font-weight:600;font-size:.85rem}
+.tl-lijstitem .nr.per{border-radius:6px;height:18px;margin-top:6px}
+.tl-lijstitem small{color:var(--muted);font-size:.8rem}
+.tl-lijstitem h3{margin:2px 0 4px;font-size:1.02rem}
+.tl-lijstitem p{margin:0;font-size:.9rem;line-height:1.5}
+.tl-lijstitem img{width:110px;height:80px;object-fit:cover;border-radius:10px}
+
+/* het kaartje om te bewerken, op de tijdlijn zelf */
+.tl-pop:focus{outline:none}.tl-pop{position:absolute;z-index:20;width:380px;max-width:calc(100vw - 32px);background:var(--kaart);border:2px solid var(--ink);border-radius:18px;box-shadow:0 24px 48px -18px rgba(20,34,76,.55);padding:14px 16px 16px;display:grid;gap:12px;box-sizing:border-box;cursor:auto}
+.tl-pop[hidden]{display:none}
+.tl-popkop{display:flex;align-items:center;gap:10px}
+.tl-popkop .nr{width:30px;height:30px;flex:none;border-radius:50%;background:var(--c);color:var(--ct);display:grid;place-items:center;font-weight:600;font-size:.85rem}
+.tl-popkop .nr.per{border-radius:6px;height:18px}
+.tl-popkop div{flex:1;min-width:0}
+.tl-popkop small{display:block;color:var(--muted);font-size:.8rem}
+.tl-popkop h2{margin:0;font-size:1.05rem;line-height:1.25}
+.tl-dicht{width:42px;height:42px;flex:none;border-radius:50%;border:none;background:var(--kaart2);color:var(--ink);cursor:pointer;display:grid;place-items:center}
+.tl-dicht svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round}
+.tl-fotovak{border-radius:12px;overflow:hidden;background:var(--kaart2)}
+.tl-fotovak img{display:block;width:100%;max-height:200px;object-fit:contain;background:var(--kaart2)}
+.tl-fotobron{display:flex;justify-content:space-between;gap:8px;font-size:.78rem;color:var(--muted);padding:6px 2px 0}
+.tl-linkknop{border:none;background:none;padding:0;color:var(--link);font:600 .8rem Poppins,sans-serif;cursor:pointer;min-height:24px}
+.tl-drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:96px;border-radius:14px;border:2px dashed var(--rand2);background:var(--kaart);color:var(--ink);font:500 .88rem Poppins,sans-serif;cursor:pointer;padding:10px;text-align:center;width:100%;box-sizing:border-box}
+.tl-drop:hover,.tl-drop.over{border-color:var(--ocean);background:var(--kies)}
+.tl-drop svg{width:26px;height:26px;fill:none;stroke:var(--ocean);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tl-drop small{color:var(--muted);font-weight:400}
+.tl-starters{display:flex;flex-wrap:wrap;gap:6px}
+.tl-starters button{min-height:34px;padding:0 11px;border-radius:999px;border:1.5px dashed var(--rand2);background:var(--kaart);color:var(--ink);font:500 .8rem Poppins,sans-serif;cursor:pointer}
+.tl-starters button:hover{border-color:var(--ocean)}
+.tl-vraag{display:grid;gap:5px}
+.tl-vraag label{font-weight:600;font-size:.9rem}
+.tl-popvoet{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tl-popvoet .tl-vul{min-width:8px}
+.tl-weglink{border:none;background:none;color:var(--fout);font:600 .85rem Poppins,sans-serif;cursor:pointer;min-height:44px;padding:0 6px}
+.tl-kaartvink{display:flex;align-items:center;gap:8px;font-size:.86rem;min-height:40px;padding:6px 10px;border-radius:10px;background:var(--kaart2)}
+.tl-kaartvink input{width:18px;height:18px;accent-color:var(--ocean)}
+
+/* stappen voor iets nieuws */
+dialog.tl-dlg{border:none;border-radius:26px;padding:0;width:min(940px,calc(100vw - 24px));max-height:calc(100vh - 24px);background:var(--room);color:var(--ink);box-shadow:0 30px 70px -20px rgba(10,16,40,.65)}
+dialog.tl-dlg::backdrop{background:rgba(20,34,76,.55)}
+.tl-dlgin{padding:28px 34px 26px;display:grid;gap:18px}
+.tl-stappen{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.tl-stappen li{display:flex;align-items:center;gap:10px;font-size:.9rem;color:var(--muted);font-weight:500}
+.tl-stappen li i{width:30px;height:30px;flex:none;border-radius:50%;border:2px solid var(--rand2);display:grid;place-items:center;font-style:normal;font-weight:600;box-sizing:border-box}
+.tl-stappen li.klaar{color:var(--ink)}.tl-stappen li.klaar i{background:var(--ocean);border-color:var(--ocean);color:#fff}
+.tl-stappen li.nu{color:var(--ink);font-weight:600}.tl-stappen li.nu i{background:var(--ink);border-color:var(--ink);color:var(--room)}
+.tl-dlgkop{display:flex;align-items:flex-end;justify-content:space-between;gap:16px}
+.tl-dlgkop .hand{display:block;margin-bottom:4px}
+.tl-dlgkop h2{margin:0;font-size:clamp(1.4rem,3vw,1.9rem);line-height:1.15}
+.tl-dlgvoet{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.tl-dlgvoet .tl-tip{color:var(--muted);font-size:.86rem}
+.tl-soorten{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.tl-soorten button{display:flex;align-items:center;gap:10px;min-height:52px;padding:0 14px;border-radius:14px;border:1.5px solid var(--rand2);background:var(--kaart);color:var(--ink);font:500 .92rem Poppins,sans-serif;cursor:pointer;text-align:left}
+.tl-soorten button i{width:18px;height:18px;flex:none;border-radius:50%;background:var(--c)}
+.tl-soorten button[aria-pressed="true"]{border:2.5px solid var(--ink);font-weight:600}
+.tl-soortkeuze{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.tl-soortkeuze button{min-height:58px;border-radius:14px;border:1.5px solid var(--rand2);background:var(--kaart);color:var(--ink);font:600 .98rem Poppins,sans-serif;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;padding:8px 16px;text-align:left}
+.tl-soortkeuze button small{font-weight:400;color:var(--muted);font-size:.8rem}
+.tl-soortkeuze button[aria-pressed="true"]{border:2.5px solid var(--ink)}
+.tl-jaarrij{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap}
+.tl-jaarin{width:200px;min-height:72px;border-radius:16px;border:2.5px solid var(--ink);padding:0 18px;font:600 2.2rem Poppins,sans-serif;color:var(--ink);background:var(--kaart);font-variant-numeric:tabular-nums;box-sizing:border-box}
+.tl-tijdkeuze{display:flex;gap:8px;padding-bottom:4px}
+.tl-tijdkeuze button{min-height:60px;padding:0 18px;border-radius:16px;border:2px solid var(--rand2);background:var(--kaart);color:var(--ink);font:600 .98rem Poppins,sans-serif;cursor:pointer}
+.tl-tijdkeuze button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--room)}
+.tl-preciezer{display:grid;grid-template-columns:110px 190px;gap:10px;margin-top:10px}
+.tl-voorproef{background:var(--kaart);border:1.5px solid var(--rand);border-radius:18px;padding:14px 18px 10px}
+.tl-voorproef b{font-size:.9rem}
+.tl-vp{position:relative;height:96px;margin:4px 6px 0}
+.tl-vp .lijn{position:absolute;left:0;right:0;top:56px;height:4px;border-radius:2px;background:var(--ink)}
+.tl-vp .ander{position:absolute;top:50px;width:16px;height:16px;margin-left:-8px;border-radius:50%;background:var(--rand2);box-shadow:0 0 0 2px var(--kaart)}
+.tl-vp .nieuw{position:absolute;top:0;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center}
+.tl-vp .nieuw span{background:#F26749;color:#14224C;font-size:.8rem;font-weight:600;padding:4px 10px;border-radius:8px;white-space:nowrap}
+.tl-vp .nieuw i{width:2px;height:16px;background:#F26749}
+.tl-vp .nieuw em{width:26px;height:26px;border-radius:50%;background:#F26749;box-shadow:0 0 0 3px var(--kaart),0 0 0 6px var(--ink)}
+.tl-vp .nieuwper{position:absolute;top:62px;height:12px;border-radius:4px;background:#F26749}
+.tl-vp .jr{position:absolute;top:76px;transform:translateX(-50%);font-size:.74rem;color:var(--muted)}
+.tl-vptekst{margin:2px 0 0;font-size:.88rem;color:var(--muted)}
+.tl-melding{margin:0;color:var(--fout);font-weight:600;font-size:.92rem;min-height:1.2em}
+.tl-twee{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:22px}
+.tl-van-tot{display:grid;gap:16px}
+.tl-van-tot>div>span{display:block;font-weight:600;margin-bottom:6px}
+
+/* opdracht met kaartjes */
+.tl-stapel{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.tl-stapelkaart{display:flex;align-items:center;gap:10px;min-height:64px;width:220px;padding:10px 14px;border-radius:14px;background:var(--kaart);border:2px solid var(--ink);box-shadow:0 5px 0 var(--rand2);font:500 .95rem/1.3 Poppins,sans-serif;color:var(--ink);cursor:grab;text-align:left;touch-action:none}
+.tl-stapelkaart[aria-pressed="true"]{background:var(--kies);border-color:var(--ocean)}
+.tl-stapelkaart svg{width:18px;height:18px;flex:none;fill:currentColor}
+.tl-sleepkaart{position:fixed;z-index:60;pointer-events:none;width:200px;padding:10px 14px;border-radius:14px;background:var(--kaart);border:2.5px dashed #EA9836;font:500 .9rem/1.3 Poppins,sans-serif;color:var(--ink);box-shadow:0 18px 30px -12px rgba(20,34,76,.5);transform:rotate(-2deg)}
+.tl-mikpunt{position:absolute;top:0;bottom:0;width:3px;margin-left:-1.5px;background:#EA9836;z-index:4;pointer-events:none}
+.tl-mikpunt span{position:absolute;top:30px;left:6px;background:#EA9836;color:#14224C;font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:6px;white-space:nowrap}
+.tl-hulp{position:absolute;z-index:21;width:300px;padding:14px 16px;border-radius:16px;background:#14224C;color:#FBF6F1;display:grid;gap:8px;box-shadow:0 18px 36px -14px rgba(10,16,40,.6)}
+.tl-hulp b{font-size:1rem}
+.tl-hulp span{font-size:.86rem;line-height:1.45;color:#C9D2EE}
+.tl-hulp div{display:flex;gap:8px;flex-wrap:wrap}
+.tl-hulp button{min-height:40px;padding:0 14px;border-radius:999px;border:1.5px solid rgba(251,246,241,.4);background:transparent;color:#FBF6F1;font:600 .84rem Poppins,sans-serif;cursor:pointer}
+.tl-hulp button.eerste{background:#EA9836;border-color:#EA9836;color:#14224C}
+.tl-opdrkop{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.tl-voort{display:flex;align-items:center;gap:10px;font-size:.9rem;font-weight:500}
+.tl-voort span{width:150px;height:10px;border-radius:999px;background:var(--rand);overflow:hidden}
+.tl-voort span i{display:block;height:100%;background:var(--ocean);transition:width .3s var(--ease)}
+.tl-goedflits{animation:tl-flits .9s var(--ease)}
+@keyframes tl-flits{0%{box-shadow:0 0 0 0 rgba(32,78,207,.6)}100%{box-shadow:0 0 0 18px rgba(32,78,207,0)}}
+
+/* docent: een klasset doorbladeren */
+.tl-klasset{display:grid;grid-template-columns:240px minmax(0,1fr);gap:18px;padding-top:16px}
+.tl-namen{list-style:none;margin:0;padding:0;display:grid;gap:2px;align-content:start}
+.tl-namen button{width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:44px;padding:0 12px;border-radius:10px;border:none;background:transparent;color:var(--ink);font:400 .9rem Poppins,sans-serif;cursor:pointer;text-align:left}
+.tl-namen button:hover{background:var(--kaart2)}
+.tl-namen button[aria-current="true"]{background:var(--ink);color:var(--room);font-weight:600}
+.tl-namen small{opacity:.75;font-size:.78rem}
+.tl-bladeren{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+
+.tl-toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--room);padding:12px 20px;border-radius:14px;font-weight:600;font-size:.92rem;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:80;max-width:calc(100vw - 32px);text-align:center}
+.tl-toast.aan{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* eenvoudig: groter, minder keuzes */
+body.tl-eenvoudig .tl-kaart b,body.tl-eenvoudig .tl-kaart span{font-size:.9rem}
+body.tl-eenvoudig .tl-vraag label{font-size:1rem}
+body.tl-eenvoudig .tl-in{font-size:1.06rem}
+body.tl-eenvoudig .tl-popkop h2{font-size:1.15rem}
+
+@media(max-width:1100px){.tl-werk{grid-template-columns:minmax(0,1fr)}.tl-zij{position:static;max-height:none}.tl-routes{grid-template-columns:repeat(2,minmax(0,1fr))}.tl-mijn{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){
+  .tl-onder,.tl-twee{grid-template-columns:minmax(0,1fr)}
+  .tl-routes,.tl-mijn{grid-template-columns:minmax(0,1fr)}
+  .tl-soorten{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .tl-dlgin{padding:22px 18px 20px}
+  .tl-stappen li span{display:none}
+  .tl-pop{position:fixed;left:8px!important;right:8px;top:auto!important;bottom:8px;width:auto;max-height:70vh;overflow:auto}
+  .tl-klasset{grid-template-columns:minmax(0,1fr)}
+  .tl-titelin{font-size:1.1rem}
+}
+@media(prefers-reduced-motion:reduce){.tl-route,.tl-kaart,.tl-schakel i::after{transition:none}.tl-goedflits{animation:none}}
+@media print{header,.tl-balk,.tl-zij,.tl-onder,.tl-zoom{display:none!important}}
+</style>
+</head>
+<body>
+<a class="sronly" href="#main">Naar de inhoud</a>
+<header class="tl-wrap">
+  <a class="mark" href="index.html"><i class="lgblob" style="background:none;box-shadow:none;border:0;border-radius:0;padding:0"><svg class="ng teken" viewBox="0 0 256 256" width="34" height="34" aria-hidden="true" focusable="false" style="width:100%;height:100%;overflow:visible;transform:scale(1.3)"><style>.ng .ngr{stroke:#204ECF}.ng .ngv{stroke:#F26749}:root[data-theme="dark"] .ng .ngr{stroke:#83A5F2}@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .ng .ngr{stroke:#83A5F2}}.ng.teken .ngr{stroke-dasharray:100;animation:ng-ring .6s cubic-bezier(.6,0,.3,1) .15s both}.ng.teken .ngv{stroke-dasharray:100;animation:ng-vink .34s cubic-bezier(.3,0,.2,1) .67s both}@keyframes ng-ring{from{stroke-dashoffset:100}to{stroke-dashoffset:0}}@keyframes ng-vink{from{stroke-dashoffset:100;opacity:0}1%{opacity:1}to{stroke-dashoffset:0;opacity:1}}@media(prefers-reduced-motion:reduce){.ng.teken .ngr,.ng.teken .ngv{animation:none}}</style><g transform="translate(8 0)" fill="none" stroke-width="32"><path class="ngr" pathLength="100" d="M163.3 123A50 50 0 1 0 76.7 73A50 50 0 1 0 163.3 123Z"/><path class="ngv" pathLength="100" d="M163.3 123L114.2 208L82.2 176" stroke-linecap="round" stroke-linejoin="round"/></g></svg></i><span>Leeromgeving</span></a>
+  <span class="hd-right">
+    <button class="themaknop" id="themaknop" type="button" aria-label="Schakel naar donker" title="Donker of licht">
+      <svg class="maan" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+      <svg class="zon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>
+    </button>
+  </span>
+</header>
+
+<main class="tl-wrap" id="main">
+  <!-- ======================= BEGINNEN ======================= -->
+  <section class="tl-sch" id="schStart" aria-labelledby="startKop">
+    <div class="tl-held">
+      <span class="hand">geschiedenis op schaal</span>
+      <h1 id="startKop">Tijdlijnmaker</h1>
+      <p>Zet gebeurtenissen en perioden op een tijdlijn die klopt: tien jaar is overal even lang. Schrijf bij elke gebeurtenis wat er gebeurde en waarom, en lever je tijdlijn in bij je klas of download hem als PDF.</p>
+    </div>
+    <div id="opdrBalk"></div>
+    <div class="tl-routes">
+      <button type="button" class="tl-route hoofd" id="rtNieuw"><svg viewBox="0 0 24 24" stroke="#14224C" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><b>Nieuwe tijdlijn</b><span>Begin leeg, of kies hieronder een tijdvak.</span></button>
+      <button type="button" class="tl-route" id="rtOpen"><svg viewBox="0 0 24 24" stroke="#204ECF" aria-hidden="true"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M12 11v6M9.5 14.5L12 17l2.5-2.5"/></svg><b>Een PDF openen</b><span>Verder met een tijdlijn uit een PDF. Docent: kies er meer tegelijk om een klasset door te bladeren.</span></button>
+      <button type="button" class="tl-route" id="rtVoorbeeld"><svg viewBox="0 0 24 24" stroke="#EA9836" aria-hidden="true"><path d="M3 12h18"/><circle cx="7" cy="12" r="2"/><circle cx="15" cy="12" r="2"/><path d="M7 10V6M15 14v4"/></svg><b>Bekijk een voorbeeld</b><span>Nederland tussen twee wereldoorlogen, met uitleg.</span></button>
+      <button type="button" class="tl-route" id="rtKlas"><svg viewBox="0 0 24 24" stroke="#83A5F2" aria-hidden="true"><path d="M4 19V8l8-4 8 4v11"/><path d="M9 19v-6h6v6"/></svg><b>Ingeleverd werk</b><span id="rtKlasTekst">Voor docenten: de tijdlijnen die je klas inleverde.</span></button>
+    </div>
+    <input type="file" id="pdfIn" accept="application/pdf,.pdf" multiple hidden>
+
+    <section class="tl-blok" aria-labelledby="mijnKop">
+      <h2 id="mijnKop">Mijn tijdlijnen</h2>
+      <div class="tl-mijn" id="mijnLijst"></div>
+      <p class="tl-leeg">Bewaard in deze browser. Download de PDF om je tijdlijn echt te bewaren of op een andere computer verder te gaan.</p>
+    </section>
+
+    <section class="tl-blok" aria-labelledby="tvKop">
+      <h2 id="tvKop">Begin met een tijdvak</h2>
+      <p>De tijdlijn loopt dan van het begin tot het eind van dat tijdvak.</p>
+      <div class="tl-vakken" id="tvKnoppen"></div>
+    </section>
+  </section>
+
+  <!-- ======================= MAKEN ======================= -->
+  <section class="tl-sch" id="schMaken" aria-label="Je tijdlijn" hidden>
+    <div class="tl-balk" role="toolbar" aria-label="Tijdlijn">
+      <button type="button" class="tl-terug" id="naarStart"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>Mijn tijdlijnen</button>
+      <span id="balkMaken" style="display:contents">
+        <button type="button" class="tl-knop vol" id="nieuwG"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Gebeurtenis</button>
+        <button type="button" class="tl-knop" id="nieuwP"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Periode</button>
+      </span>
+      <div class="tl-groep" role="group" aria-label="Weergave">
+        <button type="button" id="wTijdlijn" aria-pressed="true">Tijdlijn</button>
+        <button type="button" id="wLijst" aria-pressed="false">Lijst</button>
+      </div>
+      <span class="tl-vul"></span>
+      <label class="tl-schakel" title="Grotere letters, alleen het jaartal, hulp bij het schrijven"><span>Eenvoudig</span><input type="checkbox" id="eenvoudig"><i aria-hidden="true"></i></label>
+      <button type="button" class="tl-knop zacht" id="pdfUit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19h14"/></svg>PDF</button>
+      <button type="button" class="tl-knop" id="opdrMaak" hidden title="Maak van deze tijdlijn een opdracht voor je klas">Opdracht</button>
+      <button type="button" class="tl-knop koraal" id="inlever">Inleveren</button>
+    </div>
+
+    <div class="tl-werk">
+      <div class="tl-hoofdvak">
+        <div id="opdrVak" hidden></div>
+        <section class="tl-paneel" aria-label="De tijdlijn">
+          <div class="tl-lijnkop">
+            <div style="flex:1;min-width:240px">
+              <label class="sronly" for="titelIn">Titel van je tijdlijn</label>
+              <input class="tl-titelin" id="titelIn" maxlength="80" autocomplete="off">
+              <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><label class="sronly" for="naamIn">Je naam</label><input class="tl-naamin" id="naamIn" maxlength="60" placeholder="Je naam en klas" autocomplete="name"><span class="tl-status" id="status" aria-live="polite"></span></div>
+            </div>
+            <div class="tl-zoom" id="zoomRij">
+              <span id="schaalTekst"></span>
+              <button type="button" class="tl-knop zacht tl-rond" id="zoomIn" aria-label="Inzoomen">+</button>
+              <button type="button" class="tl-knop zacht tl-rond" id="zoomUit" aria-label="Uitzoomen">−</button>
+              <button type="button" class="tl-knop zacht klein" id="zoomPas">Passend</button>
+            </div>
+          </div>
+          <ul class="tl-legenda" id="legenda" aria-label="Soorten gebeurtenissen"></ul>
+          <div class="tl-scroll" id="tlScroll">
+            <div class="tl-vlak" id="tlVlak"></div>
+          </div>
+          <div class="tl-lijstweergave" id="lijstWeergave" hidden></div>
+        </section>
+        <div class="tl-onder" id="onderRij">
+          <section class="tl-paneel" aria-labelledby="waarKop"><h2 id="waarKop">Waar zit je in de geschiedenis?</h2><div class="tl-strook" id="strook"></div><p class="tl-strooktekst" id="strookTekst"></p></section>
+          <section class="tl-paneel" aria-labelledby="afKop"><h2 id="afKop">Is je tijdlijn af?</h2><ul class="tl-check" id="checklijst"></ul></section>
+        </div>
+      </div>
+      <aside class="tl-paneel tl-zij" aria-labelledby="volgKop">
+        <h2 id="volgKop">Alles op volgorde</h2>
+        <p>Klik op een stip, een kaartje of hieronder om uitleg en een afbeelding toe te voegen.</p>
+        <ol class="tl-volg" id="volgLijst"></ol>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ======================= KLASSET ======================= -->
+  <section class="tl-sch" id="schKlasset" aria-label="Klasset" hidden>
+    <div class="tl-balk">
+      <button type="button" class="tl-terug" id="ksTerug"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>Tijdlijnmaker</button>
+      <span class="hand" style="font-size:1.4rem">klasset bekijken</span>
+      <span class="tl-vul"></span>
+      <span class="tl-status" id="ksStatus"></span>
+    </div>
+    <div class="tl-klasset">
+      <nav aria-label="Leerlingen"><ul class="tl-namen" id="ksNamen"></ul></nav>
+      <div>
+        <div class="tl-bladeren">
+          <button type="button" class="tl-knop" id="ksVorige">← Vorige</button>
+          <b id="ksWie" aria-live="polite"></b>
+          <button type="button" class="tl-knop vol" id="ksVolgende">Volgende →</button>
+          <span class="tl-vul"></span>
+          <button type="button" class="tl-knop zacht klein" id="ksPdf">PDF</button>
+        </div>
+        <div id="ksVak"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- stappen: iets nieuws op de tijdlijn -->
+<dialog class="tl-dlg" id="dlgNieuw" aria-labelledby="dlgKop">
+  <form method="dialog" class="tl-dlgin" id="frmNieuw" novalidate>
+    <ol class="tl-stappen" id="stappen" aria-label="Stappen"></ol>
+    <div class="tl-dlgkop"><div><span class="hand" id="dlgHand"></span><h2 id="dlgKop"></h2></div><button type="button" class="tl-dicht" id="dlgDicht" aria-label="Sluiten"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div id="stapInhoud"></div>
+    <p class="tl-melding" id="stapMelding" role="alert"></p>
+    <div class="tl-dlgvoet"><button type="button" class="tl-knop" id="stapTerug">← Terug</button><span class="tl-tip" id="stapTip"></span><button type="submit" class="tl-knop koraal" id="stapVerder" style="min-height:54px;padding:0 28px;font-size:1.02rem">Volgende stap →</button></div>
+  </form>
+</dialog>
+
+<!-- inleveren -->
+<dialog class="tl-dlg" id="dlgInlever" aria-labelledby="inlKop" style="width:min(560px,calc(100vw - 24px))">
+  <form method="dialog" class="tl-dlgin" id="frmInlever" novalidate>
+    <div class="tl-dlgkop"><div><span class="hand">bij je docent</span><h2 id="inlKop">Inleveren</h2></div><button type="button" class="tl-dicht" data-sluit aria-label="Sluiten"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div id="inlInhoud"></div>
+    <p class="tl-melding" id="inlMelding" role="alert"></p>
+    <div class="tl-dlgvoet"><button type="button" class="tl-knop" data-sluit>Nog niet</button><button type="submit" class="tl-knop koraal" id="inlKnop">Lever in</button></div>
+  </form>
+</dialog>
+
+<!-- opdracht maken (docent) -->
+<dialog class="tl-dlg" id="dlgOpdr" aria-labelledby="opdrKop" style="width:min(620px,calc(100vw - 24px))">
+  <form method="dialog" class="tl-dlgin" id="frmOpdr" novalidate>
+    <div class="tl-dlgkop"><div><span class="hand">voor je klas</span><h2 id="opdrKop">Maak er een opdracht van</h2></div><button type="button" class="tl-dicht" data-sluit aria-label="Sluiten"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div id="opdrInhoud"></div>
+    <p class="tl-melding" id="opdrMelding" role="alert"></p>
+    <div class="tl-dlgvoet"><button type="button" class="tl-knop" data-sluit>Annuleren</button><button type="submit" class="tl-knop koraal" id="opdrKnop">Zet klaar</button></div>
+  </form>
+</dialog>
+
+<input type="file" id="fotoIn" accept="image/*" hidden>
+<div class="tl-toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="thema.js"></script>
+<script src="profiel.js"></script>
+<script src="klas.js"></script>
+<script src="avatar.js"></script>
+<script src="voorlezen.js"></script>
+<script src="tijdlijn-motor.js"></script>
+<script src="tijdlijn-pdf.js"></script>
+<script src="tijdlijn.js"></script>
+</body>
+</html>
