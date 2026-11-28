@@ -1448,7 +1448,7 @@ var SPELLEN = [
     wat:'Je boort je met een klein wagentje de grond in. Zachte aarde graaf je zo weg; steen, erts en vondsten kraak je met een goed antwoord. Hoe dieper, hoe zeldzamer het erts en hoe lastiger de vragen. Boven verkoop je je lading en koop je een betere boor, een grotere tank, een lamp, een groter laadruim en een lier. Fossielen en oude voorwerpen komen in je museum.',
     leer:'Oefenen, elk vak', tijd:'5 tot 10 minuten per ronde' },
 
-  { vak:['rekenen','nederlands','engels','geschiedenis','aardrijkskunde','biologie','wiskunde','mens','economie'], bestand:'teambaas.html', naam:'Teambaas', kleur:'#204ECF', tv:0,
+  { vak:['rekenen','nederlands','engels','geschiedenis','aardrijkskunde','biologie','wiskunde','mens','economie'], bestand:'teambaas.html', naam:'Teambaas', kleur:'#204ECF', tv:0, apart:true,
     ico:'<path d="M4 15a8 8 0 0 1 16 0v2H4z"/><path d="M4 13h9a3 3 0 0 0 3-3"/><path d="M6 19h12"/>',
     wat:'Je eigen raceteam, met twee coureurs, een auto en een hoofdkwartier. Met munten uit goed beantwoorde vragen maak je ze beter; elke upgrade duurt even, en elk goed antwoord maakt hem korter. Kies je banden en pitstops, ontwerp de helmen, en kijk elke week terug hoe je team racet tegen de andere teams van je divisie, op de baan van die week. Alleen met een account.',
     leer:'Oefenen, elk vak, elke week', tijd:'een paar minuten per dag' },
@@ -1837,14 +1837,15 @@ var SPELLEN = [
   ];
   function soortVan(sp){ return SOORT[(sp.bestand || '').replace('.html', '')] || 'oefenen'; }
   function soortNaam(id){ return (SOORTEN.filter(function(s){ return s.id === id; })[0] || {}).naam || ''; }
-  function hoortBij(sp, id){ return Array.isArray(sp.vak) ? sp.vak.indexOf(id) >= 0 : sp.vak === id; }
+  /* een spel met apart:true (Teambaas) staat niet onder de vakken maar alleen onder Competitie */
+  function hoortBij(sp, id){ if (sp.apart) return id === 'competitie'; return Array.isArray(sp.vak) ? sp.vak.indexOf(id) >= 0 : sp.vak === id; }
   /* Hoeveel vakken hoort een spel bij? Een spel waarin je het vak zelf kiest
      hoort bij bijna alles en staat daarom bovenaan onder "Voor elk vak". Een
      spel voor een of twee vakken hoort gewoon onder die vakken: De uitverkoop
      staat bij Rekenen en bij Economie, het DHTE-schema alleen bij Rekenen. */
   var BREED = 4;
   function vakkenVan(sp){ return Array.isArray(sp.vak) ? sp.vak : [sp.vak]; }
-  function isBreed(sp){ return vakkenVan(sp).length >= BREED; }
+  function isBreed(sp){ return !sp.apart && vakkenVan(sp).length >= BREED; }
   function eersteTv(sp){ return !sp.tv ? 0 : (Array.isArray(sp.tv) ? sp.tv[0] : sp.tv); }
   function tvLijst(sp){ return !sp.tv ? [] : (Array.isArray(sp.tv) ? sp.tv : [sp.tv]); }
   function tvVan(nr){ return TIJDVAKKEN.filter(function(t){ return t.nr === nr; })[0] || null; }
@@ -2009,6 +2010,8 @@ var SPELLEN = [
       var n = aantalIn(v.id);
       if (n) s += rij({ on:stand.vak === v.id, data:'data-vak="' + v.id + '"', naam:v.naam, kleur:v.kleur, tel:n });
     });
+    var nc = aantalIn('competitie');
+    if (nc) s += rij({ on:stand.vak === 'competitie', data:'data-vak="competitie"', naam:COMPETITIE.naam, kleur:COMPETITIE.kleur, tel:nc });
     $('vaklijst').innerHTML = s;
     Array.prototype.forEach.call($('vaklijst').querySelectorAll('.rij'), function(b){
       b.addEventListener('click', function(){
@@ -2529,7 +2532,9 @@ var SPELLEN = [
   function eenvoudigAan(){ return !eenvoudigAlles; }
   /* de spellen voor elk vak als een eigen tegel, naast de vakken */
   var OVERAL = { id:'overal', naam:'Voor elk vak', kleur:'#F6B65A', ico:'<path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z"/>' };
-  function tegelVak(id){ return id === 'overal' ? OVERAL : vakVan(id); }
+  var COMPETITIE = { id:'competitie', naam:'Competitie', kleur:'#14224C', wat:'Je eigen team, elke week een wedstrijd tegen de andere teams.',
+    ico:'<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4"/><path d="M12 13v4M8.5 20h7M10 17h4"/>' };
+  function tegelVak(id){ return id === 'overal' ? OVERAL : id === 'competitie' ? COMPETITIE : vakVan(id); }
   function aantalOveral(){ return SPELLEN.filter(function(s){ return s.bestand && isBreed(s); }).length; }
   /* Letters op een vakkleur: wit of donkerblauw, wat het meeste contrast geeft.
      Haalt geen van beide 4,5 tegen 1, dan wordt het vlak een tikje donkerder
@@ -2658,7 +2663,7 @@ var SPELLEN = [
     doel.classList.remove('hide');
     var naar = function(){ doel.scrollIntoView({ block:'start', behavior: magBewegen ? 'smooth' : 'auto' }); };
     if (start){
-      var tegels = VAKKEN.filter(function(v){ return aantalIn(v.id); }).concat([OVERAL]).map(function(v, i){
+      var tegels = VAKKEN.filter(function(v){ return aantalIn(v.id); }).concat([OVERAL]).concat(aantalIn('competitie') ? [COMPETITIE] : []).map(function(v, i){
         var n = v.id === 'overal' ? aantalOveral() : aantalIn(v.id);
         return '<button type="button" class="vaktegel' + (v.id === 'overal' ? ' overal' : '') + '" data-vaktegel="' + v.id + '" style="' + vakStijl(v.kleur) + ';--draai:' + DRAAI[i % DRAAI.length] + 'deg">' +
           '<svg viewBox="0 0 24 24" aria-hidden="true">' + v.ico + '</svg><b>' + schoon(v.naam) + '</b><small>' + n + (n === 1 ? ' spel' : ' spellen') + '</small></button>';
@@ -2681,7 +2686,7 @@ var SPELLEN = [
     var v = stand.vak !== 'alle' ? tegelVak(stand.vak) : null;
     var kop = v ? { naam:v.naam, kleur:v.kleur } : { naam:(SOORTKOP[stand.soort] || ['Alle spellen'])[0], kleur:(SOORTKOP[stand.soort] || [0, '#204ECF'])[1] };
     var eerst = v ? beginSpel(stand.vak, lijst) : null, aantal = lijst.length;
-    var vs = v && v.id !== 'overal' && !filter0() ? volgendeStap(stand.vak, lijst) : null;
+    var vs = v && v.id !== 'overal' && v.id !== 'competitie' && !filter0() ? volgendeStap(stand.vak, lijst) : null;
     function filter0(){ return stand.soort !== 'alles' || !!stand.tv; }
     /* kwam je binnen met een soort of tijdvak in de link (?tv=5), dan zeg dat, met een knop om het weg te halen */
     var filter = !v ? [] : [stand.soort !== 'alles' ? soortNaam(stand.soort).toLowerCase() : '', stand.tv && tvVan(stand.tv) ? 'tijdvak ' + stand.tv + ' (' + tvVan(stand.tv).naam.toLowerCase() + ')' : ''].filter(Boolean);
@@ -2780,7 +2785,7 @@ var SPELLEN = [
       sectieReeksEerst = !!lijst.length && isReeks(lijst[0]);
       s += sectie('', '', 'Zoeken naar “' + stand.zoek + '”', '', lijst.length, lijst);
       sectieReeksEerst = false;
-    } else if (eenvoudigAan() && stand.vak !== 'alle' && stand.vak !== 'geschiedenis' && stand.soort === 'alles' && !stand.tv){
+    } else if (eenvoudigAan() && stand.vak !== 'alle' && stand.vak !== 'geschiedenis' && stand.vak !== 'competitie' && stand.soort === 'alles' && !stand.tv){
       /* geschiedenis houdt ook op vmbo-bb zijn indeling per tijdvak (hieronder) */
       s += vakGroepen(lijst);
     } else if (eenvoudigAan() && stand.vak === 'alle' && stand.soort !== 'alles'){
@@ -2805,6 +2810,8 @@ var SPELLEN = [
       if (stand.soort === 'alles' && !stand.tv) s += uitgelicht(lijst);
       if (alleen.length) s += sectieKort('<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>', '#5b6480', 'Voor elk vak', 'je kiest het vak in het spel zelf', alleen, 'overal');
       if (samenLijst.length) s += sectie('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/>', 'var(--vista)', 'Samen op het digibord', 'je docent start deze', samenLijst.length, samenLijst);
+      var apart = lijst.filter(function(sp){ return sp.apart; });
+      if (apart.length) s += sectie(COMPETITIE.ico, COMPETITIE.kleur, COMPETITIE.naam, 'je eigen team, met vragen uit elk vak', apart.length, apart);
       VAKKEN.forEach(function(v){
         var mijn = lijst.filter(function(sp){ return !isBreed(sp) && hoortBij(sp, v.id); });
         if (!mijn.length) return;
@@ -2918,7 +2925,7 @@ var SPELLEN = [
   var n = param('n');
   if (!n){ try { n = localStorage.getItem('lg-niveau'); } catch (e){} }
   var v = param('vak');
-  if (v && (vakVan(v) || v === 'overal')) stand.vak = v;
+  if (v && (vakVan(v) || v === 'overal' || v === 'competitie')) stand.vak = v;
   var so = param('soort');
   if (so && SOORTEN.some(function(x){ return x.id === so; })) stand.soort = so;
   var tv = parseInt(param('tv') || '0', 10);
