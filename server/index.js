@@ -30,6 +30,9 @@ export { Stadheld } from "./stad.js";
 /* Teambaas, de racemanager: een object per team en een voor de liga (server/teambaas.js) */
 export { Teambaas } from "./teambaas.js";
 import { behandel as teambaasBehandel } from "./teambaas.js";
+/* Clubbaas, de voetbalmanager: een object per club en een voor de liga (server/clubbaas.js) */
+export { Clubbaas } from "./clubbaas.js";
+import { behandel as clubbaasBehandel } from "./clubbaas.js";
 import { behandel as accountBehandel, ingelogd as accountIngelogd, mogelijk as accountMogelijk, isEigenaar, naamVan as accountNaam, kenmerkVan as accountKenmerk, eigenaarVan as accountEigenaar, zorgVoorCode as accountZorgVoorCode, verhuisCode as accountVerhuisCode } from "./account.js";
 import { behandel as pmtBehandel } from "./pmt.js";
 const KLASSEMENTEN = { toren: true, zwaard: true, dag: true, mijnwerker: true, poortrace: true, kaarttoren: true, torendag: true };   /* dag en torendag: per datum een lijst, dag-2026-09-19 */
@@ -361,6 +364,14 @@ async function verdeel(req, env, ctx){
       let id = await accountKenmerk(req, env);
       if (!id && lokaal && !accountMogelijk(env) && /^[a-z0-9]{1,20}$/.test(url.searchParams.get("test") || "")) id = "test:" + url.searchParams.get("test");
       return teambaasBehandel(req, env, url, { id, lokaal, magDoor: (wat, per, s) => magDoor(env, req, wat, per, s) });
+    }
+    /* Clubbaas: de voetbalclub van wie is ingelogd, net als Teambaas */
+    if (p === "/api/clubbaas" || p.startsWith("/api/clubbaas/")){
+      if (!eigenSite(req, url)) return json({ fout: "niet vanaf deze site" }, 403);
+      if (!await magDoor(env, req, "clubbaas", 1500, 60)) return json({ fout: "even wachten" }, 429);
+      let id = await accountKenmerk(req, env);
+      if (!id && lokaal && !accountMogelijk(env) && /^[a-z0-9]{1,20}$/.test(url.searchParams.get("test") || "")) id = "test:" + url.searchParams.get("test");
+      return clubbaasBehandel(req, env, url, { id, lokaal, magDoor: (wat, per, s) => magDoor(env, req, wat, per, s) });
     }
     /* inloggen met Microsoft, optioneel, gekoppeld aan een speelcode (account.js) */
     if (p === "/api/account" || p.startsWith("/api/account/")){
